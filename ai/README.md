@@ -13,6 +13,7 @@ python3 -m gidh_ai sessions
 python3 -m gidh_ai daily 2026-09-10
 python3 -m gidh_ai intraday 2026-09-10 RELIANCE
 python3 -m gidh_ai focus 2026-09-10
+python3 -m gidh_ai daily-stock-selector inception --session-date=2026-09-01
 ```
 
 Set `GIDH_API_URL` to use a non-default API address. The default is
@@ -21,6 +22,10 @@ Set `GIDH_API_URL` to use a non-default API address. The default is
 The `focus` command requires the declared PostgreSQL dependency and database
 environment settings. It reads backend-certified `market.*` facts directly and
 writes only AI-owned `ai.*` records.
+
+`daily-stock-selector inception` also requires `GEMINI_API_KEY` and
+`GEMINI_MODEL`. It uses only the selected session's backend-published daily
+features; later sessions are never supplied to Gemini.
 
 ## Layout
 

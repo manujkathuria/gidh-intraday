@@ -47,12 +47,12 @@ class PostgresStore:
             raise RuntimeError(f"no backend-published daily features for {session_date}")
         return str(rows[0]["feature_run_id"]), rows
 
-    def save_focus_list(self, session_date: date, feature_run_id: str, policy_version: str, candidates: list[FocusCandidate]) -> str:
+    def save_focus_list(self, session_date: date, feature_run_id: str, policy_version: str, candidates: list[FocusCandidate], model_version: str | None = None, input_snapshot: dict[str, object] | None = None) -> str:
         with psycopg.connect(self._database_url) as connection, connection.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO ai.research_runs (session_date, feature_run_id, policy_version, status, input_snapshot)
-                VALUES (%s, %s::uuid, %s, 'RUNNING', jsonb_build_object('candidate_count', %s)) RETURNING id::text
-            """, (session_date, feature_run_id, policy_version, len(candidates)))
+                VALUES (%s, %s::uuid, %s, %s, 'RUNNING', %s::jsonb) RETURNING id::text
+            """, (session_date, feature_run_id, policy_version, model_version, Jsonb(input_snapshot or {"candidate_count": len(candidates)})))
             research_run_id = cursor.fetchone()[0]
             cursor.execute("""
                 INSERT INTO ai.daily_focus_lists (research_run_id, session_date, feature_run_id, status, published_at)
