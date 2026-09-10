@@ -25,6 +25,17 @@ TimescaleDB is the evidence store for Gidh. Database names, columns, and migrati
 - `market.preopen_snapshots`: auction/pre-open observations when that feed is added.
 - `market.data_readiness`: backend-owned integrity and publication record for a session, with its `feature_run_id`. AI does not interpret this table; backend exposes only the feature data it has approved.
 
+## Live selection handoff
+
+`ai.live_market_subscriptions` is the explicit AI-to-backend contract for the
+realtime feed. After a directional research run is sealed, AI publishes exactly
+15 rows for that session: the instrument reference, LONG/SHORT side, priority,
+confidence, source decision, and the Asia/Kolkata 09:00–15:30 subscription
+window. The backend reads `PUBLISHED` rows and joins `market.instruments` and
+the active `market.future_contracts` row to obtain feed tokens. It must not
+infer a live list from focus-list tables or mutate this AI-owned delivery
+record. Cancelling a selection is an explicit AI status change, not a delete.
+
 The old `public` application tables are not part of Day 0. New AI work must use its own `ai` schema and must reference the published `market.feature_runs` input rather than copying market facts into opinion tables.
 
 ## Target AI audit contract

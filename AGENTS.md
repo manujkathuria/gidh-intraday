@@ -15,6 +15,7 @@ smallest correct change, and verify the result.
   platform, or an installed dependency already solves the problem.
 
 <!-- gidh-forge:start -->
+
 ## Gidh Forge sidecar
 
 When `gidh-forge` is available, use it to reduce exploration context. It is an
@@ -29,6 +30,12 @@ optional sidecar: it never replaces this project contract or normal tools.
   `trace <symbol>`. Treat unresolved or text-only results as leads, not proof.
 - After changes, use `diff` to review semantic ownership and `check` for
   syntax. Use `check --strict` when Tree-Sitter coverage is required.
+- Use `gidh-forge changed` for a quick summary of modified and untracked files.
+- Use `gidh-forge review` for a composite pre-commit report (diff + check +
+  blast radius).
+- Use `gidh-forge test-scope <symbol>` to find tests affected by a change.
+- Use `gidh-forge check <file1> <file2>` to validate specific files.
+- Append `--json` to any read command for structured output.
 - `gidh-forge init` owns only `.gidh/`. Do not overwrite user-owned agent or
   editor instruction files outside this marked block.
 

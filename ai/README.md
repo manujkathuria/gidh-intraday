@@ -13,6 +13,7 @@ python3 -m gidh_ai sessions
 python3 -m gidh_ai daily 2026-09-10
 python3 -m gidh_ai intraday 2026-09-10 RELIANCE
 python3 -m gidh_ai focus 2026-09-10
+python3 -m gidh_ai directional-pool --session-date=2026-09-10
 python3 -m gidh_ai daily-stock-selector inception --session-date=2026-09-01
 ```
 
@@ -26,6 +27,11 @@ writes only AI-owned `ai.*` records.
 `daily-stock-selector inception` also requires `GEMINI_API_KEY` and
 `GEMINI_MODEL`. It uses only the selected session's backend-published daily
 features; later sessions are never supplied to Gemini.
+
+`directional-pool` is the deterministic pre-filter for the directional replay
+analyst. It reads a published 210-stock feature run and returns 35 compact,
+direction-neutral cards for the model to assess. It uses no model call and does
+not read the target session's candles.
 
 ## Layout
 
