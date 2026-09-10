@@ -1,7 +1,9 @@
-.PHONY: help api auth universe history features integrity test
+.PHONY: help ai ai-test api auth universe history features integrity test
 
 help:
 	@echo "Gidh batch kernel"
+	@echo "  make ai         Run the AI read client (pass ARGS='sessions')"
+	@echo "  make ai-test    Run AI-layer tests"
 	@echo "  make api        Start the local read-only market API"
 	@echo "  make auth       Renew the local Kite access token"
 	@echo "  make universe   Refresh the 210-symbol cash/future universe"
@@ -12,6 +14,12 @@ help:
 
 api:
 	@cd backend && go run ./cmd/gidh-api
+
+ai:
+	@cd ai && PYTHONPATH=src python3 -m gidh_ai $(ARGS)
+
+ai-test:
+	@cd ai && PYTHONPATH=src python3 -m unittest discover -s tests
 
 auth:
 	@cd backend && go run ./cmd/gidh-auth $(TOKEN)

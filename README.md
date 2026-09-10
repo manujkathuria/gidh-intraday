@@ -17,6 +17,7 @@ make universe    # refresh the 210 cash/futures pairs
 make history     # seed or repair raw candles
 make features    # publish the current daily baseline
 make integrity   # repair a closed session only when backend marks it non-ready
+make ai-test     # run AI read-layer tests
 make test
 ```
 
