@@ -1,0 +1,38 @@
+# Environment & Secrets (CRITICAL: Never commit .env or service account keys)
+.env
+.env.local
+.env.*.local
+*.env
+firebase.json
+backend/firebase.json
+*service-account*.json
+
+# IDE
+.idea
+
+# Go binaries & caches
+bin/
+backend/bin/
+*.exe
+*.test
+*.out
+
+# Node / Frontend
+node_modules/
+.pnpm-store/
+.next/
+out/
+dist/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+
+# Logs & scratch
+*.log
+*.pid
+.pids/
+.DS_Store
+.gidh
