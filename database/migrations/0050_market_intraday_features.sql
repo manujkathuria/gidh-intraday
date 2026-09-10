@@ -1,11 +1,8 @@
 -- Intraday features are neutral market-state facts. AI owns setup and trigger
 -- interpretation; this table never stores a side, score, or trade instruction.
 --
--- This is Day 0 derived data. Recreate it rather than preserve the incomplete
--- v1 rows: every row is reproducible from immutable raw candles and a published
--- daily feature run.
-
-DROP TABLE IF EXISTS market.intraday_features_1m;
+-- Every row is reproducible from immutable raw candles and a published daily
+-- feature run.
 
 CREATE TABLE market.intraday_features_1m (
     ts TIMESTAMPTZ NOT NULL,

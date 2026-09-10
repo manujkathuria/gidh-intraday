@@ -19,7 +19,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_successful_daily_feature_run
     ON market.feature_runs (feature_set, feature_version, session_date)
     WHERE status = 'SUCCEEDED';
 
-DROP TABLE IF EXISTS market.daily_features;
 CREATE TABLE market.daily_features (
     feature_run_id UUID NOT NULL REFERENCES market.feature_runs(id),
     instrument_id BIGINT NOT NULL REFERENCES market.instruments(id),
@@ -51,46 +50,6 @@ CREATE TABLE market.daily_features (
 CREATE INDEX idx_daily_features_instrument_run
     ON market.daily_features (instrument_id, feature_run_id);
 
-DROP TABLE IF EXISTS market.intraday_features_1m;
-CREATE TABLE market.intraday_features_1m (
-    ts TIMESTAMPTZ NOT NULL,
-    feature_run_id UUID NOT NULL REFERENCES market.feature_runs(id),
-    instrument_id BIGINT NOT NULL REFERENCES market.instruments(id),
-    cash_source_ts TIMESTAMPTZ NOT NULL,
-    future_source_ts TIMESTAMPTZ,
-    session_open NUMERIC(18, 4) NOT NULL,
-    session_high NUMERIC(18, 4) NOT NULL,
-    session_low NUMERIC(18, 4) NOT NULL,
-    session_vwap NUMERIC(18, 4),
-    vwap_sd_1 NUMERIC(18, 4),
-    vwap_sd_2 NUMERIC(18, 4),
-    bar_range NUMERIC(18, 4) NOT NULL,
-    bar_body NUMERIC(18, 4) NOT NULL,
-    clv NUMERIC(10, 6),
-    upper_wick_pct NUMERIC(10, 6),
-    lower_wick_pct NUMERIC(10, 6),
-    cumulative_volume BIGINT NOT NULL,
-    expected_cumulative_volume BIGINT,
-    relative_volume NUMERIC(12, 4),
-    realised_volatility_5m NUMERIC(12, 6),
-    realised_volatility_15m NUMERIC(12, 6),
-    realised_volatility_30m NUMERIC(12, 6),
-    session_range_pct_atr NUMERIC(12, 6),
-    adr_fuel_used_pct NUMERIC(12, 6),
-    future_contract_id BIGINT REFERENCES market.future_contracts(id),
-    future_close NUMERIC(18, 4),
-    futures_basis NUMERIC(18, 4),
-    oi_change_1m BIGINT,
-    oi_change_5m BIGINT,
-    oi_change_15m BIGINT,
-    oi_change_session BIGINT,
-    PRIMARY KEY (ts, feature_run_id, instrument_id)
-);
-
-SELECT create_hypertable('market.intraday_features_1m', 'ts', if_not_exists => TRUE);
-CREATE INDEX idx_intraday_features_instrument_ts
-    ON market.intraday_features_1m (instrument_id, ts DESC);
-
 CREATE TABLE IF NOT EXISTS market.preopen_snapshots (
     session_date DATE NOT NULL,
     instrument_id BIGINT NOT NULL REFERENCES market.instruments(id),
@@ -105,5 +64,26 @@ CREATE TABLE IF NOT EXISTS market.preopen_snapshots (
     PRIMARY KEY (session_date, instrument_id)
 );
 
-ALTER TABLE market.data_readiness
-    ADD COLUMN IF NOT EXISTS feature_run_id UUID REFERENCES market.feature_runs(id);
+CREATE TABLE market.data_readiness (
+    session_date DATE PRIMARY KEY,
+    status VARCHAR(16) NOT NULL CHECK (status IN ('READY', 'NOT_READY')),
+    active_instruments INTEGER NOT NULL,
+    active_future_contracts INTEGER NOT NULL,
+    symbols_with_history INTEGER NOT NULL,
+    daily_feature_rows INTEGER NOT NULL,
+    feature_run_id UUID REFERENCES market.feature_runs(id),
+    checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    details JSONB NOT NULL DEFAULT '{}'::JSONB
+);
+
+CREATE TABLE market.data_coverage (
+    session_date DATE NOT NULL,
+    instrument_id BIGINT NOT NULL REFERENCES market.instruments(id),
+    data_set VARCHAR(32) NOT NULL,
+    expected_rows INTEGER NOT NULL CHECK (expected_rows >= 0),
+    received_rows INTEGER NOT NULL CHECK (received_rows >= 0),
+    first_ts TIMESTAMPTZ,
+    last_ts TIMESTAMPTZ,
+    checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (session_date, instrument_id, data_set)
+);

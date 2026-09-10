@@ -1,5 +1,8 @@
--- Day 0 clean ownership boundary for the unreleased Gidh rebuild.
--- Legacy public tables remain untouched until the new system is ready.
+-- Shared database ownership boundary. This migration is the foundation for a
+-- fresh database and must run before every schema-specific migration.
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 CREATE SCHEMA IF NOT EXISTS market;
 CREATE SCHEMA IF NOT EXISTS execution;
