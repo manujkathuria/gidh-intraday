@@ -2,10 +2,10 @@
 
 Day 0 foundation for an AI-native Indian intraday research system.
 
-The repository currently contains only the market-data batch kernel. It builds
-and repairs the canonical TimescaleDB market history and its daily and
-one-minute derived features. A new API, frontend, live ingestion path, and AI
-runtime will be built separately on this published data contract.
+The repository currently contains the market-data batch kernel and a minimal,
+read-only local API. The batch process builds and repairs canonical TimescaleDB
+market history and daily/one-minute derived features; the API exposes only
+backend-certified data for the future UI and AI runtime.
 
 ## Commands
 
@@ -19,6 +19,17 @@ make features    # publish the current daily baseline
 make integrity   # repair a closed session only when backend marks it non-ready
 make test
 ```
+
+Start the local read API with:
+
+```bash
+cd backend && go run ./cmd/gidh-api
+```
+
+It listens on `127.0.0.1:8080` by default (`GIDH_API_ADDR` overrides this) and
+provides `GET /healthz`, `GET /v1/market/universe`,
+`GET /v1/market/sessions`, `GET /v1/market/daily-features?session_date=YYYY-MM-DD`,
+and `GET /v1/market/intraday-features?session_date=YYYY-MM-DD&symbol=SYMBOL`.
 
 For the operating contract and schema ownership, start with
 [ai-docs/INDEX.md](ai-docs/INDEX.md).
