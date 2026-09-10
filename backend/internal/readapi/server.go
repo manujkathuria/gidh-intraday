@@ -18,7 +18,21 @@ func NewServer(reader MarketReader) http.Handler {
 	mux.HandleFunc("GET /v1/market/sessions", s.sessions)
 	mux.HandleFunc("GET /v1/market/daily-features", s.dailyFeatures)
 	mux.HandleFunc("GET /v1/market/intraday-features", s.intradayFeatures)
+	mux.HandleFunc("GET /v1/ai/daily-focus", s.dailyFocus)
 	return mux
+}
+
+func (s *Server) dailyFocus(w http.ResponseWriter, r *http.Request) {
+	date, ok := sessionDate(w, r)
+	if !ok {
+		return
+	}
+	items, err := s.reader.DailyFocus(r.Context(), date)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "query_failed", "AI research data could not be read")
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
 }
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {

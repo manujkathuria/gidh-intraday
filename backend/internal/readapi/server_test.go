@@ -24,6 +24,9 @@ func (f *fakeReader) IntradayFeatures(_ context.Context, date, symbol string, li
 	f.intradayDate, f.intradaySymbol, f.intradayLimit = date, symbol, limit
 	return []IntradayFeature{}, nil
 }
+func (f *fakeReader) DailyFocus(context.Context, string) ([]DailyFocusItem, error) {
+	return []DailyFocusItem{}, nil
+}
 
 func TestDailyFeaturesRequiresValidSessionDate(t *testing.T) {
 	h := NewServer(&fakeReader{})

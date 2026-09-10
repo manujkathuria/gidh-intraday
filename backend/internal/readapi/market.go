@@ -79,12 +79,51 @@ type IntradayFeature struct {
 	FutureIsComplete      bool      `json:"future_is_complete"`
 }
 
+type DailyFocusItem struct {
+	FocusListID    string    `json:"focus_list_id"`
+	SessionDate    string    `json:"session_date"`
+	FeatureRunID   string    `json:"feature_run_id"`
+	PolicyVersion  string    `json:"policy_version"`
+	PublishedAt    time.Time `json:"published_at"`
+	Symbol         string    `json:"symbol"`
+	Rank           int       `json:"rank"`
+	State          string    `json:"state"`
+	AttentionScore float64   `json:"attention_score"`
+}
+
 type MarketReader interface {
 	Ping(context.Context) error
 	Universe(context.Context) ([]UniverseItem, error)
 	Sessions(context.Context) ([]Session, error)
 	DailyFeatures(context.Context, string) ([]DailyFeature, error)
 	IntradayFeatures(context.Context, string, string, int) ([]IntradayFeature, error)
+	DailyFocus(context.Context, string) ([]DailyFocusItem, error)
+}
+
+func (r *Repository) DailyFocus(ctx context.Context, sessionDate string) ([]DailyFocusItem, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT l.id::text, l.session_date::text, l.feature_run_id::text, run.policy_version, l.published_at,
+			i.symbol, item.rank, item.state, item.attention_score
+		FROM ai.daily_focus_lists l
+		JOIN ai.research_runs run ON run.id = l.research_run_id AND run.status = 'SUCCEEDED'
+		JOIN ai.daily_focus_list_items item ON item.focus_list_id = l.id
+		JOIN market.instruments i ON i.id = item.instrument_id
+		WHERE l.session_date = $1::date AND l.status = 'PUBLISHED'
+		ORDER BY l.published_at DESC, item.rank ASC;
+	`, sessionDate)
+	if err != nil {
+		return nil, fmt.Errorf("query daily focus: %w", err)
+	}
+	defer rows.Close()
+	items := []DailyFocusItem{}
+	for rows.Next() {
+		var item DailyFocusItem
+		if err := rows.Scan(&item.FocusListID, &item.SessionDate, &item.FeatureRunID, &item.PolicyVersion, &item.PublishedAt, &item.Symbol, &item.Rank, &item.State, &item.AttentionScore); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }
 
 type Repository struct{ db *store.DB }
