@@ -27,6 +27,12 @@ func (f *fakeReader) IntradayFeatures(_ context.Context, date, symbol string, li
 func (f *fakeReader) DailyFocus(context.Context, string) ([]DailyFocusItem, error) {
 	return []DailyFocusItem{}, nil
 }
+func (f *fakeReader) ReplaySnapshot(context.Context, string, string) (*ReplaySnapshotResponse, error) {
+	return &ReplaySnapshotResponse{}, nil
+}
+func (f *fakeReader) ReplayCandles(context.Context, string, string, string) ([]ReplayCandle, error) {
+	return []ReplayCandle{}, nil
+}
 
 func TestDailyFeaturesRequiresValidSessionDate(t *testing.T) {
 	h := NewServer(&fakeReader{})

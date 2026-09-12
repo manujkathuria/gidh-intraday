@@ -21,6 +21,9 @@ smallest correct change, and verify the result.
 When `gidh-forge` is available, use it to reduce exploration context. It is an
 optional sidecar: it never replaces this project contract or normal tools.
 
+- At the start of every coding or investigation task, run `gidh-forge -h`.
+  Treat its current command list and descriptions as the source of truth; do
+  not rely solely on this guidance or on remembered command syntax.
 - Start a non-trivial unfamiliar task with `gidh-forge map` to see code
   ownership and filesystem context.
 - Use `gidh-forge search "<hypothesis>"` when the implementation point is
@@ -29,7 +32,9 @@ optional sidecar: it never replaces this project contract or normal tools.
 - Before changing a shared symbol, use `impact <symbol>` and, where supported,
   `trace <symbol>`. Treat unresolved or text-only results as leads, not proof.
 - After changes, use `diff` to review semantic ownership and `check` for
-  syntax. Use `check --strict` when Tree-Sitter coverage is required.
+  syntax. `check` is not a compiler or typechecker: also run the project's
+  compiler/typechecker (for example, `tsc`, `go build`, or the project build).
+  Use `check --strict` when Tree-Sitter coverage is required.
 - Use `gidh-forge changed` for a quick summary of modified and untracked files.
 - Use `gidh-forge review` for a composite pre-commit report (diff + check +
   blast radius).

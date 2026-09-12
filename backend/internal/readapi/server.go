@@ -19,7 +19,64 @@ func NewServer(reader MarketReader) http.Handler {
 	mux.HandleFunc("GET /v1/market/daily-features", s.dailyFeatures)
 	mux.HandleFunc("GET /v1/market/intraday-features", s.intradayFeatures)
 	mux.HandleFunc("GET /v1/ai/daily-focus", s.dailyFocus)
-	return mux
+	mux.HandleFunc("GET /v1/replay/snapshot", s.replaySnapshot)
+	mux.HandleFunc("GET /v1/replay/candles", s.replayCandles)
+
+	return withCORS(mux)
+}
+
+func withCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Server) replaySnapshot(w http.ResponseWriter, r *http.Request) {
+	date, ok := sessionDate(w, r)
+	if !ok {
+		return
+	}
+	asOfTime := strings.TrimSpace(r.URL.Query().Get("time"))
+	if asOfTime == "" {
+		asOfTime = "09:30:00"
+	}
+
+	snapshot, err := s.reader.ReplaySnapshot(r.Context(), date, asOfTime)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "query_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, snapshot)
+}
+
+func (s *Server) replayCandles(w http.ResponseWriter, r *http.Request) {
+	date, ok := sessionDate(w, r)
+	if !ok {
+		return
+	}
+	symbol := strings.TrimSpace(r.URL.Query().Get("symbol"))
+	if symbol == "" {
+		writeError(w, http.StatusBadRequest, "invalid_query", "symbol is required")
+		return
+	}
+	toTime := strings.TrimSpace(r.URL.Query().Get("to_time"))
+	if toTime == "" {
+		toTime = "15:30:00"
+	}
+
+	candles, err := s.reader.ReplayCandles(r.Context(), date, symbol, toTime)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "query_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, candles)
 }
 
 func (s *Server) dailyFocus(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +99,7 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
+
 func (s *Server) universe(w http.ResponseWriter, r *http.Request) {
 	items, err := s.reader.Universe(r.Context())
 	if err != nil {
@@ -50,6 +108,7 @@ func (s *Server) universe(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, items)
 }
+
 func (s *Server) sessions(w http.ResponseWriter, r *http.Request) {
 	items, err := s.reader.Sessions(r.Context())
 	if err != nil {
@@ -113,6 +172,7 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
 }
+
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	writeJSON(w, status, map[string]any{"error": map[string]string{"code": code, "message": message}})
 }

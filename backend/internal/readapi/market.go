@@ -98,6 +98,8 @@ type MarketReader interface {
 	DailyFeatures(context.Context, string) ([]DailyFeature, error)
 	IntradayFeatures(context.Context, string, string, int) ([]IntradayFeature, error)
 	DailyFocus(context.Context, string) ([]DailyFocusItem, error)
+	ReplaySnapshot(ctx context.Context, sessionDate, asOfTime string) (*ReplaySnapshotResponse, error)
+	ReplayCandles(ctx context.Context, sessionDate, symbol, toTime string) ([]ReplayCandle, error)
 }
 
 func (r *Repository) DailyFocus(ctx context.Context, sessionDate string) ([]DailyFocusItem, error) {
