@@ -12,6 +12,9 @@ help:
 	@echo "  make integrity  Run EOD repair when backend has not published READY"
 	@echo "  make test       Run batch-kernel tests"
 
+lab:
+	@cd analysis && ./.venv/bin/streamlit run app.py --server.port 8501
+
 api:
 	@cd backend && go run ./cmd/gidh-api
 
