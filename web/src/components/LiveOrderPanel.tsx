@@ -3,12 +3,8 @@
 import React, { useEffect } from "react";
 import { useLiveOrderStore } from "@/stores/liveOrderStore";
 import {
-  Activity,
   ShieldCheck,
-  TrendingUp,
-  TrendingDown,
   XCircle,
-  AlertCircle,
   Zap,
 } from "lucide-react";
 
@@ -39,19 +35,11 @@ export const LiveOrderPanel: React.FC = () => {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
-              <span
-                className={`animate-ping absolute inline-flex h-full w-full rounded-full ${
-                  isConnected ? "bg-emerald-400 opacity-75" : "bg-rose-400 opacity-75"
-                }`}
-              />
-              <span
-                className={`relative inline-flex rounded-full h-2 w-2 ${
-                  isConnected ? "bg-emerald-500" : "bg-rose-500"
-                }`}
-              />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-foreground opacity-40" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-foreground" />
             </span>
             <span className="text-xs font-black tracking-wider uppercase text-foreground/80 flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              <Zap className="w-3.5 h-3.5" />
               LIVE ORDER MANAGER (5 SLOTS · ₹50,000 POOL)
             </span>
           </div>
@@ -64,13 +52,7 @@ export const LiveOrderPanel: React.FC = () => {
         {/* Aggregate Real-Time P&L */}
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-foreground/50 uppercase font-bold">Total Live P&L:</span>
-          <span
-            className={`text-sm font-black px-2 py-0.5 rounded border ${
-              totalPnLINR >= 0
-                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                : "bg-rose-500/10 text-rose-500 border-rose-500/30"
-            }`}
-          >
+          <span className="text-sm font-black px-2 py-0.5 rounded border border-surface-border bg-surface-muted text-foreground">
             {totalPnLINR >= 0 ? "+" : ""}₹{totalPnLINR.toFixed(2)}
           </span>
         </div>
@@ -82,18 +64,14 @@ export const LiveOrderPanel: React.FC = () => {
           const isLong = pos.side === "LONG";
           const isProfit = pos.pnl_inr >= 0;
 
-          // Milestone Stop Floor Label
+          // Milestone Stop Floor Label (Monochrome)
           let stopBadge = "SL -1.50% (HARD)";
-          let stopBadgeColor = "text-foreground/50 border-surface-border";
           if (pos.stop_floor_pct >= 2.5) {
-            stopBadge = "🔒 +2.50% PROFIT LOCKED";
-            stopBadgeColor = "text-emerald-400 border-emerald-500/40 bg-emerald-500/10";
+            stopBadge = "🔒 +2.50% LOCKED";
           } else if (pos.stop_floor_pct >= 1.0) {
-            stopBadge = "🔒 +1.00% PROFIT LOCKED";
-            stopBadgeColor = "text-emerald-400 border-emerald-500/40 bg-emerald-500/10";
+            stopBadge = "🔒 +1.00% LOCKED";
           } else if (pos.stop_floor_pct >= 0.0) {
-            stopBadge = "🛡️ 0.00% BREAKEVEN LOCKED";
-            stopBadgeColor = "text-amber-400 border-amber-500/40 bg-amber-500/10";
+            stopBadge = "🛡️ 0.00% BREAKEVEN";
           }
 
           return (
@@ -110,8 +88,8 @@ export const LiveOrderPanel: React.FC = () => {
                   <span
                     className={`text-[9px] font-black px-1.5 py-0.2 rounded ${
                       isLong
-                        ? "bg-emerald-500 text-background"
-                        : "bg-rose-500 text-background"
+                        ? "bg-foreground text-background"
+                        : "border border-foreground/40 text-foreground"
                     }`}
                   >
                     {pos.side}
@@ -125,7 +103,7 @@ export const LiveOrderPanel: React.FC = () => {
                     }
                   }}
                   title="Square Off Position"
-                  className="text-foreground/40 hover:text-rose-500 transition-colors"
+                  className="text-foreground/40 hover:text-foreground transition-colors"
                 >
                   <XCircle className="w-4 h-4" />
                 </button>
@@ -145,14 +123,10 @@ export const LiveOrderPanel: React.FC = () => {
               <div className="flex items-center justify-between pt-1 border-t border-surface-border">
                 <span className="text-[10px] text-foreground/40 font-bold">P&L:</span>
                 <div className="flex items-center gap-1 font-bold">
-                  <span className={isProfit ? "text-emerald-500" : "text-rose-500"}>
+                  <span className="text-foreground">
                     {isProfit ? "+" : ""}₹{pos.pnl_inr.toFixed(2)}
                   </span>
-                  <span
-                    className={`text-[10px] ${
-                      isProfit ? "text-emerald-500" : "text-rose-500"
-                    }`}
-                  >
+                  <span className="text-[10px] text-foreground/60">
                     ({isProfit ? "+" : ""}{pos.pnl_pct.toFixed(2)}%)
                   </span>
                 </div>
@@ -160,9 +134,7 @@ export const LiveOrderPanel: React.FC = () => {
 
               {/* Trailing Stop Floor Badge */}
               <div className="pt-0.5">
-                <span
-                  className={`block text-[9px] text-center font-bold px-1.5 py-0.5 rounded border ${stopBadgeColor}`}
-                >
+                <span className="block text-[9px] text-center font-bold px-1.5 py-0.5 rounded border border-surface-border bg-surface text-foreground/80">
                   {stopBadge}
                 </span>
               </div>

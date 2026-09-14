@@ -141,7 +141,7 @@ export const HeaderControls: React.FC = () => {
 
           <div className="h-4 w-px bg-surface-border" />
 
-          {/* Navigation Menu */}
+          {/* Navigation Menu (Monochrome) */}
           <nav className="flex items-center gap-1 font-mono text-xs">
             <Link
               href="/"
@@ -184,19 +184,17 @@ export const HeaderControls: React.FC = () => {
               href="/positions"
               className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${
                 pathname === "/positions"
-                  ? "bg-emerald-500 text-black font-black border-emerald-500 shadow-sm"
-                  : "bg-surface-muted border-surface-border text-foreground/70 hover:text-foreground hover:bg-surface-hover"
+                  ? "bg-foreground text-background font-bold border-foreground shadow-sm"
+                  : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
               }`}
             >
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span>Positions & Orders</span>
+              <Zap className="w-3.5 h-3.5" />
+              <span>Positions</span>
               <span
-                className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                className={`text-[10px] font-mono px-1.5 py-0.2 rounded border ${
                   pathname === "/positions"
-                    ? "bg-black text-white"
-                    : activeCount > 0
-                    ? "bg-emerald-500 text-black font-black"
-                    : "bg-surface-border text-foreground/60"
+                    ? "bg-background text-foreground border-background"
+                    : "bg-surface border-surface-border text-foreground/70"
                 }`}
               >
                 {activeCount}/5
@@ -207,26 +205,17 @@ export const HeaderControls: React.FC = () => {
 
         {/* Right: Mode Switcher, Date/Market Breadth & Theme Switcher */}
         <div className="flex items-center gap-3">
-          {/* Mode Switcher: LIVE vs REPLAY */}
-          <div className="flex items-center bg-surface-muted border border-surface-border rounded p-0.5 font-mono text-xs shadow-inner">
+          {/* Mode Switcher: LIVE vs REPLAY (Pure Monochrome) */}
+          <div className="flex items-center bg-surface-muted border border-surface-border rounded p-0.5 font-mono text-xs">
             <button
               onClick={() => setMode("LIVE")}
               className={`px-2.5 py-1 rounded flex items-center gap-1.5 font-bold transition text-xs ${
                 mode === "LIVE"
-                  ? "bg-emerald-500 text-black shadow-sm font-black"
-                  : "text-foreground/60 hover:text-foreground"
+                  ? "bg-foreground text-background shadow-sm font-black"
+                  : "text-foreground/50 hover:text-foreground"
               }`}
             >
-              <span className="relative flex h-2 w-2">
-                {mode === "LIVE" && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-black opacity-50" />
-                )}
-                <span
-                  className={`relative inline-flex rounded-full h-2 w-2 ${
-                    mode === "LIVE" ? "bg-black" : "bg-emerald-500"
-                  }`}
-                />
-              </span>
+              <Radio className="w-3 h-3" />
               <span>LIVE</span>
             </button>
             <button
@@ -234,7 +223,7 @@ export const HeaderControls: React.FC = () => {
               className={`px-2.5 py-1 rounded flex items-center gap-1.5 font-bold transition text-xs ${
                 mode === "REPLAY"
                   ? "bg-foreground text-background shadow-sm font-black"
-                  : "text-foreground/60 hover:text-foreground"
+                  : "text-foreground/50 hover:text-foreground"
               }`}
             >
               <RotateCcw className="w-3 h-3" />
@@ -289,24 +278,24 @@ export const HeaderControls: React.FC = () => {
 
       {/* ROW 2: Stream Status (LIVE) vs Timeline Scrubber (REPLAY) */}
       {mode === "LIVE" ? (
-        <div className="px-5 py-1.5 bg-surface-muted/30 flex items-center justify-between text-xs font-mono">
+        <div className="px-5 py-1.5 bg-surface-muted/20 flex items-center justify-between text-xs font-mono">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-foreground opacity-40" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-foreground" />
               </span>
               <span className="font-bold text-foreground">LIVE STREAM ACTIVE</span>
             </div>
-            <span className="text-foreground/40">•</span>
-            <span className="text-foreground/60">210 F&O Universe 1-Min Batch Poller</span>
-            <span className="text-foreground/40">•</span>
-            <span className="text-foreground/60">5-Slot MIS Leveraged Live Order Manager</span>
+            <span className="text-foreground/30">•</span>
+            <span className="text-foreground/50">210 F&O Universe 1-Min Batch Poller</span>
+            <span className="text-foreground/30">•</span>
+            <span className="text-foreground/50">5-Slot MIS Live Order Manager</span>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-surface border border-surface-border rounded">
-              <Clock className="w-3 h-3 text-emerald-500" />
+              <Clock className="w-3 h-3 text-foreground/60" />
               <span className="font-bold text-foreground">{liveClock || "09:15:00"} IST</span>
             </div>
           </div>

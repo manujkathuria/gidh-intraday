@@ -16,11 +16,8 @@ import {
   RefreshCw,
   LineChart,
   Activity,
-  AlertTriangle,
-  Lock,
   Shield,
   Clock,
-  ArrowRight,
 } from "lucide-react";
 
 export default function PositionsPage() {
@@ -110,21 +107,15 @@ export default function PositionsPage() {
       <HeaderControls />
 
       <div className="w-full px-6 py-5 flex-1 flex flex-col gap-5 max-w-7xl mx-auto">
-        {/* Top War Room Hero Stats Matrix */}
+        {/* Top War Room Hero Stats Matrix (Monochrome) */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Metric 1: Total Real-Time P&L */}
-          <div className="bg-surface border border-surface-border rounded-xl p-4 flex flex-col justify-between shadow-sm relative overflow-hidden">
+          <div className="bg-surface border border-surface-border rounded-xl p-4 flex flex-col justify-between shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-bold text-foreground/50 uppercase tracking-wider">
                 Total Live P&L
               </span>
-              <span
-                className={`p-1.5 rounded-md ${
-                  totalPnLINR >= 0
-                    ? "bg-emerald-500/10 text-emerald-500"
-                    : "bg-rose-500/10 text-rose-500"
-                }`}
-              >
+              <span className="p-1.5 rounded-md bg-surface-muted text-foreground/70 border border-surface-border">
                 {totalPnLINR >= 0 ? (
                   <TrendingUp className="w-4 h-4" />
                 ) : (
@@ -134,11 +125,7 @@ export default function PositionsPage() {
             </div>
 
             <div className="mt-2 flex items-baseline gap-2 font-mono">
-              <span
-                className={`text-2xl font-black tracking-tight ${
-                  totalPnLINR >= 0 ? "text-emerald-500" : "text-rose-500"
-                }`}
-              >
+              <span className="text-2xl font-black tracking-tight text-foreground">
                 {totalPnLINR >= 0 ? "+" : ""}₹{totalPnLINR.toFixed(2)}
               </span>
               <span className="text-xs text-foreground/50">
@@ -167,7 +154,7 @@ export default function PositionsPage() {
               <span className="text-xs font-mono font-bold text-foreground/50 uppercase tracking-wider">
                 Margin Utilization
               </span>
-              <span className="text-[11px] font-mono font-black px-2 py-0.5 rounded bg-surface-muted border border-surface-border text-foreground">
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-surface-muted border border-surface-border text-foreground">
                 {usedSlots} / 5 Slots
               </span>
             </div>
@@ -185,7 +172,7 @@ export default function PositionsPage() {
             <div className="mt-2 pt-2 border-t border-surface-border flex flex-col gap-1">
               <div className="w-full bg-surface-muted h-1.5 rounded-full overflow-hidden">
                 <div
-                  className="bg-emerald-500 h-full rounded-full transition-all"
+                  className="bg-foreground h-full rounded-full transition-all"
                   style={{ width: `${(usedSlots / 5) * 100}%` }}
                 />
               </div>
@@ -202,7 +189,7 @@ export default function PositionsPage() {
               <span className="text-xs font-mono font-bold text-foreground/50 uppercase tracking-wider">
                 Gross MIS Exposure
               </span>
-              <span className="text-[11px] font-mono font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/30">
+              <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-surface-muted border border-surface-border text-foreground/80">
                 5x LEVERAGE
               </span>
             </div>
@@ -217,8 +204,8 @@ export default function PositionsPage() {
             </div>
 
             <div className="mt-2 pt-2 border-t border-surface-border flex items-center justify-between text-[11px] font-mono text-foreground/50">
-              <span>Risk Ceiling</span>
-              <span className="font-bold text-rose-500">
+              <span>Risk Floor</span>
+              <span className="font-bold text-foreground">
                 -₹750 SL (-1.5% stock)
               </span>
             </div>
@@ -241,16 +228,8 @@ export default function PositionsPage() {
 
             <div className="mt-2 flex items-center gap-2 font-mono">
               <span className="relative flex h-2.5 w-2.5">
-                <span
-                  className={`animate-ping absolute inline-flex h-full w-full rounded-full ${
-                    isConnected ? "bg-emerald-400 opacity-75" : "bg-rose-400 opacity-75"
-                  }`}
-                />
-                <span
-                  className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                    isConnected ? "bg-emerald-500" : "bg-rose-500"
-                  }`}
-                />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-foreground opacity-40" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-foreground" />
               </span>
               <span className="text-base font-black text-foreground">
                 {isConnected ? "ZERODHA CONNECTED" : "OFFLINE"}
@@ -267,7 +246,7 @@ export default function PositionsPage() {
         {/* Section Header & Order Action Button */}
         <div className="flex items-center justify-between font-mono">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-amber-500" />
+            <Zap className="w-4 h-4 text-foreground/70" />
             <h2 className="text-sm font-black uppercase tracking-wider text-foreground">
               Active Trade Slots (5 Max)
             </h2>
@@ -287,7 +266,7 @@ export default function PositionsPage() {
           </button>
         </div>
 
-        {/* 5 Fixed Slots Grid */}
+        {/* 5 Fixed Slots Grid (Monochrome) */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5 font-mono">
           {Array.from({ length: 5 }).map((_, slotIndex) => {
             const pos = positionsList[slotIndex];
@@ -296,28 +275,20 @@ export default function PositionsPage() {
               const isLong = pos.side === "LONG";
               const isProfit = pos.pnl_inr >= 0;
 
-              // Trailing Stop Badge logic
+              // Trailing Stop Badge logic in Monochrome
               let stopBadge = "SL -1.50% (HARD)";
-              let stopBadgeColor =
-                "text-foreground/60 border-surface-border bg-surface-muted";
               if (pos.stop_floor_pct >= 2.5) {
-                stopBadge = "🔒 +2.50% PROFIT LOCKED";
-                stopBadgeColor =
-                  "text-emerald-400 border-emerald-500/40 bg-emerald-500/10";
+                stopBadge = "🔒 +2.50% LOCKED";
               } else if (pos.stop_floor_pct >= 1.0) {
-                stopBadge = "🔒 +1.00% PROFIT LOCKED";
-                stopBadgeColor =
-                  "text-emerald-400 border-emerald-500/40 bg-emerald-500/10";
+                stopBadge = "🔒 +1.00% LOCKED";
               } else if (pos.stop_floor_pct >= 0.0) {
-                stopBadge = "🛡️ 0.00% BREAKEVEN LOCKED";
-                stopBadgeColor =
-                  "text-amber-400 border-amber-500/40 bg-amber-500/10";
+                stopBadge = "🛡️ 0.00% BREAKEVEN";
               }
 
               return (
                 <div
                   key={pos.symbol}
-                  className="bg-surface border-2 border-surface-border rounded-xl p-4 flex flex-col justify-between gap-3 shadow-md relative overflow-hidden"
+                  className="bg-surface border-2 border-surface-border rounded-xl p-4 flex flex-col justify-between gap-3 shadow-sm relative overflow-hidden"
                 >
                   {/* Slot Header */}
                   <div className="flex items-center justify-between">
@@ -328,8 +299,8 @@ export default function PositionsPage() {
                       <span
                         className={`text-[10px] font-black px-2 py-0.5 rounded ${
                           isLong
-                            ? "bg-emerald-500 text-black"
-                            : "bg-rose-500 text-black"
+                            ? "bg-foreground text-background"
+                            : "border border-foreground/40 text-foreground"
                         }`}
                       >
                         {pos.side}
@@ -347,7 +318,7 @@ export default function PositionsPage() {
                         }
                       }}
                       title="Square off position unconditionally"
-                      className="p-1 rounded text-foreground/40 hover:text-rose-500 hover:bg-rose-500/10 transition"
+                      className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-surface-hover transition"
                     >
                       <XCircle className="w-5 h-5" />
                     </button>
@@ -391,11 +362,7 @@ export default function PositionsPage() {
                       <span className="text-[10px] text-foreground/50 uppercase font-bold">
                         P&L
                       </span>
-                      <div
-                        className={`text-sm font-black ${
-                          isProfit ? "text-emerald-500" : "text-rose-500"
-                        }`}
-                      >
+                      <div className="text-sm font-black text-foreground">
                         {isProfit ? "+" : ""}₹{pos.pnl_inr.toFixed(2)} (
                         {isProfit ? "+" : ""}
                         {pos.pnl_pct.toFixed(2)}%)
@@ -411,9 +378,7 @@ export default function PositionsPage() {
                   </div>
 
                   {/* Trailing Stop Badge */}
-                  <div
-                    className={`text-[9px] text-center font-bold px-2 py-1 rounded border ${stopBadgeColor}`}
-                  >
+                  <div className="text-[9px] text-center font-bold px-2 py-1 rounded border border-surface-border bg-surface-muted text-foreground/80">
                     {stopBadge}
                   </div>
 
@@ -429,7 +394,7 @@ export default function PositionsPage() {
 
                     <button
                       onClick={() => squareOff(pos.symbol)}
-                      className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-500 border border-rose-500/30 hover:bg-rose-500 hover:text-white transition"
+                      className="text-[10px] font-bold px-2 py-0.5 rounded border border-surface-border text-foreground hover:bg-surface-hover transition"
                     >
                       Square Off
                     </button>
@@ -472,7 +437,7 @@ export default function PositionsPage() {
         {/* Brain Risk Rules & Execution Guidelines */}
         <div className="mt-3 bg-surface border border-surface-border rounded-xl p-5 font-mono text-xs">
           <div className="flex items-center gap-2 mb-3">
-            <Shield className="w-4 h-4 text-emerald-500" />
+            <Shield className="w-4 h-4 text-foreground/70" />
             <h3 className="text-xs font-black uppercase tracking-wider text-foreground">
               Live Operating Brain Execution & Exit Protocol
             </h3>
@@ -514,13 +479,13 @@ export default function PositionsPage() {
         </div>
       </div>
 
-      {/* Quick Order Dispatch Modal */}
+      {/* Quick Order Dispatch Modal (Monochrome) */}
       {showOrderModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-surface border border-surface-border rounded-2xl w-full max-w-lg p-6 shadow-2xl font-mono flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-surface-border pb-3">
               <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-amber-500" />
+                <Zap className="w-4 h-4 text-foreground" />
                 <h3 className="text-sm font-black text-foreground uppercase tracking-wider">
                   Dispatch Live MIS Order (₹10k Slot)
                 </h3>
@@ -545,7 +510,7 @@ export default function PositionsPage() {
                     onClick={() => setOrderSide("LONG")}
                     className={`py-2 rounded-lg font-black transition border ${
                       orderSide === "LONG"
-                        ? "bg-emerald-500 text-black border-emerald-500 shadow-sm"
+                        ? "bg-foreground text-background border-foreground shadow-sm"
                         : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground"
                     }`}
                   >
@@ -556,7 +521,7 @@ export default function PositionsPage() {
                     onClick={() => setOrderSide("SHORT")}
                     className={`py-2 rounded-lg font-black transition border ${
                       orderSide === "SHORT"
-                        ? "bg-rose-500 text-black border-rose-500 shadow-sm"
+                        ? "bg-foreground text-background border-foreground shadow-sm"
                         : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground"
                     }`}
                   >
@@ -601,13 +566,7 @@ export default function PositionsPage() {
                       </div>
                       <div className="flex items-center gap-2 text-[11px]">
                         <span>₹{item.price.toFixed(2)}</span>
-                        <span
-                          className={
-                            item.move_pct >= 0
-                              ? "text-emerald-500 font-bold"
-                              : "text-rose-500 font-bold"
-                          }
-                        >
+                        <span className="font-bold">
                           {item.move_pct >= 0 ? "+" : ""}
                           {item.move_pct.toFixed(2)}%
                         </span>
@@ -651,7 +610,7 @@ export default function PositionsPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>Initial Risk:</span>
-                  <span className="font-bold text-rose-500">-1.50% (-₹750 SL Floor)</span>
+                  <span className="font-bold text-foreground">-1.50% (-₹750 SL Floor)</span>
                 </div>
               </div>
 
@@ -667,7 +626,7 @@ export default function PositionsPage() {
                 <button
                   type="submit"
                   disabled={!selectedSymbol || submittingOrder}
-                  className="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-black transition disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-lg bg-foreground hover:bg-foreground/90 text-background font-black transition disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {submittingOrder ? (
                     <>
