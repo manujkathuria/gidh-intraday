@@ -6,12 +6,33 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gidh-intraday/backend/internal/ordermanager"
 )
 
-type Server struct{ reader MarketReader }
+type Server struct {
+	reader       MarketReader
+	orderManager *ordermanager.Manager
+	orderStore   *ordermanager.RedisOrderStore
+	wsHub        *ordermanager.WSHub
+}
 
 func NewServer(reader MarketReader) http.Handler {
-	s := &Server{reader: reader}
+	return NewServerWithOrders(reader, nil, nil, nil)
+}
+
+func NewServerWithOrders(
+	reader MarketReader,
+	om *ordermanager.Manager,
+	os *ordermanager.RedisOrderStore,
+	hub *ordermanager.WSHub,
+) http.Handler {
+	s := &Server{
+		reader:       reader,
+		orderManager: om,
+		orderStore:   os,
+		wsHub:        hub,
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /v1/market/universe", s.universe)
@@ -22,6 +43,12 @@ func NewServer(reader MarketReader) http.Handler {
 	mux.HandleFunc("GET /v1/replay/snapshot", s.replaySnapshot)
 	mux.HandleFunc("GET /v1/replay/candles", s.replayCandles)
 	mux.HandleFunc("GET /v1/replay/ws", s.replayWebSocket)
+
+	// Live Orders & Positions
+	mux.HandleFunc("GET /v1/live/orders", s.liveOrders)
+	mux.HandleFunc("POST /v1/live/orders", s.createLiveOrder)
+	mux.HandleFunc("POST /v1/live/orders/square-off", s.squareOffLiveOrder)
+	mux.HandleFunc("GET /v1/live/orders/ws", s.liveOrdersWebSocket)
 
 	return withCORS(mux)
 }
