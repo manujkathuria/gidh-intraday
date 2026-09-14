@@ -47,7 +47,7 @@ func (c *RedisCache) GetSnapshot(ctx context.Context, sessionDate, asOfTime stri
 		return nil, false
 	}
 
-	key := fmt.Sprintf("gidh:replay:snapshot:%s:%s", sessionDate, asOfTime)
+	key := fmt.Sprintf("gidh-intraday:replay:snapshot:%s:%s", sessionDate, asOfTime)
 	val, err := c.client.Get(ctx, key).Bytes()
 	if err != nil {
 		return nil, false
@@ -65,7 +65,7 @@ func (c *RedisCache) SetSnapshot(ctx context.Context, sessionDate, asOfTime stri
 		return
 	}
 
-	key := fmt.Sprintf("gidh:replay:snapshot:%s:%s", sessionDate, asOfTime)
+	key := fmt.Sprintf("gidh-intraday:replay:snapshot:%s:%s", sessionDate, asOfTime)
 	data, err := json.Marshal(res)
 	if err != nil {
 		return
@@ -86,14 +86,14 @@ func (c *RedisCache) SetDaySnapshots(ctx context.Context, sessionDate string, sn
 
 	pipe := c.client.Pipeline()
 	for asOfTime, snap := range snapshots {
-		key := fmt.Sprintf("gidh:replay:snapshot:%s:%s", sessionDate, asOfTime)
+		key := fmt.Sprintf("gidh-intraday:replay:snapshot:%s:%s", sessionDate, asOfTime)
 		data, err := json.Marshal(snap)
 		if err != nil {
 			continue
 		}
 		pipe.Set(ctx, key, data, 2*time.Hour)
 	}
-	pipe.Set(ctx, fmt.Sprintf("gidh:replay:day:%s:warmed", sessionDate), "1", 2*time.Hour)
+	pipe.Set(ctx, fmt.Sprintf("gidh-intraday:replay:day:%s:warmed", sessionDate), "1", 2*time.Hour)
 	_, err := pipe.Exec(ctx)
 	return err
 }
@@ -102,7 +102,7 @@ func (c *RedisCache) IsDayWarmed(ctx context.Context, sessionDate string) bool {
 	if c.client == nil {
 		return false
 	}
-	key := fmt.Sprintf("gidh:replay:day:%s:warmed", sessionDate)
+	key := fmt.Sprintf("gidh-intraday:replay:day:%s:warmed", sessionDate)
 	val, err := c.client.Get(ctx, key).Result()
 	return err == nil && val == "1"
 }

@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	KeyLivePositions = "gidh:live:positions:active"
-	KeyLiveOrders    = "gidh:live:orders:active"
-	KeyLiveWSTokens  = "gidh:live:ws:tokens"
-	KeyLiveRiskState = "gidh:live:risk"
-	KeyLiveEvents    = "gidh:live:events"
+	KeyLivePositions = "gidh-intraday:live:positions:active"
+	KeyLiveOrders    = "gidh-intraday:live:orders:active"
+	KeyLiveWSTokens  = "gidh-intraday:live:ws:tokens"
+	KeyLiveRiskState = "gidh-intraday:live:risk"
+	KeyLiveEvents    = "gidh-intraday:live:events"
 )
 
 type RedisOrderStore struct {

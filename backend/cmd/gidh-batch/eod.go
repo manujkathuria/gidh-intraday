@@ -100,7 +100,7 @@ func runEODPipeline(args []string) {
 
 	// 5. Redis Replay Pre-Warming
 	if !*skipWarm {
-		fmt.Printf("[5/5] Pre-warming Replay snapshots into Redis (gidh:replay:*)...\n")
+		fmt.Printf("[5/5] Pre-warming Replay snapshots into Redis (gidh-intraday:replay:*)...\n")
 		warmStart := time.Now()
 
 		redisAddr := os.Getenv("REDIS_ADDR")
@@ -129,6 +129,6 @@ func runEODPipeline(args []string) {
 	fmt.Println("==================================================================")
 	fmt.Printf(" EOD PIPELINE COMPLETE (Total time: %v)\n", time.Since(startTotal))
 	fmt.Println(" • TimescaleDB: market.cash_candles_1m & intraday_features_1m verified")
-	fmt.Println(" • Redis Cache: gidh:replay:snapshot:* primed for instantaneous replay")
+	fmt.Println(" • Redis Cache: gidh-intraday:replay:snapshot:* primed for instantaneous replay")
 	fmt.Println("==================================================================")
 }
