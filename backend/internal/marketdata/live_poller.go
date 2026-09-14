@@ -27,7 +27,7 @@ func NewLivePoller(
 	interval time.Duration,
 ) *LivePoller {
 	if interval <= 0 {
-		interval = 30 * time.Second
+		interval = 60 * time.Second
 	}
 	return &LivePoller{
 		kiteClient:     kc,

@@ -18,7 +18,7 @@ import (
 
 func runLiveIngestion(args []string) {
 	flags := flag.NewFlagSet("live", flag.ExitOnError)
-	intervalSec := flags.Int("interval", 30, "polling interval in seconds for universe REST quotes")
+	intervalSec := flags.Int("interval", 60, "polling interval in seconds for universe REST quotes (1 minute)")
 	_ = flags.Parse(args)
 
 	ctx, cancel := context.WithCancel(context.Background())
