@@ -21,6 +21,7 @@ import {
   CandlestickChart as ChartIcon,
   Radio,
   Zap,
+  Brain,
 } from "lucide-react";
 
 export const HeaderControls: React.FC = () => {
@@ -177,6 +178,19 @@ export const HeaderControls: React.FC = () => {
             >
               <ChartIcon className="w-3.5 h-3.5" />
               <span>Charts</span>
+            </Link>
+
+            {/* Quant Brain Operating Intelligence Tab */}
+            <Link
+              href="/brain"
+              className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${
+                pathname === "/brain"
+                  ? "bg-foreground text-background font-bold border-foreground shadow-sm"
+                  : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
+              }`}
+            >
+              <Brain className="w-3.5 h-3.5" />
+              <span>Quant Brain</span>
             </Link>
 
             {/* Dedicated Positions & Orders Tab */}
