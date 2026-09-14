@@ -59,10 +59,10 @@ export const SectorTableHeader: React.FC<Props> = ({
         </th>
         <th
           onClick={() => onSort("pct_above_vwap")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-left bg-surface"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-surface"
         >
-          <div className="flex items-center gap-1">
-            <span>Breadth</span>
+          <div className="flex items-center justify-end gap-1">
+            <span>VWAP%</span>
             {renderSortIcon("pct_above_vwap")}
           </div>
         </th>

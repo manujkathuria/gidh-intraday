@@ -63,9 +63,8 @@ export const AppShell: React.FC<Props> = ({ children }) => {
 
       {/* 2. Desktop / iPad Rail (Hidden on mobile, visible md+) */}
       <aside
-        className={`hidden md:flex bg-surface border-r border-surface-border flex-col justify-between transition-all duration-200 shrink-0 z-20 ${
-          isCollapsed ? "w-14 p-2" : "w-52 p-3.5"
-        }`}
+        className={`hidden md:flex bg-surface border-r border-surface-border flex-col justify-between transition-all duration-200 shrink-0 z-20 ${isCollapsed ? "w-14 p-2" : "w-52 p-3.5"
+          }`}
       >
         <div className="flex flex-col gap-4">
           {/* Navigation Links (No Branding Clutter) */}
@@ -78,11 +77,25 @@ export const AppShell: React.FC<Props> = ({ children }) => {
 
       {/* 3. Main Workspace Viewport */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
-        {/* Main Content Body: Starts directly at Top 0px with Breadcrumbs */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col p-3 md:p-4">
-          <AppBreadcrumbs />
+        {/* Main Content Body: Starts directly at Top 0px with Ultra-Compact Breadcrumbs */}
+        <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col px-3 pt-1.5 pb-3 md:px-4 md:pt-1.5 md:pb-4 gap-1.5">
+          <AppBreadcrumbs
+            isCollapsed={isCollapsed}
+            onToggleSidebar={handleToggleSidebar}
+            mode={mode}
+            liveClock={liveClock}
+            localTime={localTime}
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            sessions={sessions}
+            isPlaying={isPlaying}
+            togglePlay={togglePlay}
+          />
           {children}
         </main>
+
 
         {/* Unified Bottom Cockpit Footer (Controls, Scrubber, Mode, Menu) */}
         <BottomCockpitFooter
@@ -90,9 +103,6 @@ export const AppShell: React.FC<Props> = ({ children }) => {
           toggleSidebar={handleToggleSidebar}
           mode={mode}
           setMode={setMode}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          sessions={sessions}
           localTime={localTime}
           setLocalTime={setLocalTime}
           setCurrentTimeMinutes={setCurrentTimeMinutes}
@@ -104,11 +114,10 @@ export const AppShell: React.FC<Props> = ({ children }) => {
           setPlaybackSpeed={setPlaybackSpeed}
           handleSliderChange={handleSliderChange}
           handleSliderCommit={handleSliderCommit}
-          liveClock={liveClock}
-          isDark={isDark}
-          toggleTheme={toggleTheme}
         />
+
       </div>
     </div>
   );
 };
+

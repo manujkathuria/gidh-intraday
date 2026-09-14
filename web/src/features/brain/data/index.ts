@@ -25,3 +25,5 @@ export const BRAIN_CATEGORIES: CategoryOption[] = [
   { key: "CHARACTER", label: "Character Profiles (10)" },
   { key: "BATTALION", label: "Sector Battalions (5)" },
 ];
+
+

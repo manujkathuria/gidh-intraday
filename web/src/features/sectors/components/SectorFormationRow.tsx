@@ -12,129 +12,119 @@ interface Props {
   onToggleExpand: () => void;
 }
 
-export const SectorFormationRow: React.FC<Props> = ({
-  sector,
-  isExpanded,
-  onToggleExpand,
-}) => {
+export const SectorFormationRow: React.FC<Props> = ({ sector, isExpanded, onToggleExpand }) => {
   const avgMove = sector.avg_move_pct || 0;
   const vwapPct = sector.pct_above_vwap || 0;
   const avgRvol = sector.avg_rvol || 0;
   const stocks: ReplayStock[] = sector.stocks || [];
+  const topGainer = sector.topGainer;
 
   return (
     <>
       <tr
         onClick={onToggleExpand}
-        className="border-b border-surface-border transition-colors cursor-pointer hover:bg-surface-hover/60 text-xs"
+        className={`border-b border-surface-border transition-colors cursor-pointer group text-xs ${
+          isExpanded ? "bg-surface-hover/80 border-l-2 border-l-foreground" : "hover:bg-surface-hover/60"
+        }`}
       >
         {/* Expand Chevron */}
-        <td className="py-2.5 px-3 text-center text-foreground/40">
+        <td className="py-2.5 px-3 text-center text-foreground/40 w-8">
           {isExpanded ? (
-            <ChevronDown className="w-3.5 h-3.5 mx-auto" />
+            <ChevronDown className="w-3.5 h-3.5 mx-auto text-foreground" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 mx-auto" />
+            <ChevronRight className="w-3.5 h-3.5 mx-auto text-foreground/40 group-hover:text-foreground" />
           )}
         </td>
 
-        {/* Sector Name */}
+        {/* Sector Name (Clean) */}
         <td className="py-2.5 px-3 font-bold text-foreground">
-          <div className="flex items-center gap-2">
-            <span>{sector.sector}</span>
-            {vwapPct >= 80 && (
-              <span className="px-1 py-0.2 rounded bg-foreground text-background text-[9px] font-bold">
-                STRONG
-              </span>
-            )}
-          </div>
+          <span className="tracking-wide">{sector.sector}</span>
         </td>
 
         {/* Civ Count */}
-        <td className="py-2.5 px-3 text-center text-foreground/60">{sector.civ_count}</td>
+        <td className="py-2.5 px-3 text-center text-foreground/50 text-[11px]">{sector.civ_count}</td>
 
-        {/* Avg Move % with subtle tint */}
+        {/* Avg Move % with subdued tint */}
         <td className="py-2.5 px-3 text-right font-bold">
           <span
-            className={
+            className={`tabular-nums ${
               avgMove > 0
                 ? "text-emerald-600 dark:text-emerald-400 font-bold"
                 : avgMove < 0
                 ? "text-rose-600 dark:text-rose-400 font-bold"
                 : "text-foreground/60"
-            }
+            }`}
           >
             {avgMove >= 0 ? "+" : ""}
             {avgMove.toFixed(2)}%
           </span>
         </td>
 
-        {/* VWAP Breadth Bar */}
-        <td className="py-2.5 px-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-20 bg-surface-border h-1 rounded-full overflow-hidden shrink-0">
-              <div
-                className="h-full bg-foreground rounded-full"
-                style={{ width: `${vwapPct}%` }}
-              />
-            </div>
-            <span className="font-bold text-xs text-foreground">
-              {vwapPct.toFixed(0)}%
-            </span>
-          </div>
+        {/* VWAP% (Clean colored numeric text, no progress bars) */}
+        <td className="py-2.5 px-3 text-right font-bold">
+          <span
+            className={`tabular-nums ${
+              vwapPct >= 60
+                ? "text-emerald-600 dark:text-emerald-400"
+                : vwapPct <= 40
+                ? "text-rose-600 dark:text-rose-400"
+                : "text-foreground/70"
+            }`}
+          >
+            {vwapPct.toFixed(0)}%
+          </span>
         </td>
 
-        {/* Mean RVOL */}
-        <td className="py-2.5 px-3 text-right font-bold text-foreground">
-          {avgRvol.toFixed(2)}x
+        {/* Clean RVOL Multiplier */}
+        <td className="py-2.5 px-3 text-right font-bold">
+          <span
+            className={`tabular-nums ${
+              avgRvol >= 2.0 ? "text-foreground font-black" : "text-foreground/70"
+            }`}
+          >
+            {avgRvol.toFixed(1)}x
+          </span>
         </td>
 
-        {/* Adv / Dec */}
-        <td className="py-2.5 px-3 text-right text-foreground/70">
-          {sector.advances ?? 0} / {sector.declines ?? 0}
+        {/* Advances / Declines Ratio */}
+        <td className="py-2.5 px-3 text-right text-[11px] font-bold">
+          <span className="text-emerald-600 dark:text-emerald-400">{sector.advances ?? 0}</span>
+          <span className="text-foreground/20 mx-1">/</span>
+          <span className="text-rose-600 dark:text-rose-400">{sector.declines ?? 0}</span>
         </td>
       </tr>
 
-      {/* Expanded Sibling Stocks Table */}
+      {/* Expanded Sibling Stocks Grid */}
       {isExpanded && stocks.length > 0 && (
         <tr className="bg-surface-muted/30 border-b border-surface-border">
           <td colSpan={7} className="p-3">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 text-xs">
               {stocks.map((st: ReplayStock) => {
                 const move = st.move_pct || 0;
                 return (
                   <div
                     key={st.symbol}
-                    className="bg-surface border border-surface-border rounded p-2 flex items-center justify-between shadow-xs"
+                    className="bg-surface border border-surface-border rounded-md p-2 flex items-center justify-between shadow-xs hover:border-foreground/30 transition"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                           st.is_above_vwap ? "bg-foreground" : "bg-surface-border"
                         }`}
                       />
-                      <span className="font-bold text-foreground">{st.symbol}</span>
+                      <span className="font-bold text-foreground truncate">{st.symbol}</span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px]">
-                      <span className="text-foreground/60">₹{st.price?.toFixed(2)}</span>
-                      <span
-                        className={
-                          move > 0
-                            ? "text-emerald-600 dark:text-emerald-400 font-bold"
-                            : move < 0
-                            ? "text-rose-600 dark:text-rose-400 font-bold"
-                            : "text-foreground/60 font-bold"
-                        }
-                      >
-                        {move >= 0 ? "+" : ""}
-                        {move.toFixed(2)}%
+                    <div className="flex items-center gap-2 text-[11px] shrink-0">
+                      <span className={`font-bold tabular-nums ${move > 0 ? "text-emerald-600 dark:text-emerald-400" : move < 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground/60"}`}>
+                        {move >= 0 ? "+" : ""}{move.toFixed(2)}%
                       </span>
                       <Link
                         href={`/chart?symbol=${encodeURIComponent(st.symbol)}`}
                         className="p-1 rounded hover:bg-foreground hover:text-background text-foreground/40 transition"
                         title={`Open ${st.symbol} Chart`}
                       >
-                        <LineChart className="w-3 h-3" />
+                        <LineChart className="w-3.5 h-3.5" />
                       </Link>
                     </div>
                   </div>

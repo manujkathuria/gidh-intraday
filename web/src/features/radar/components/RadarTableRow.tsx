@@ -99,32 +99,33 @@ export const RadarTableRow: React.FC<Props> = ({
         </span>
       </td>
 
-      {/* 7. VWAP State */}
-      <td className="py-2.5 px-3.5 text-right font-medium text-foreground/80 hidden md:table-cell">
+      {/* 7. VWAP State (Clean colored text without tags) */}
+      <td className="py-2.5 px-3.5 text-right font-bold hidden md:table-cell">
         <span
-          className={`px-1.5 py-0.5 rounded text-[10px] border ${
+          className={`tabular-nums ${
             isAbove
-              ? "bg-surface-muted border-surface-border text-foreground font-bold"
-              : "border-surface-border text-foreground/50"
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-rose-600 dark:text-rose-400"
           }`}
         >
-          {isAbove ? "▲" : "▼"} {Math.abs(vwapDist).toFixed(1)}%
+          {isAbove ? "+" : "-"}
+          {Math.abs(vwapDist).toFixed(1)}%
         </span>
       </td>
 
-      {/* 8. AI Action Badge (High-Contrast Long / Short) */}
+      {/* 8. AI Action Badge (Single-Word: LONG, SHORT, WAIT) */}
       <td className="py-2.5 px-3.5 text-center">
         {isLong ? (
-          <span className="text-[10px] font-black px-2 py-0.5 rounded bg-foreground text-background shadow-xs">
-            ▲ LONG {isSurge ? "• SURGE" : ""}
+          <span className="text-[10px] font-black px-2.5 py-0.5 rounded bg-foreground text-background shadow-xs tracking-wider">
+            LONG
           </span>
         ) : isShort ? (
-          <span className="text-[10px] font-black px-2 py-0.5 rounded border border-foreground/40 text-foreground">
-            ▼ SHORT {isSurge ? "• DUMP" : ""}
+          <span className="text-[10px] font-black px-2.5 py-0.5 rounded border border-foreground/40 text-foreground tracking-wider">
+            SHORT
           </span>
         ) : (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-muted text-foreground/40 border border-surface-border">
-            WAIT (NEUTRAL)
+          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-surface-muted text-foreground/40 border border-surface-border tracking-wider">
+            WAIT
           </span>
         )}
       </td>

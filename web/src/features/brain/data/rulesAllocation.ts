@@ -30,7 +30,7 @@ export const ALLOCATION_RULES: BrainRule[] = [
     ],
     action:
       "Never fire all 5 slots at the opening bell. Stage entries across 09:30 and 09:45 to diversify intraday timing.",
-    invalidation: "09:30 breadth < 35% with no valid Paladin leaders",
+    invalidation: "09:30 breadth < 35% with no valid volume momentum leaders",
     notes: "Protects capital from opening fakeouts and spreads liquidity capture.",
   },
   {

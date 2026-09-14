@@ -82,23 +82,30 @@ export const RadarMobileCard: React.FC<Props> = ({
             {rvol.toFixed(1)}x RVOL
           </span>
           <span className="text-foreground/20">•</span>
-          <span className="text-[10px] text-foreground/60">
-            {isAbove ? "▲" : "▼"} {Math.abs(vwapDist).toFixed(1)}% VWAP
+          <span
+            className={`text-[11px] font-bold tabular-nums ${
+              isAbove
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-rose-600 dark:text-rose-400"
+            }`}
+          >
+            {isAbove ? "+" : "-"}
+            {Math.abs(vwapDist).toFixed(1)}% VWAP
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* AI Action Badge */}
+          {/* AI Action Badge (Single-Word: LONG, SHORT, WAIT) */}
           {isLong ? (
-            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-foreground text-background">
-              LONG{isSurge ? " • SURGE" : ""}
+            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-foreground text-background tracking-wider">
+              LONG
             </span>
           ) : isShort ? (
-            <span className="text-[9px] font-black px-1.5 py-0.5 rounded border border-foreground/40 text-foreground">
-              SHORT{isSurge ? " • DUMP" : ""}
+            <span className="text-[9px] font-black px-2 py-0.5 rounded border border-foreground/40 text-foreground tracking-wider">
+              SHORT
             </span>
           ) : (
-            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-surface-muted text-foreground/40 border border-surface-border">
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-surface-muted text-foreground/40 border border-surface-border tracking-wider">
               WAIT
             </span>
           )}

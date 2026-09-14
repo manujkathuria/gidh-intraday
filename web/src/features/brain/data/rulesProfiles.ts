@@ -4,13 +4,14 @@ export const PROFILES_RULES: BrainRule[] = [
   {
     id: "CHARACTER_COCHINSHIP_01",
     category: "CHARACTER",
-    name: "COCHINSHIP — High-Beta Momentum Paladin",
+    name: "COCHINSHIP — High-Beta Momentum Leader",
     confidence: 0.9,
     conditions: ["RVOL >= 5.0x", "Price > VWAP"],
     action:
       "When RVOL > 5x, trends 4-7% without touching VWAP. Give wider intraday breathing room.",
     notes: "Defence / Shipbuilder leader with explosive trending characteristics.",
   },
+
   {
     id: "CHARACTER_BANDHANBNK_02",
     category: "CHARACTER",

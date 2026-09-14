@@ -29,7 +29,7 @@ export const HOLD_NO_TRADE_RULES: BrainRule[] = [
       "P&L is stagnant between -0.3% and +0.3% or hovering near VWAP",
     ],
     action:
-      "Square off stagnant Tier 3 positions before lunch lull. Only Mega-RVOL Paladins and strong Battalion runners hold past 11:30.",
+      "Square off stagnant Tier 3 positions before lunch lull. Only Mega-RVOL Volume Leaders and strong Sector runners hold past 11:30.",
     invalidation: "RVOL expansion > 6.0x",
     notes: "Eliminates capital lockup during low-volatility midday hours.",
   },

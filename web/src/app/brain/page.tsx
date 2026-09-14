@@ -8,14 +8,17 @@ export const metadata = {
 
 export default function BrainPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="p-8 text-xs text-foreground/40">
-          Loading Quant Brain Engine...
-        </div>
-      }
-    >
-      <QuantBrainView />
-    </Suspense>
+    <div className="w-full px-5 py-3 flex-1 flex flex-col">
+      <Suspense
+        fallback={
+          <div className="p-8 text-xs text-foreground/40">
+            Loading Quant Brain Engine...
+          </div>
+        }
+      >
+        <QuantBrainView />
+      </Suspense>
+    </div>
   );
 }
+

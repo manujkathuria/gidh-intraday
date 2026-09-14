@@ -13,7 +13,7 @@ export const ThemeToggle: React.FC<Props> = ({ isDark, toggleTheme }) => {
     <button
       onClick={toggleTheme}
       title={isDark ? "Switch to Light theme" : "Switch to Dark theme"}
-      className="p-1.5 rounded bg-surface-muted hover:bg-surface-hover text-foreground/70 hover:text-foreground border border-surface-border transition"
+      className="p-1 rounded text-foreground/70 hover:text-foreground hover:bg-surface-hover transition cursor-pointer"
     >
       {isDark ? (
         <Sun className="w-3.5 h-3.5 text-foreground/80" />
@@ -23,3 +23,4 @@ export const ThemeToggle: React.FC<Props> = ({ isDark, toggleTheme }) => {
     </button>
   );
 };
+

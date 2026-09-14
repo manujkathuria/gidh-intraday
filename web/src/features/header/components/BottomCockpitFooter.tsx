@@ -7,15 +7,12 @@ import {
   PanelLeftOpen,
   Radio,
   RotateCcw,
-  Calendar,
   Play,
   Pause,
   SkipBack,
   SkipForward,
-  Clock,
 } from "lucide-react";
 import { formatMinutesToTime } from "@/stores/replayStore";
-import { ThemeToggle } from "./ThemeToggle";
 import { MobileReplayDrawer } from "./MobileReplayDrawer";
 
 interface Props {
@@ -23,9 +20,6 @@ interface Props {
   toggleSidebar: () => void;
   mode: "LIVE" | "REPLAY";
   setMode: (mode: "LIVE" | "REPLAY") => void;
-  selectedDate: string;
-  setSelectedDate: (date: string) => void;
-  sessions: string[];
   localTime: number;
   setLocalTime: (val: number) => void;
   setCurrentTimeMinutes: (val: number) => void;
@@ -37,9 +31,6 @@ interface Props {
   setPlaybackSpeed: (val: number) => void;
   handleSliderChange: (val: number) => void;
   handleSliderCommit: () => void;
-  liveClock: string;
-  isDark: boolean;
-  toggleTheme: () => void;
 }
 
 export const BottomCockpitFooter: React.FC<Props> = ({
@@ -47,43 +38,27 @@ export const BottomCockpitFooter: React.FC<Props> = ({
   toggleSidebar,
   mode,
   setMode,
-  selectedDate,
-  setSelectedDate,
-  sessions,
   localTime,
   setLocalTime,
   setCurrentTimeMinutes,
+
   isPlaying,
   togglePlay,
   stepBackward,
   stepForward,
   playbackSpeed,
+
   setPlaybackSpeed,
   handleSliderChange,
   handleSliderCommit,
-  liveClock,
-  isDark,
-  toggleTheme,
 }) => {
+
   const timeFormatted = formatMinutesToTime(localTime).slice(0, 5);
 
   return (
     <footer className="h-11 px-3 bg-surface border-t border-surface-border flex items-center justify-between gap-2.5 select-none shrink-0 z-30 text-xs shadow-lg">
-      {/* 1. Left: Menu Toggle + Mode Switcher & Date */}
+      {/* 1. Left: Mode Switcher & Date */}
       <div className="flex items-center gap-2 shrink-0">
-        <button
-          onClick={toggleSidebar}
-          title="Toggle Navigation Menu"
-          className="p-1.5 rounded bg-surface-muted hover:bg-surface-hover text-foreground/70 hover:text-foreground border border-surface-border transition flex items-center gap-1.5"
-        >
-          <Menu className="w-3.5 h-3.5 md:hidden" />
-          {isCollapsed ? (
-            <PanelLeftOpen className="w-3.5 h-3.5 hidden md:block" />
-          ) : (
-            <PanelLeftClose className="w-3.5 h-3.5 hidden md:block" />
-          )}
-        </button>
-
         {/* Mode Switcher */}
         <div className="flex items-center bg-surface-muted border border-surface-border rounded p-0.5">
           <button
@@ -109,25 +84,8 @@ export const BottomCockpitFooter: React.FC<Props> = ({
             <span>REPLAY</span>
           </button>
         </div>
-
-        {/* Date Selector in REPLAY mode */}
-        {mode === "REPLAY" && (
-          <div className="hidden sm:flex items-center gap-1.5 bg-surface-muted border border-surface-border rounded px-2 py-0.5">
-            <Calendar className="w-3 h-3 text-foreground/40" />
-            <select
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-transparent text-[11px] font-medium text-foreground focus:outline-none cursor-pointer"
-            >
-              {sessions.map((s, idx) => (
-                <option key={`${s}-${idx}`} value={s} className="bg-surface text-foreground">
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
+
 
       {/* 2. Center: Timeline & Controls (md+) OR Live Dot */}
       {mode === "LIVE" ? (
@@ -198,35 +156,25 @@ export const BottomCockpitFooter: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 3. Right: Clock / Mobile Replay Trigger + Theme Toggle */}
-      <div className="flex items-center gap-2 shrink-0">
-        {mode === "REPLAY" && (
-          <div className="md:hidden">
-            <MobileReplayDrawer
-              localTime={localTime}
-              setLocalTime={setLocalTime}
-              setCurrentTimeMinutes={setCurrentTimeMinutes}
-              isPlaying={isPlaying}
-              togglePlay={togglePlay}
-              stepBackward={stepBackward}
-              stepForward={stepForward}
-              playbackSpeed={playbackSpeed}
-              setPlaybackSpeed={setPlaybackSpeed}
-              handleSliderChange={handleSliderChange}
-              handleSliderCommit={handleSliderCommit}
-            />
-          </div>
-        )}
-
-        <div className="flex items-center gap-1 px-2 py-0.5 bg-surface-muted border border-surface-border rounded">
-          <Clock className="w-3 h-3 text-foreground/50" />
-          <span className="font-bold text-foreground tracking-wider text-[11px]">
-            {mode === "LIVE" ? liveClock || "09:15:00" : timeFormatted}
-          </span>
+      {/* 3. Right: Mobile Replay Drawer trigger if on mobile */}
+      {mode === "REPLAY" && (
+        <div className="md:hidden shrink-0">
+          <MobileReplayDrawer
+            localTime={localTime}
+            setLocalTime={setLocalTime}
+            setCurrentTimeMinutes={setCurrentTimeMinutes}
+            isPlaying={isPlaying}
+            togglePlay={togglePlay}
+            stepBackward={stepBackward}
+            stepForward={stepForward}
+            playbackSpeed={playbackSpeed}
+            setPlaybackSpeed={setPlaybackSpeed}
+            handleSliderChange={handleSliderChange}
+            handleSliderCommit={handleSliderCommit}
+          />
         </div>
-
-        <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
-      </div>
+      )}
     </footer>
   );
 };
+

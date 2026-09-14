@@ -4,7 +4,7 @@ export const TACTICS_RULES: BrainRule[] = [
   {
     id: "ENTRY_PALADIN_01",
     category: "ENTRY",
-    name: "Mega-RVOL Paladin Leader Long",
+    name: "Mega-RVOL Momentum Leader Long",
     confidence: 0.85,
     triggerTime: "09:30 or 09:45 Bar Close",
     conditions: [
