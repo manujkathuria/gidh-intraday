@@ -10,6 +10,8 @@ func main() {
 		log.Fatal("usage: gidh-batch live | instruments sync | candles backfill | features daily | features intraday backfill | integrity eod")
 	}
 	switch {
+	case os.Args[1] == "eod":
+		runEODPipeline(os.Args[2:])
 	case os.Args[1] == "live":
 		runLiveIngestion(os.Args[2:])
 	case len(os.Args) >= 3 && os.Args[1] == "instruments" && os.Args[2] == "sync":
@@ -23,6 +25,6 @@ func main() {
 	case len(os.Args) >= 3 && os.Args[1] == "integrity" && os.Args[2] == "eod":
 		runEODIntegrity(os.Args[3:])
 	default:
-		log.Fatal("usage: gidh-batch live | instruments sync | candles backfill | features daily | features intraday backfill | integrity eod")
+		log.Fatal("usage: gidh-batch eod | live | instruments sync | candles backfill | features daily | features intraday backfill | integrity eod")
 	}
 }
