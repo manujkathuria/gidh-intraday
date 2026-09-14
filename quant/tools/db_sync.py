@@ -95,8 +95,31 @@ def sync_day(day_num: int):
     session_id = session_id_match.group(1)
     print(f"Synced quant.sessions for Day {day_num} ({session_date}) -> Session ID: {session_id}")
 
-    # Delete existing trades for session to re-sync cleanly
+    # Delete existing trades and lessons for session to re-sync cleanly
     run_sql(f"DELETE FROM quant.trades WHERE session_id = {session_id};")
+    run_sql(f"DELETE FROM quant.lessons WHERE session_id = {session_id};")
+
+    # Sync Session-Level Macro Lesson
+    mem_lesson_match = re.search(r"Memory:\s*([^\n]+(?:\n[^\n#]+)*)", content)
+    if mem_lesson_match:
+        mem_lesson_text = mem_lesson_match.group(1).strip().replace("'", "''")
+        lesson_sql = f"""
+        INSERT INTO quant.lessons (session_id, lesson_type, lesson, confidence, active, created_by)
+        VALUES ({session_id}, 'market', '{mem_lesson_text}', 0.9, true, 'antigravity');
+        """
+        run_sql(lesson_sql)
+
+    # Sync Strategic Takeaways if present
+    takeaways_match = re.search(r"## Strategic Takeaways\s*\n(.*?)(?=\nThe Day|\Z)", content, re.DOTALL)
+    if takeaways_match:
+        takeaway_items = re.findall(r"\d+\.\s+\*\*([^\*]+)\*\*:\s*([^\n]+(?:\n(?!\d+\.)[^\n]+)*)", takeaways_match.group(1))
+        for title, text in takeaway_items:
+            clean_lesson = f"{title.strip()}: {text.strip()}".replace("'", "''")
+            l_type = "battalion" if "battalion" in title.lower() else "execution" if "scout" in title.lower() or "exit" in title.lower() else "tactic"
+            run_sql(f"""
+            INSERT INTO quant.lessons (session_id, lesson_type, lesson, confidence, active, created_by)
+            VALUES ({session_id}, '{l_type}', '{clean_lesson}', 0.95, true, 'antigravity');
+            """)
 
     # Parse Trades from markdown ledger
     trade_blocks = re.findall(r"### Trade \d+[:\s\-]+([^\n]+)\n(.*?)(?=\n###|\n##|\Z)", content, re.DOTALL)
@@ -166,6 +189,7 @@ def sync_day(day_num: int):
         run_sql(trade_sql)
         pct_str = f"{res_pct:+.2f}%" if res_pct is not None else "N/A"
         print(f"  -> Synced trade: {tactic} {side.upper()} {symbol} ({pct_str})")
+
 
 
 def main():

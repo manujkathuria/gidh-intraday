@@ -13,6 +13,18 @@ erDiagram
     SESSIONS ||--o{ LESSONS : contains
     SESSIONS ||--o{ REVIEWS : evaluates
 
+    BRAIN_RULES {
+        string rule_id PK
+        string category
+        string name
+        jsonb condition_json
+        text action
+        text invalidation
+        numeric confidence
+        text evidence
+        string status
+    }
+
     SESSIONS {
         bigint id PK
         text mode "replay | live"
@@ -104,6 +116,25 @@ CREATE TABLE IF NOT EXISTS quant.trades (
     raw_exit JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+### `quant.brain_rules`
+Stores the distilled, opinionated Operating Brain rules with confidence scores, executable condition JSON, and promotion evidence.
+
+```sql
+CREATE TABLE IF NOT EXISTS quant.brain_rules (
+    rule_id VARCHAR(64) PRIMARY KEY,
+    category VARCHAR(32) NOT NULL, -- ENTRY, INVALIDATION, HOLD, NO_TRADE, ALLOCATION, CHARACTER, BATTALION
+    name VARCHAR(128) NOT NULL,
+    condition_json JSONB NOT NULL,
+    action TEXT NOT NULL,
+    invalidation TEXT,
+    confidence NUMERIC(4,2) NOT NULL,
+    evidence TEXT NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
