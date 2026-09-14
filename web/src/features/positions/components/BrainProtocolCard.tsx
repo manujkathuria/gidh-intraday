@@ -5,7 +5,7 @@ import { Shield } from "lucide-react";
 
 export const BrainProtocolCard: React.FC = () => {
   return (
-    <div className="mt-3 bg-surface border border-surface-border rounded-xl p-5 font-mono text-xs">
+    <div className="mt-3 bg-surface border border-surface-border rounded-xl p-5 text-xs">
       <div className="flex items-center gap-2 mb-3">
         <Shield className="w-4 h-4 text-foreground/70" />
         <h3 className="text-xs font-black uppercase tracking-wider text-foreground">

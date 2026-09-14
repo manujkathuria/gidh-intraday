@@ -37,7 +37,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: isDark ? "#A1A1AA" : "#71717A",
-        fontFamily: "monospace",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
         fontSize: 11,
       },
       grid: {

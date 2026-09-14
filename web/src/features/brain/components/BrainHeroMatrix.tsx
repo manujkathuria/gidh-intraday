@@ -5,7 +5,7 @@ import { Brain } from "lucide-react";
 
 export const BrainHeroMatrix: React.FC = () => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 font-mono">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {/* Card 1: Distilled Rules Count */}
       <div className="bg-surface border border-surface-border rounded-xl p-4 flex flex-col justify-between shadow-sm">
         <div className="flex items-center justify-between">

@@ -1,102 +1,87 @@
 "use client";
 
 import React from "react";
-import { Search } from "lucide-react";
-import { SectorOption, VwapFilter } from "../types";
+import { Search, Flame, TrendingUp, TrendingDown, Layers } from "lucide-react";
+import { RadarPreset, SectorOption } from "../types";
+import { SectorListbox } from "./SectorListbox";
 
 interface Props {
-  search: string;
-  setSearch: (val: string) => void;
+  preset: RadarPreset;
+  setPreset: (preset: RadarPreset) => void;
   selectedSector: string;
   setSelectedSector: (val: string) => void;
   sectorOptions: SectorOption[];
-  minRvol: number;
-  setMinRvol: (val: number) => void;
-  vwapFilter: VwapFilter;
-  setVwapFilter: (val: VwapFilter) => void;
+  search: string;
+  setSearch: (val: string) => void;
   visibleCount: number;
   totalCount: number;
 }
 
 export const RadarFilterBar: React.FC<Props> = ({
-  search,
-  setSearch,
+  preset,
+  setPreset,
   selectedSector,
   setSelectedSector,
   sectorOptions,
-  minRvol,
-  setMinRvol,
-  vwapFilter,
-  setVwapFilter,
+  search,
+  setSearch,
   visibleCount,
   totalCount,
 }) => {
+  const presets: { id: RadarPreset; label: string; icon: React.FC<{ className?: string }> }[] = [
+    { id: "ALL", label: "All 210", icon: Layers },
+    { id: "SURGES", label: "Volume Surges (≥2.5x)", icon: Flame },
+    { id: "LEADERS", label: "Top Bulls", icon: TrendingUp },
+    { id: "DUMPERS", label: "Top Bears", icon: TrendingDown },
+  ];
+
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-xs select-none">
+    <div className="flex flex-wrap items-center justify-between gap-3 py-1 text-xs select-none">
       <div className="flex flex-wrap items-center gap-2.5">
-        {/* Search Input */}
+        {/* 1-Click Spectator Presets */}
+        <div className="flex items-center bg-surface-muted border border-surface-border rounded-md p-1">
+          {presets.map((p) => {
+            const Icon = p.icon;
+            const isActive = preset === p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() => setPreset(p.id)}
+                className={`px-3 py-1.5 rounded transition font-bold flex items-center gap-1.5 ${
+                  isActive
+                    ? "bg-foreground text-background shadow-xs"
+                    : "text-foreground/60 hover:text-foreground hover:bg-surface-hover"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{p.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Headless UI Custom Select Listbox */}
+        <SectorListbox
+          selectedSector={selectedSector}
+          setSelectedSector={setSelectedSector}
+          sectorOptions={sectorOptions}
+        />
+
+        {/* Tailwind Plus Style Precision Search Input */}
         <div className="relative min-w-[220px]">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/40" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-foreground/40 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search stock or sector..."
+            placeholder="Search symbol or sector..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-surface-muted border border-surface-border rounded pl-8 pr-2.5 py-1 text-xs text-foreground placeholder-foreground/40 focus:outline-none focus:border-foreground/40"
+            className="block w-full rounded-md bg-surface pl-8.5 pr-3 py-1.5 text-xs text-foreground placeholder:text-foreground/40 border border-surface-border focus:outline-1 focus:-outline-offset-1 focus:outline-foreground focus:border-foreground"
           />
-        </div>
-
-        {/* Sector Dropdown */}
-        <select
-          value={selectedSector}
-          onChange={(e) => setSelectedSector(e.target.value)}
-          className="bg-surface-muted border border-surface-border rounded px-2.5 py-1 text-xs text-foreground focus:outline-none cursor-pointer"
-        >
-          {sectorOptions.map((opt) => (
-            <option key={opt.sector} value={opt.sector} className="bg-surface text-foreground">
-              {opt.label}
-            </option>
-          ))}
-        </select>
-
-        {/* Min RVOL Buttons */}
-        <div className="flex items-center gap-1 bg-surface-muted border border-surface-border rounded p-0.5">
-          <span className="text-[10px] text-foreground/40 px-1.5 font-bold">RVOL:</span>
-          {[0, 1.5, 3.0, 5.0, 10.0].map((val) => (
-            <button
-              key={val}
-              onClick={() => setMinRvol(val)}
-              className={`px-2 py-0.5 text-xs rounded transition ${
-                minRvol === val
-                  ? "bg-foreground text-background font-bold"
-                  : "text-foreground/50 hover:text-foreground"
-              }`}
-            >
-              {val === 0 ? "All" : `≥${val}x`}
-            </button>
-          ))}
-        </div>
-
-        {/* VWAP Alignment Buttons */}
-        <div className="flex items-center bg-surface-muted border border-surface-border rounded p-0.5">
-          {(["ALL", "ABOVE", "BELOW"] as const).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setVwapFilter(filter)}
-              className={`px-2 py-0.5 text-xs rounded transition ${
-                vwapFilter === filter
-                  ? "bg-foreground text-background font-bold"
-                  : "text-foreground/50 hover:text-foreground"
-              }`}
-            >
-              {filter === "ALL" ? "All" : filter === "ABOVE" ? "▲ Bulls" : "▼ Bears"}
-            </button>
-          ))}
         </div>
       </div>
 
       {/* Showing Count */}
-      <div className="flex items-center gap-1.5 text-xs text-foreground/50 font-mono">
+      <div className="flex items-center gap-1.5 text-xs text-foreground/50 pr-1">
         <span>Showing</span>
         <span className="font-bold text-foreground">{visibleCount}</span>
         <span>/ {totalCount} Stocks</span>

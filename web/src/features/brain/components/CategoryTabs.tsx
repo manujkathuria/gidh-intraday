@@ -15,7 +15,7 @@ export const CategoryTabs: React.FC<Props> = ({
   onSelectCategory,
 }) => {
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar font-mono text-xs">
+    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-xs">
       {categories.map((cat) => (
         <button
           key={cat.key}

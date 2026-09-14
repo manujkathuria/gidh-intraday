@@ -27,21 +27,21 @@ export const SectorTableHeader: React.FC<Props> = ({
   };
 
   return (
-    <thead className="bg-surface-muted text-foreground/50 sticky top-0 z-10 border-b border-surface-border select-none font-mono text-xs">
+    <thead className="bg-surface text-foreground/50 sticky top-0 z-10 border-b border-surface-border select-none text-xs shadow-xs">
       <tr>
-        <th className="py-2.5 px-3 w-8" />
+        <th className="py-2.5 px-3 w-8 bg-surface" />
         <th
           onClick={() => onSort("sector")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-left"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-left bg-surface"
         >
           <div className="flex items-center gap-1">
-            <span>Sector Battalion</span>
+            <span>Sector</span>
             {renderSortIcon("sector")}
           </div>
         </th>
         <th
           onClick={() => onSort("civ_count")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-center"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-center bg-surface"
         >
           <div className="flex items-center justify-center gap-1">
             <span>Stocks</span>
@@ -50,37 +50,37 @@ export const SectorTableHeader: React.FC<Props> = ({
         </th>
         <th
           onClick={() => onSort("avg_move_pct")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-surface"
         >
           <div className="flex items-center justify-end gap-1">
-            <span>Avg Move %</span>
+            <span>Change</span>
             {renderSortIcon("avg_move_pct")}
           </div>
         </th>
         <th
           onClick={() => onSort("pct_above_vwap")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-left"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-left bg-surface"
         >
           <div className="flex items-center gap-1">
-            <span>VWAP Breadth %</span>
+            <span>Breadth</span>
             {renderSortIcon("pct_above_vwap")}
           </div>
         </th>
         <th
           onClick={() => onSort("avg_rvol")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-surface"
         >
           <div className="flex items-center justify-end gap-1">
-            <span>Mean RVOL</span>
+            <span>RVOL</span>
             {renderSortIcon("avg_rvol")}
           </div>
         </th>
         <th
           onClick={() => onSort("advances")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-surface"
         >
           <div className="flex items-center justify-end gap-1">
-            <span>Adv / Dec</span>
+            <span>Ratio</span>
             {renderSortIcon("advances")}
           </div>
         </th>

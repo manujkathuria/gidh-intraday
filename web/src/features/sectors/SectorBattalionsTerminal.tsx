@@ -20,7 +20,7 @@ export const SectorBattalionsTerminal: React.FC = () => {
   } = useSectorFormations();
 
   return (
-    <div className="flex flex-col gap-3 font-mono">
+    <div className="flex flex-col gap-3">
       {/* 1. Filter Bar */}
       <SectorFilterBar
         search={search}
@@ -43,7 +43,7 @@ export const SectorBattalionsTerminal: React.FC = () => {
                 <tr>
                   <td
                     colSpan={7}
-                    className="py-12 text-center text-foreground/40 font-mono text-xs"
+                    className="py-12 text-center text-foreground/40 text-xs"
                   >
                     No sector battalions match the filter.
                   </td>

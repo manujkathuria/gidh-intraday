@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useReplayStore } from "@/stores/replayStore";
-import { SortField, VwapFilter } from "../types";
+import { SortField, RadarPreset, SectorOption } from "../types";
 
 export function useRadarFilters() {
   const { snapshot, selectedSymbol, setSelectedSymbol, sectors, init } =
@@ -10,26 +10,51 @@ export function useRadarFilters() {
     init();
   }, [init]);
 
+  const [preset, setPreset] = useState<RadarPreset>("ALL");
   const [selectedSector, setSelectedSector] = useState("ALL");
-  const [minRvol, setMinRvol] = useState<number>(0);
-  const [vwapFilter, setVwapFilter] = useState<VwapFilter>("ALL");
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("rvol");
   const [sortAsc, setSortAsc] = useState(false);
 
   const stocks = snapshot?.stocks || [];
 
-  const sectorOptions = useMemo(() => {
+  const sectorOptions: SectorOption[] = useMemo(() => {
+    // Sort sectors numerically descending by avg_move_pct (highest positive gain at top, lowest negative at bottom)
+    const sortedSectors = [...sectors].sort((a, b) => {
+      const moveA = a.avg_move_pct ?? 0;
+      const moveB = b.avg_move_pct ?? 0;
+      return moveB - moveA;
+    });
+
     return [
-      { sector: "ALL", label: `All Sectors (${stocks.length})` },
-      ...sectors.map((s) => ({
+      {
+        sector: "ALL",
+        label: "All Sectors",
+        count: stocks.length,
+        avgMovePct: 0,
+      },
+      ...sortedSectors.map((s) => ({
         sector: s.sector,
-        label: `${s.sector} (${s.civ_count}) · ${
-          s.avg_move_pct >= 0 ? "+" : ""
-        }${s.avg_move_pct.toFixed(1)}% · ${s.pct_above_vwap.toFixed(0)}% VWAP`,
+        label: s.sector,
+        count: s.civ_count,
+        avgMovePct: s.avg_move_pct,
       })),
     ];
   }, [sectors, stocks.length]);
+
+  const handleSelectPreset = (newPreset: RadarPreset) => {
+    setPreset(newPreset);
+    if (newPreset === "LEADERS") {
+      setSortField("move_pct");
+      setSortAsc(false); // Top positive gains first
+    } else if (newPreset === "DUMPERS") {
+      setSortField("move_pct");
+      setSortAsc(true); // Biggest negative drops first
+    } else if (newPreset === "SURGES") {
+      setSortField("rvol");
+      setSortAsc(false); // Highest relative volume first
+    }
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -43,11 +68,12 @@ export function useRadarFilters() {
   const filteredAndSorted = useMemo(() => {
     return stocks
       .filter((s) => {
-        if (selectedSector !== "ALL" && s.sector !== selectedSector)
-          return false;
-        if ((s.rvol || 0) < minRvol) return false;
-        if (vwapFilter === "ABOVE" && !s.is_above_vwap) return false;
-        if (vwapFilter === "BELOW" && s.is_above_vwap) return false;
+        if (selectedSector !== "ALL" && s.sector !== selectedSector) return false;
+
+        // Spectator Presets
+        if (preset === "SURGES" && (s.rvol || 0) < 2.5) return false;
+        if (preset === "LEADERS" && (!s.is_above_vwap || (s.move_pct || 0) <= 0)) return false;
+        if (preset === "DUMPERS" && (s.is_above_vwap || (s.move_pct || 0) >= 0)) return false;
 
         const query = search.toLowerCase();
         if (
@@ -74,16 +100,14 @@ export function useRadarFilters() {
           ? (valA as number) - (valB as number)
           : (valB as number) - (valA as number);
       });
-  }, [stocks, selectedSector, minRvol, vwapFilter, search, sortField, sortAsc]);
+  }, [stocks, selectedSector, preset, search, sortField, sortAsc]);
 
   return {
     stocks,
+    preset,
+    setPreset: handleSelectPreset,
     selectedSector,
     setSelectedSector,
-    minRvol,
-    setMinRvol,
-    vwapFilter,
-    setVwapFilter,
     search,
     setSearch,
     sortField,

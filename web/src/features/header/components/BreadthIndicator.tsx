@@ -11,7 +11,7 @@ export const BreadthIndicator: React.FC<Props> = ({ breadth }) => {
   const isBullish = breadth >= 50;
 
   return (
-    <div className="flex items-center gap-1.5 bg-surface-muted border border-surface-border rounded px-2.5 py-1 text-xs font-mono">
+    <div className="flex items-center gap-1.5 bg-surface-muted border border-surface-border rounded px-2.5 py-1 text-xs">
       <Activity className="w-3.5 h-3.5 text-foreground/50" />
       <span className="text-foreground/50">VWAP:</span>
       <span className="font-bold text-foreground">

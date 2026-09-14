@@ -18,14 +18,14 @@ export const BrandNavigation: React.FC<Props> = ({ activeCount }) => {
         <span className="text-sm font-black tracking-widest text-foreground">
           GIDH
         </span>
-        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-muted text-foreground/70 border border-surface-border font-bold">
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-muted text-foreground/70 border border-surface-border font-bold">
           WAR ROOM
         </span>
       </div>
 
       <div className="h-4 w-px bg-surface-border" />
 
-      <nav className="flex items-center gap-1 font-mono text-xs">
+      <nav className="flex items-center gap-1 text-xs">
         <Link
           href="/"
           className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${
@@ -85,7 +85,7 @@ export const BrandNavigation: React.FC<Props> = ({ activeCount }) => {
           <Zap className="w-3.5 h-3.5" />
           <span>Positions</span>
           <span
-            className={`text-[10px] font-mono px-1.5 py-0.2 rounded border ${
+            className={`text-[10px] px-1.5 py-0.2 rounded border ${
               pathname === "/positions"
                 ? "bg-background text-foreground border-background"
                 : "bg-surface border-surface-border text-foreground/70"

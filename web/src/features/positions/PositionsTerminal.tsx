@@ -51,7 +51,7 @@ export const PositionsTerminal: React.FC = () => {
       />
 
       {/* 2. Section Header & Order Action Button */}
-      <div className="flex items-center justify-between font-mono">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-foreground/70" />
           <h2 className="text-sm font-black uppercase tracking-wider text-foreground">
@@ -62,7 +62,7 @@ export const PositionsTerminal: React.FC = () => {
         <button
           onClick={() => setShowOrderModal(true)}
           disabled={availableSlots === 0}
-          className={`px-3.5 py-1.5 rounded-lg font-mono text-xs font-black flex items-center gap-1.5 transition ${
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition ${
             availableSlots > 0
               ? "bg-foreground text-background hover:bg-foreground/90 shadow-sm cursor-pointer"
               : "bg-surface-muted text-foreground/30 border border-surface-border cursor-not-allowed"
@@ -74,7 +74,7 @@ export const PositionsTerminal: React.FC = () => {
       </div>
 
       {/* 3. 5 Fixed Slots Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5 font-mono">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5">
         {Array.from({ length: 5 }).map((_, slotIndex) => {
           const pos = positionsList[slotIndex];
           if (pos) {

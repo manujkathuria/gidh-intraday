@@ -30,24 +30,25 @@ export const StockSelectorSidebar: React.FC<Props> = ({
           <span className="text-xs font-black tracking-wider uppercase text-foreground/70 flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5" /> F&O Universe ({allSymbols.length})
           </span>
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-muted text-foreground/60 border border-surface-border">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-muted text-foreground/60 border border-surface-border">
             {selectedDate || "LIVE"}
           </span>
         </div>
 
+        {/* Tailwind Plus Style Precision Search Input */}
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/40" />
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/40 pointer-events-none" />
           <input
             type="text"
             placeholder="Search stock or sector..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-surface-muted border border-surface-border rounded pl-8 pr-2.5 py-1 text-xs text-foreground placeholder-foreground/40 focus:outline-none focus:border-foreground/40 font-mono"
+            className="block w-full rounded-md bg-surface-muted/40 pl-8 pr-2.5 py-1 text-xs text-foreground placeholder:text-foreground/40 border border-surface-border focus:outline-1 focus:-outline-offset-1 focus:outline-foreground focus:border-foreground"
           />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-surface-border font-mono text-xs">
+      <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-surface-border text-xs">
         {filteredSymbols.length === 0 ? (
           <div className="p-6 text-center text-foreground/40 text-xs">
             No stocks found
@@ -55,7 +56,7 @@ export const StockSelectorSidebar: React.FC<Props> = ({
         ) : (
           filteredSymbols.map((item) => {
             const isSelected = item.symbol === activeSymbol;
-            const isPositive = item.move_pct >= 0;
+            const move = item.move_pct || 0;
 
             return (
               <button
@@ -95,9 +96,19 @@ export const StockSelectorSidebar: React.FC<Props> = ({
 
                 <div className="text-right flex flex-col items-end">
                   <span className="font-semibold">₹{item.price.toFixed(2)}</span>
-                  <span className="text-[11px] font-bold">
-                    {isPositive ? "+" : ""}
-                    {item.move_pct.toFixed(2)}%
+                  <span
+                    className={`text-[11px] font-bold ${
+                      isSelected
+                        ? "text-background"
+                        : move > 0
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : move < 0
+                        ? "text-rose-600 dark:text-rose-400"
+                        : "text-foreground/60"
+                    }`}
+                  >
+                    {move >= 0 ? "+" : ""}
+                    {move.toFixed(2)}%
                   </span>
                 </div>
               </button>

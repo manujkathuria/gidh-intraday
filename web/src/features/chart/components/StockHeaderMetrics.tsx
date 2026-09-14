@@ -37,11 +37,11 @@ export const StockHeaderMetrics: React.FC<Props> = ({
             <h1 className="text-xl font-black tracking-tight text-foreground">
               {activeSymbol}
             </h1>
-            <span className="text-xs font-mono px-2 py-0.5 rounded bg-surface-muted border border-surface-border text-foreground/70">
+            <span className="text-xs px-2 py-0.5 rounded bg-surface-muted border border-surface-border text-foreground/70">
               {stockInfo?.sector || "EQUITY"}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-xs font-mono text-foreground/50 mt-0.5">
+          <div className="flex items-center gap-2 text-xs text-foreground/50 mt-0.5">
             <span>As of {formatMinutesToTime(currentTimeMinutes).slice(0, 5)} IST</span>
             <span>•</span>
             <span>{candlesCount} 1m Bars Loaded</span>
@@ -50,7 +50,7 @@ export const StockHeaderMetrics: React.FC<Props> = ({
       </div>
 
       {/* Live Metrics Matrix (Monochrome) */}
-      <div className="flex items-center gap-4 font-mono text-xs">
+      <div className="flex items-center gap-4 text-xs">
         {/* LTP */}
         <div className="flex flex-col items-end px-3 py-1 bg-surface-muted border border-surface-border rounded">
           <span className="text-[10px] text-foreground/40 font-bold">LTP</span>

@@ -10,6 +10,7 @@ import {
   Clock,
 } from "lucide-react";
 import { formatMinutesToTime } from "@/stores/replayStore";
+import { MarketPhaseJumpButtons } from "./MarketPhaseJumpButtons";
 
 interface Props {
   localTime: number;
@@ -40,30 +41,32 @@ export const ReplayScrubberBar: React.FC<Props> = ({
 }) => {
   const timeFormatted = formatMinutesToTime(localTime).slice(0, 5);
 
+  const jumpToPhase = (minutes: number) => {
+    setLocalTime(minutes);
+    setCurrentTimeMinutes(minutes);
+  };
+
   return (
-    <div className="px-5 py-2 bg-surface-muted/30 flex items-center justify-between gap-4">
-      {/* Playback & Step Controls */}
-      <div className="flex items-center gap-1">
+    <div className="flex items-center justify-between gap-2.5 w-full text-xs">
+      {/* 1. Step & Playback */}
+      <div className="flex items-center gap-1 shrink-0">
         <button
-          onClick={() => {
-            setLocalTime(554);
-            setCurrentTimeMinutes(554);
-          }}
-          title="Reset 09:14 Pre-Open"
-          className="p-1.5 rounded bg-surface-muted hover:bg-surface-hover text-foreground/70 hover:text-foreground transition border border-surface-border"
+          onClick={() => jumpToPhase(554)}
+          title="Reset Pre-Open (09:14)"
+          className="p-1 rounded bg-surface-muted hover:bg-surface-hover text-foreground/70 hover:text-foreground transition border border-surface-border"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
+          <RotateCcw className="w-3 h-3" />
         </button>
         <button
           onClick={() => stepBackward(5)}
           title="-5 min"
-          className="p-1.5 rounded bg-surface-muted hover:bg-surface-hover text-foreground/70 hover:text-foreground transition border border-surface-border"
+          className="p-1 rounded bg-surface-muted hover:bg-surface-hover text-foreground/70 hover:text-foreground transition border border-surface-border"
         >
-          <SkipBack className="w-3.5 h-3.5" />
+          <SkipBack className="w-3 h-3" />
         </button>
         <button
           onClick={togglePlay}
-          className={`px-3 py-1.5 rounded text-xs font-mono font-bold flex items-center gap-1.5 transition ${
+          className={`px-2.5 py-1 rounded text-xs font-black flex items-center gap-1.5 transition ${
             isPlaying
               ? "bg-foreground text-background shadow-sm"
               : "bg-surface-muted hover:bg-surface-hover text-foreground border border-surface-border"
@@ -75,35 +78,34 @@ export const ReplayScrubberBar: React.FC<Props> = ({
             </>
           ) : (
             <>
-              <Play className="w-3 h-3 fill-current" /> PLAY REPLAY
+              <Play className="w-3 h-3 fill-current" /> PLAY
             </>
           )}
         </button>
         <button
           onClick={() => stepForward(5)}
           title="+5 min"
-          className="p-1.5 rounded bg-surface-muted hover:bg-surface-hover text-foreground/70 hover:text-foreground transition border border-surface-border"
+          className="p-1 rounded bg-surface-muted hover:bg-surface-hover text-foreground/70 hover:text-foreground transition border border-surface-border"
         >
-          <SkipForward className="w-3.5 h-3.5" />
+          <SkipForward className="w-3 h-3" />
         </button>
       </div>
 
-      {/* Current Time Clock */}
-      <div className="flex items-center gap-1.5 px-3 py-1 bg-surface border border-surface-border rounded min-w-[85px] justify-center">
-        <Clock className="w-3.5 h-3.5 text-foreground/50" />
-        <span className="font-mono text-xs font-bold text-foreground tracking-wide">
-          {timeFormatted}
-        </span>
-        {localTime === 554 && (
-          <span className="text-[9px] font-mono font-bold px-1 rounded bg-foreground text-background">
-            PRE
+      {/* 2. Clock & Quick Phase Jump Badges */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 px-2 py-0.5 bg-surface-muted border border-surface-border rounded">
+          <Clock className="w-3 h-3 text-foreground/50" />
+          <span className="font-bold text-foreground tracking-wide">
+            {timeFormatted}
           </span>
-        )}
+        </div>
+
+        <MarketPhaseJumpButtons onJump={jumpToPhase} />
       </div>
 
-      {/* Timeline Slider */}
-      <div className="flex-1 flex items-center gap-3 max-w-3xl">
-        <span className="text-[10px] font-mono text-foreground/40">09:14</span>
+      {/* 3. Timeline Slider */}
+      <div className="flex-1 flex items-center gap-2 min-w-0">
+        <span className="text-[10px] text-foreground/40 shrink-0">09:14</span>
         <input
           type="range"
           min={554}
@@ -116,16 +118,16 @@ export const ReplayScrubberBar: React.FC<Props> = ({
           onKeyUp={handleSliderCommit}
           className="w-full h-1 bg-surface-border rounded appearance-none cursor-pointer accent-foreground"
         />
-        <span className="text-[10px] font-mono text-foreground/40">15:30</span>
+        <span className="text-[10px] text-foreground/40 shrink-0">15:30</span>
       </div>
 
-      {/* Speed Multiplier Toggles */}
-      <div className="flex items-center bg-surface-muted border border-surface-border rounded p-0.5 font-mono">
+      {/* 4. Speed Multipliers */}
+      <div className="flex items-center bg-surface-muted border border-surface-border rounded p-0.5 shrink-0">
         {[1, 2, 5, 10].map((spd) => (
           <button
             key={spd}
             onClick={() => setPlaybackSpeed(spd)}
-            className={`px-2.5 py-0.5 text-[10px] font-medium rounded transition ${
+            className={`px-1.5 py-0.2 text-[10px] font-medium rounded transition ${
               playbackSpeed === spd
                 ? "bg-foreground text-background font-bold"
                 : "text-foreground/50 hover:text-foreground"

@@ -5,7 +5,7 @@ import { Clock } from "lucide-react";
 
 export const SessionMilestonesTimeline: React.FC = () => {
   return (
-    <div className="bg-surface border border-surface-border rounded-xl p-4 font-mono text-xs shadow-sm">
+    <div className="bg-surface border border-surface-border rounded-xl p-4 text-xs shadow-sm">
       <div className="flex items-center justify-between mb-3 border-b border-surface-border pb-2">
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-foreground/70" />

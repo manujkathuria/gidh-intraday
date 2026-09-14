@@ -15,150 +15,51 @@
   --color-primary-foreground: rgb(var(--primary-foreground));
   --color-primary-hover: rgb(var(--primary-hover));
   --color-primary-subtle: rgb(var(--primary-subtle));
-
-  --color-success: rgb(var(--success));
-  --color-success-foreground: rgb(var(--success-foreground));
-  --color-success-subtle: rgb(var(--success-subtle));
-
-  --color-warning: rgb(var(--warning));
-  --color-warning-foreground: rgb(var(--warning-foreground));
-  --color-warning-subtle: rgb(var(--warning-subtle));
-
-  --color-danger: rgb(var(--danger));
-  --color-danger-foreground: rgb(var(--danger-foreground));
-  --color-danger-subtle: rgb(var(--danger-subtle));
-
-  --color-info: rgb(var(--info));
-  --color-info-foreground: rgb(var(--info-foreground));
-  --color-info-subtle: rgb(var(--info-subtle));
-
-  --color-triage-red: rgb(var(--triage-red));
-  --color-triage-yellow: rgb(var(--triage-yellow));
-  --color-triage-green: rgb(var(--triage-green));
 }
 
 :root {
-  /* Classic Trustworthy Clinical Light Theme */
-  --background: 248 249 251;
-  /* soft sterile clinical grey-blue */
-  --foreground: 30 41 59;
-  /* warm slate-800 - easy on doctor's eyes */
+  /* Institutional Light Mode (Pure Greyscale) */
+  --background: 248 249 250;
+  --foreground: 24 24 27;
 
   --surface: 255 255 255;
-  /* clean white */
-  --surface-muted: 241 245 249;
-  /* soft slate-100 */
-  --surface-hover: 235 240 246;
-  /* gentle hover */
-  --surface-border: 226 232 240;
-  /* refined slate-200 */
+  --surface-muted: 244 244 245;
+  --surface-hover: 228 228 231;
+  --surface-border: 212 212 216;
 
-  /* Primary Brand: Modern High-Contrast Monochrome (Codex / Linear / Vercel style) */
   --primary: 24 24 27;
-  /* #18181B - solid carbon black */
   --primary-foreground: 255 255 255;
   --primary-hover: 39 39 42;
-  /* #27272A */
   --primary-subtle: 244 244 245;
-  /* #F4F4F5 */
-
-  /* Status Tokens - Balanced & Subdued (Not Neon) */
-  --success: 21 128 61;
-  /* clinical green-700 */
-  --success-foreground: 255 255 255;
-  --success-subtle: 240 253 244;
-  /* green-50 */
-
-  --warning: 180 83 9;
-  /* amber-700 */
-  --warning-foreground: 255 255 255;
-  --warning-subtle: 254 243 199;
-  /* amber-100 */
-
-  --danger: 190 24 93;
-  /* clinical rose-700 */
-  --danger-foreground: 255 255 255;
-  --danger-subtle: 255 241 242;
-  /* rose-50 */
-
-  --info: 3 105 161;
-  /* sky-700 */
-  --info-foreground: 255 255 255;
-  --info-subtle: 240 249 255;
-  /* sky-50 */
-
-  /* Triage Colors - Standard Clinical Manchester Triage */
-  --triage-red: 190 24 93;
-  /* Immediate */
-  --triage-yellow: 217 119 6;
-  /* Urgent */
-  --triage-green: 21 128 61;
-  /* Routine */
 }
 
 [data-theme="dark"],
 .dark {
-  /* Codex / Modern Minimalist Dark Theme (Neutral Carbon Charcoal, No Blue/Navy Tint) */
-  --background: 18 18 18;
-  /* #121212 - sleek modern neutral carbon */
-  --foreground: 236 236 236;
-  /* #ECECEC - crisp off-white text */
+  /* Institutional Dark Mode (Pure Carbon Greyscale) */
+  --background: 14 14 14;
+  --foreground: 240 240 240;
 
-  --surface: 26 26 26;
-  /* #1A1A1A - clean neutral dark card surface */
-  --surface-muted: 34 34 34;
-  /* #222222 - subtle elevated surface */
-  --surface-hover: 44 44 44;
-  /* #2C2C2C - smooth interaction hover */
-  --surface-border: 48 48 48;
-  /* #303030 - crisp subtle border */
+  --surface: 22 22 22;
+  --surface-muted: 30 30 30;
+  --surface-hover: 40 40 40;
+  --surface-border: 45 45 45;
 
-  /* Primary Brand: Pure Monochrome Codex / Linear High Contrast */
-  --primary: 243 244 246;
-  /* #F3F4F6 - solid crisp off-white */
-  --primary-foreground: 18 18 18;
-  /* #121212 - solid dark carbon */
-  --primary-hover: 229 231 235;
-  /* #E5E7EB */
-  --primary-subtle: 38 38 38;
-  /* #262626 */
-
-  /* Status Tokens */
-  --success: 52 211 153;
-  /* emerald-400 */
-  --success-foreground: 18 18 18;
-  --success-subtle: 20 45 35;
-
-  --warning: 251 191 36;
-  /* amber-400 */
-  --warning-foreground: 18 18 18;
-  --warning-subtle: 45 35 15;
-
-  --danger: 248 113 113;
-  /* red-400 */
-  --danger-foreground: 18 18 18;
-  --danger-subtle: 50 20 25;
-
-  --info: 96 165 250;
-  /* blue-400 */
-  --info-foreground: 18 18 18;
-  --info-subtle: 20 35 55;
-
-  /* Triage Colors */
-  --triage-red: 248 113 113;
-  --triage-yellow: 251 191 36;
-  --triage-green: 52 211 153;
+  --primary: 244 244 245;
+  --primary-foreground: 14 14 14;
+  --primary-hover: 228 228 231;
+  --primary-subtle: 32 32 32;
 }
 
 body {
   background-color: rgb(var(--background));
   color: rgb(var(--foreground));
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Fix browser autofill and native focus box distortion */
+/* Fix browser autofill distortion */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
@@ -174,8 +75,8 @@ html {
 
 /* Custom Scrollbar for Clinical HUD */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {

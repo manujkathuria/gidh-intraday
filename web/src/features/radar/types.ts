@@ -5,12 +5,13 @@ export type SortField =
   | "move_pct"
   | "rvol"
   | "vwap_dist_pct"
-  | "clv"
   | "volume";
 
-export type VwapFilter = "ALL" | "ABOVE" | "BELOW";
+export type RadarPreset = "ALL" | "SURGES" | "LEADERS" | "DUMPERS";
 
 export interface SectorOption {
   sector: string;
   label: string;
+  count?: number;
+  avgMovePct?: number;
 }

@@ -1,5 +1,4 @@
 import React, { Suspense } from "react";
-import { HeaderControls } from "@/features/header";
 import { RadarLeaderboard } from "@/features/radar";
 
 export const metadata = {
@@ -9,19 +8,16 @@ export const metadata = {
 
 export default function ReplayWarRoom() {
   return (
-    <main className="min-h-screen bg-background text-foreground flex flex-col font-sans transition-colors">
-      <HeaderControls />
-      <div className="w-full px-5 py-3 flex-1 flex flex-col">
-        <Suspense
-          fallback={
-            <div className="p-8 font-mono text-xs text-foreground/40">
-              Loading Radar Leaderboard...
-            </div>
-          }
-        >
-          <RadarLeaderboard />
-        </Suspense>
-      </div>
-    </main>
+    <div className="w-full px-5 py-3 flex-1 flex flex-col">
+      <Suspense
+        fallback={
+          <div className="p-8 text-xs text-foreground/40">
+            Loading Radar Leaderboard...
+          </div>
+        }
+      >
+        <RadarLeaderboard />
+      </Suspense>
+    </div>
   );
 }

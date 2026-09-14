@@ -53,7 +53,7 @@ export const ChartStudio: React.FC = () => {
         {/* Candlestick Studio Box */}
         <div className="flex-1 bg-surface border border-surface-border rounded-lg p-2 flex flex-col min-h-[580px] relative">
           {loadingCandles && (
-            <div className="absolute top-4 right-4 z-20 bg-surface/90 border border-surface-border px-3 py-1.5 rounded text-xs font-mono text-foreground/70 flex items-center gap-2 shadow-lg backdrop-blur-sm">
+            <div className="absolute top-4 right-4 z-20 bg-surface/90 border border-surface-border px-3 py-1.5 rounded text-xs text-foreground/70 flex items-center gap-2 shadow-lg backdrop-blur-sm">
               <Activity className="w-3.5 h-3.5 animate-spin text-foreground" />
               Syncing 1m stream...
             </div>

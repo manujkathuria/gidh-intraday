@@ -27,7 +27,7 @@ export const HeroStatsMatrix: React.FC<Props> = ({
   const pnlPct = usedSlots > 0 ? (totalPnLINR / (usedSlots * 10000)) * 100 : 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 font-mono text-xs">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
       {/* 1. Total Real-Time P&L */}
       <div className="bg-surface border border-surface-border rounded-xl p-4 flex flex-col justify-between shadow-sm">
         <div className="flex items-center justify-between">

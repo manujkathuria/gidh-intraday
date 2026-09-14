@@ -35,7 +35,7 @@ export const QuantBrainView: React.FC = () => {
       />
 
       {/* 4. Rule Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
         {filteredRules.length === 0 ? (
           <div className="col-span-2 p-12 text-center text-foreground/40 bg-surface border border-surface-border rounded-xl">
             No rules found in this category

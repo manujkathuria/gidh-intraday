@@ -80,7 +80,7 @@ export const BrainRuleCard: React.FC<Props> = ({ rule }) => {
               <span className="font-bold text-foreground/60 shrink-0">
                 Invalidate:
               </span>
-              <span className="text-foreground/80 font-mono">
+              <span className="text-foreground/80">
                 {rule.invalidation}
               </span>
             </div>

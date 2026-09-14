@@ -1,2 +1,2 @@
+export { AppShell } from "./AppShell";
 export { HeaderControls } from "./HeaderControls";
-export * from "./types";

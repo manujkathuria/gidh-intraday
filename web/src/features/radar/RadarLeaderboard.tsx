@@ -4,17 +4,16 @@ import React from "react";
 import { RadarFilterBar } from "./components/RadarFilterBar";
 import { RadarTableHeader } from "./components/RadarTableHeader";
 import { RadarTableRow } from "./components/RadarTableRow";
+import { RadarMobileCard } from "./components/RadarMobileCard";
 import { useRadarFilters } from "./hooks/useRadarFilters";
 
 export const RadarLeaderboard: React.FC = () => {
   const {
     stocks,
+    preset,
+    setPreset,
     selectedSector,
     setSelectedSector,
-    minRvol,
-    setMinRvol,
-    vwapFilter,
-    setVwapFilter,
     search,
     setSearch,
     sortField,
@@ -27,25 +26,42 @@ export const RadarLeaderboard: React.FC = () => {
   } = useRadarFilters();
 
   return (
-    <div className="flex flex-col gap-3 font-mono">
-      {/* 1. Filter Bar */}
+    <div className="flex flex-col gap-3">
+      {/* 1. 1-Click Spectator Filter Presets */}
       <RadarFilterBar
-        search={search}
-        setSearch={setSearch}
+        preset={preset}
+        setPreset={setPreset}
         selectedSector={selectedSector}
         setSelectedSector={setSelectedSector}
         sectorOptions={sectorOptions}
-        minRvol={minRvol}
-        setMinRvol={setMinRvol}
-        vwapFilter={vwapFilter}
-        setVwapFilter={setVwapFilter}
+        search={search}
+        setSearch={setSearch}
         visibleCount={filteredAndSorted.length}
         totalCount={stocks.length}
       />
 
-      {/* 2. Clinical Monochrome Data Table */}
-      <div className="bg-surface border border-surface-border rounded-lg overflow-hidden transition-colors">
-        <div className="overflow-x-auto max-h-[calc(100vh-140px)] custom-scrollbar">
+      {/* 2. Mobile View: Thumb-Friendly Spectator Stock Cards (< md) */}
+      <div className="md:hidden bg-surface border border-surface-border rounded-lg overflow-hidden flex flex-col divide-y divide-surface-border">
+        {filteredAndSorted.length === 0 ? (
+          <div className="py-12 text-center text-foreground/40 text-xs">
+            No stocks match this filter.
+          </div>
+        ) : (
+          filteredAndSorted.map((stock, idx) => (
+            <RadarMobileCard
+              key={stock.symbol}
+              stock={stock}
+              index={idx}
+              isSelected={stock.symbol === selectedSymbol}
+              onSelect={setSelectedSymbol}
+            />
+          ))
+        )}
+      </div>
+
+      {/* 3. iPad / Desktop View: High-Density Table (hidden on mobile, visible md+) */}
+      <div className="hidden md:block bg-surface border border-surface-border rounded-lg overflow-hidden transition-colors">
+        <div className="overflow-x-auto max-h-[calc(100vh-130px)] custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs">
             <RadarTableHeader
               sortField={sortField}
@@ -56,10 +72,10 @@ export const RadarLeaderboard: React.FC = () => {
               {filteredAndSorted.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={9}
-                    className="py-12 text-center text-foreground/40 font-mono text-xs"
+                    colSpan={8}
+                    className="py-12 text-center text-foreground/40 text-xs"
                   >
-                    No stocks match the selected filter criteria.
+                    No stocks match this filter.
                   </td>
                 </tr>
               ) : (

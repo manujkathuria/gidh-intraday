@@ -41,7 +41,7 @@ export const OrderDispatchModal: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-surface border border-surface-border rounded-2xl w-full max-w-lg p-6 shadow-2xl font-mono flex flex-col gap-4">
+      <div className="bg-surface border border-surface-border rounded-2xl w-full max-w-lg p-6 shadow-2xl flex flex-col gap-4">
         <div className="flex items-center justify-between border-b border-surface-border pb-3">
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-foreground" />

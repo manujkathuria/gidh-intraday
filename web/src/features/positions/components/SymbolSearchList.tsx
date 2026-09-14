@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Search } from "lucide-react";
 import { FnoSymbolItem } from "../types";
 
 interface Props {
@@ -19,19 +20,24 @@ export const SymbolSearchList: React.FC<Props> = ({
   onSelectSymbol,
 }) => {
   return (
-    <div className="flex flex-col gap-1.5 font-mono text-xs">
+    <div className="flex flex-col gap-1.5 text-xs">
       <label className="text-[11px] font-bold text-foreground/60 uppercase">
         Select Stock from 210 F&O Universe
       </label>
-      <input
-        type="text"
-        placeholder="Type to filter stock (e.g. RELIANCE)..."
-        value={searchFilter}
-        onChange={(e) => setSearchFilter(e.target.value)}
-        className="bg-surface-muted border border-surface-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:border-foreground/50"
-      />
 
-      <div className="max-h-40 overflow-y-auto border border-surface-border rounded-lg bg-surface-muted divide-y divide-surface-border custom-scrollbar mt-1">
+      {/* Tailwind Plus Style Precision Search Input */}
+      <div className="relative">
+        <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/40 pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Type to filter stock (e.g. RELIANCE)..."
+          value={searchFilter}
+          onChange={(e) => setSearchFilter(e.target.value)}
+          className="block w-full rounded-md bg-surface-muted pl-8 pr-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 border border-surface-border focus:outline-1 focus:-outline-offset-1 focus:outline-foreground focus:border-foreground"
+        />
+      </div>
+
+      <div className="max-h-40 overflow-y-auto border border-surface-border rounded-md bg-surface divide-y divide-surface-border custom-scrollbar mt-1">
         {filteredSymbols.map((item) => (
           <button
             key={item.symbol}

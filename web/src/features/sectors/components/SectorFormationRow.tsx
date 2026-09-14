@@ -26,7 +26,7 @@ export const SectorFormationRow: React.FC<Props> = ({
     <>
       <tr
         onClick={onToggleExpand}
-        className="border-b border-surface-border transition-colors cursor-pointer hover:bg-surface-hover/60 font-mono text-xs"
+        className="border-b border-surface-border transition-colors cursor-pointer hover:bg-surface-hover/60 text-xs"
       >
         {/* Expand Chevron */}
         <td className="py-2.5 px-3 text-center text-foreground/40">
@@ -52,10 +52,20 @@ export const SectorFormationRow: React.FC<Props> = ({
         {/* Civ Count */}
         <td className="py-2.5 px-3 text-center text-foreground/60">{sector.civ_count}</td>
 
-        {/* Avg Move % */}
-        <td className="py-2.5 px-3 text-right font-bold text-foreground">
-          {avgMove >= 0 ? "+" : ""}
-          {avgMove.toFixed(2)}%
+        {/* Avg Move % with subtle tint */}
+        <td className="py-2.5 px-3 text-right font-bold">
+          <span
+            className={
+              avgMove > 0
+                ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                : avgMove < 0
+                ? "text-rose-600 dark:text-rose-400 font-bold"
+                : "text-foreground/60"
+            }
+          >
+            {avgMove >= 0 ? "+" : ""}
+            {avgMove.toFixed(2)}%
+          </span>
         </td>
 
         {/* VWAP Breadth Bar */}
@@ -88,37 +98,48 @@ export const SectorFormationRow: React.FC<Props> = ({
       {isExpanded && stocks.length > 0 && (
         <tr className="bg-surface-muted/30 border-b border-surface-border">
           <td colSpan={7} className="p-3">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 font-mono text-xs">
-              {stocks.map((st: ReplayStock) => (
-                <div
-                  key={st.symbol}
-                  className="bg-surface border border-surface-border rounded p-2 flex items-center justify-between shadow-xs"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        st.is_above_vwap ? "bg-foreground" : "bg-surface-border"
-                      }`}
-                    />
-                    <span className="font-bold text-foreground">{st.symbol}</span>
-                  </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+              {stocks.map((st: ReplayStock) => {
+                const move = st.move_pct || 0;
+                return (
+                  <div
+                    key={st.symbol}
+                    className="bg-surface border border-surface-border rounded p-2 flex items-center justify-between shadow-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          st.is_above_vwap ? "bg-foreground" : "bg-surface-border"
+                        }`}
+                      />
+                      <span className="font-bold text-foreground">{st.symbol}</span>
+                    </div>
 
-                  <div className="flex items-center gap-2 text-[11px]">
-                    <span className="text-foreground/60">₹{st.price?.toFixed(2)}</span>
-                    <span className="font-bold text-foreground">
-                      {(st.move_pct || 0) >= 0 ? "+" : ""}
-                      {(st.move_pct || 0).toFixed(2)}%
-                    </span>
-                    <Link
-                      href={`/chart?symbol=${encodeURIComponent(st.symbol)}`}
-                      className="p-1 rounded hover:bg-foreground hover:text-background text-foreground/40 transition"
-                      title={`Open ${st.symbol} Chart`}
-                    >
-                      <LineChart className="w-3 h-3" />
-                    </Link>
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <span className="text-foreground/60">₹{st.price?.toFixed(2)}</span>
+                      <span
+                        className={
+                          move > 0
+                            ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                            : move < 0
+                            ? "text-rose-600 dark:text-rose-400 font-bold"
+                            : "text-foreground/60 font-bold"
+                        }
+                      >
+                        {move >= 0 ? "+" : ""}
+                        {move.toFixed(2)}%
+                      </span>
+                      <Link
+                        href={`/chart?symbol=${encodeURIComponent(st.symbol)}`}
+                        className="p-1 rounded hover:bg-foreground hover:text-background text-foreground/40 transition"
+                        title={`Open ${st.symbol} Chart`}
+                      >
+                        <LineChart className="w-3 h-3" />
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </td>
         </tr>
