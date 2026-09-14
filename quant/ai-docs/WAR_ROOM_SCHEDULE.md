@@ -9,8 +9,8 @@ This document defines the strict standard operating procedure (SOP) and checkpoi
 | Time (IST) | Phase | Objective | Tools / Commands |
 | :--- | :--- | :--- | :--- |
 | **08:45 – 09:00 AM** | **Pre-Market Warmup** | • Refresh Zerodha Kite Token<br>• Verify PostgreSQL & Go Backend<br>• Check GIFT Nifty & Global Macro Cues | `make auth`<br>`docker ps`<br>`make api` |
-| **09:08 – 09:14 AM** | **Pre-Open Snapshot** | • Pre-open order matching settles<br>• Identify top opening gap-up & gap-down candidates | Pre-open screen / market depth |
-| **09:15 – 09:30 AM** | **Market Open & Observation** | • Live candle feed ingestion begins<br>• Strictly NO trade entries during first 15 mins (Let opening volatility settle) | Relax & wait for the 09:30 close |
+| **09:08 – 09:14 AM** | **Pre-Open Snapshot** | • Pre-open order matching settles<br>• Start live data poller (210 F&O universe) | `make live` |
+| **09:15 – 09:30 AM** | **Market Open & Observation** | • Live candle feed ingestion running in background<br>• Strictly NO trade entries during first 15 mins (Let opening volatility settle) | Relax & wait for the 09:30 close |
 | **09:30:05 AM** | **🎯 Checkpoint 1 (09:30 Bar Close)** | • First 15m candle closes<br>• Screen for Tier 1 Monster volume openers (`RVOL >= 5x`)<br>• Screen for 09:30 Sector Battalion Leaders | `python3 quant/tools/decision_screen.py --time 09:30`<br>`python3 quant/tools/battalion_scanner.py --time 09:30` |
 | **09:45:05 AM** | **🎯 Checkpoint 2 (09:45 Bar Close)** | • Second 15m candle closes<br>• Identify False Breakout Bull/Bear Traps (high wicks + low CLV)<br>• Confirm Battalion Followers<br>• Fill active portfolio to 5 trades | `python3 quant/tools/decision_screen.py --time 09:45`<br>`python3 quant/tools/battalion_scanner.py --time 09:45` |
 | **10:45 AM** | **Checkpoint 3 (Trend Health)** | • First major trend health check<br>• Verify VWAP alignment on all active trades | `python3 quant/tools/scout.py --time 10:45` |

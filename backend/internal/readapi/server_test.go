@@ -33,6 +33,9 @@ func (f *fakeReader) ReplaySnapshot(context.Context, string, string) (*ReplaySna
 func (f *fakeReader) ReplayCandles(context.Context, string, string, string) ([]ReplayCandle, error) {
 	return []ReplayCandle{}, nil
 }
+func (f *fakeReader) WarmSessionDay(context.Context, string) error {
+	return nil
+}
 
 func TestDailyFeaturesRequiresValidSessionDate(t *testing.T) {
 	h := NewServer(&fakeReader{})

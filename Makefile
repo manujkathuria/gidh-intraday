@@ -1,7 +1,8 @@
-.PHONY: help ai ai-test api api-restart web lab auth universe history features integrity test
+.PHONY: help ai ai-test api api-restart web lab auth live universe history features integrity test
 
 help:
 	@echo "Gidh Intraday Engine & War Room"
+	@echo "  make live        Start live universe REST quote polling & feature engine"
 	@echo "  make api         Start the Go read-only market & replay API"
 	@echo "  make api-restart Kill any running instance on port 8080 and start Go API"
 	@echo "  make web         Start the Next.js War Room UI (pnpm dev)"
@@ -31,6 +32,9 @@ ai-test:
 
 auth:
 	@cd backend && go run ./cmd/gidh-auth $(TOKEN)
+
+live:
+	@cd backend && go run ./cmd/gidh-batch live $(ARGS)
 
 universe:
 	@cd backend && go run ./cmd/gidh-batch instruments sync --expected-count=210

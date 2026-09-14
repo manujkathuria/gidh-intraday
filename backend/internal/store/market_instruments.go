@@ -83,3 +83,35 @@ func (r *MarketInstrumentRepo) ReplaceActiveUniverse(ctx context.Context, pairs 
 	}
 	return tx.Commit(ctx)
 }
+
+type ActiveInstrument struct {
+	ID        int64
+	Symbol    string
+	Name      string
+	Exchange  string
+	CashToken int64
+	TickSize  float64
+}
+
+func (r *MarketInstrumentRepo) GetActiveInstruments(ctx context.Context) ([]ActiveInstrument, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT id, symbol, name, exchange, cash_token, tick_size
+		FROM market.instruments
+		WHERE is_active = TRUE
+		ORDER BY symbol;
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []ActiveInstrument
+	for rows.Next() {
+		var inst ActiveInstrument
+		if err := rows.Scan(&inst.ID, &inst.Symbol, &inst.Name, &inst.Exchange, &inst.CashToken, &inst.TickSize); err != nil {
+			return nil, err
+		}
+		list = append(list, inst)
+	}
+	return list, rows.Err()
+}
