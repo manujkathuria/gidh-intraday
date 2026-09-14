@@ -65,29 +65,84 @@ func (m *Manager) SyncWithZerodha(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.isPaperTrading {
-		log.Println("[ORDER MANAGER] Paper trading active — skipping broker sync.")
+	if m.isPaperTrading || m.kiteClient == nil {
+		log.Println("[ORDER MANAGER] Paper trading mode or no Kite client — skipping broker position sync.")
 		return nil
 	}
 
-	// 1. Fetch current positions from Zerodha
-	// Note: In a live session with active credentials, this queries kite.GetPositions()
 	log.Println("[ORDER MANAGER] Reconciling active positions against Zerodha Source of Truth...")
+
+	positions, err := m.kiteClient.FetchPositions(ctx)
+	if err != nil {
+		log.Printf("[ORDER MANAGER WARN] FetchPositions failed: %v", err)
+		return err
+	}
 
 	activePositions, err := m.redisStore.GetActivePositions(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to load active positions from redis: %w", err)
 	}
 
-	// Ensure subscribed tokens in tracker match Redis active positions
-	for _, pos := range activePositions {
-		if m.tracker != nil && pos.InstrumentToken > 0 {
-			m.tracker.SubscribePosition(pos.Symbol, pos.InstrumentToken)
-			_ = m.redisStore.AddWSToken(ctx, pos.InstrumentToken)
+	// Map of active net positions in Zerodha (MIS only where Quantity != 0)
+	brokerNetMap := make(map[string]bool)
+	for _, np := range positions.Net {
+		if np.Product == "MIS" && np.Quantity != 0 {
+			brokerNetMap[np.Tradingsymbol] = true
+			side := SideLong
+			qty := np.Quantity
+			if qty < 0 {
+				side = SideShort
+				qty = -qty
+			}
+
+			pos, exists := activePositions[np.Tradingsymbol]
+			if !exists {
+				pos = &ActivePosition{
+					Symbol:          np.Tradingsymbol,
+					InstrumentToken: uint32(np.InstrumentToken),
+					Exchange:        np.Exchange,
+					Side:            side,
+					Quantity:        qty,
+					EntryPrice:      np.AveragePrice,
+					CurrentLTP:      np.LastPrice,
+					PnLINR:          np.PnL,
+					StopFloorPct:    -1.50,
+					Tactic:          "LIVE_ADOPTED",
+					BrokerOrderID:   "ZERODHA_SYNC",
+					OpenedAt:        time.Now(),
+					UpdatedAt:       time.Now(),
+				}
+				_ = m.redisStore.SaveActivePosition(ctx, pos)
+				log.Printf("[ORDER MANAGER] Adopted open Zerodha MIS position: %s %s @ %.2f (Qty: %d)", side, np.Tradingsymbol, np.AveragePrice, qty)
+			} else {
+				pos.Quantity = qty
+				pos.EntryPrice = np.AveragePrice
+				pos.CurrentLTP = np.LastPrice
+				pos.PnLINR = np.PnL
+				_ = m.redisStore.SaveActivePosition(ctx, pos)
+			}
+
+			if m.tracker != nil && pos.InstrumentToken > 0 {
+				m.tracker.SubscribePosition(pos.Symbol, pos.InstrumentToken)
+				_ = m.redisStore.AddWSToken(ctx, pos.InstrumentToken)
+			}
 		}
 	}
 
-	log.Printf("[ORDER MANAGER] Reconciliation complete. Active tracked positions: %d/%d slots", len(activePositions), m.maxSlots)
+	// Clean up any Redis positions that have closed in Zerodha
+	for sym, p := range activePositions {
+		if !brokerNetMap[sym] {
+			log.Printf("[ORDER MANAGER] Pruning closed position from Redis: %s", sym)
+			_ = m.redisStore.RemoveActivePosition(ctx, sym)
+			if m.tracker != nil && p.InstrumentToken > 0 {
+				m.tracker.UnsubscribePosition(p.InstrumentToken)
+				_ = m.redisStore.RemoveWSToken(ctx, p.InstrumentToken)
+			}
+		}
+	}
+
+	updated, _ := m.redisStore.GetActivePositions(ctx)
+	log.Printf("[ORDER MANAGER] Reconciliation complete. Active tracked positions: %d/%d slots", len(updated), m.maxSlots)
 	return nil
 }
 
@@ -152,10 +207,20 @@ func (m *Manager) PlaceOrder(ctx context.Context, intent OrderIntent) (*ActivePo
 		qty = 1
 	}
 
+	txnType := "BUY"
+	if intent.Side == SideShort {
+		txnType = "SELL"
+	}
+
 	brokerOrderID := fmt.Sprintf("PAPER-%d", time.Now().UnixNano())
-	if !m.isPaperTrading {
-		// Place actual order via Kite API
-		// brokerOrderID = placeBrokerOrder(...)
+	if !m.isPaperTrading && m.kiteClient != nil {
+		// Place actual MIS market order with market_protection = -1 for unconditional fill
+		placedID, err := m.kiteClient.PlaceMISMarketOrder(ctx, targetInst.Exchange, targetInst.Symbol, txnType, qty, "GIDH")
+		if err != nil {
+			return nil, fmt.Errorf("zerodha order placement failed for %s: %w", targetInst.Symbol, err)
+		}
+		brokerOrderID = placedID
+		log.Printf("[ORDER MANAGER] Placed Zerodha MIS Market Order (%s %s %d) | OrderID: %s", txnType, targetInst.Symbol, qty, brokerOrderID)
 	}
 
 	// 4. Create Active Position
@@ -213,18 +278,32 @@ func (m *Manager) SquareOffPosition(ctx context.Context, symbol, reason string) 
 		return fmt.Errorf("no active position found for %s", symbol)
 	}
 
-	// 1. Unsubscribe from WebSocket
+	// 1. Send closing order to Zerodha
+	if !m.isPaperTrading && m.kiteClient != nil {
+		exitTxnType := "SELL"
+		if pos.Side == SideShort {
+			exitTxnType = "BUY"
+		}
+		exitOrderID, err := m.kiteClient.PlaceMISMarketOrder(ctx, pos.Exchange, pos.Symbol, exitTxnType, pos.Quantity, "GIDH_EXIT")
+		if err != nil {
+			log.Printf("[ORDER MANAGER ERROR] Failed to place square-off order for %s: %v", pos.Symbol, err)
+		} else {
+			log.Printf("[ORDER MANAGER] Squared off %s on Zerodha (%s %d) | OrderID: %s", pos.Symbol, exitTxnType, pos.Quantity, exitOrderID)
+		}
+	}
+
+	// 2. Unsubscribe from WebSocket
 	if m.tracker != nil && pos.InstrumentToken > 0 {
 		m.tracker.UnsubscribePosition(pos.InstrumentToken)
 	}
 	_ = m.redisStore.RemoveWSToken(ctx, pos.InstrumentToken)
 
-	// 2. Remove from active positions in Redis
+	// 3. Remove from active positions in Redis
 	if err := m.redisStore.RemoveActivePosition(ctx, symbol); err != nil {
 		return err
 	}
 
-	// 3. Publish Event
+	// 4. Publish Event
 	_ = m.redisStore.PublishLiveEvent(ctx, "POSITION_CLOSED", map[string]interface{}{
 		"symbol":      pos.Symbol,
 		"exit_price":  pos.CurrentLTP,

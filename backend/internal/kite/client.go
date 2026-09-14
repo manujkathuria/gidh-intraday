@@ -69,3 +69,37 @@ func (c *Client) FetchQuote(ctx context.Context, instruments ...string) (kitecon
 
 	return quotes, nil
 }
+
+func (c *Client) PlaceMISMarketOrder(ctx context.Context, exchange, symbol, transactionType string, qty int, tag string) (string, error) {
+	c.waitRateLimit()
+
+	orderParams := kiteconnect.OrderParams{
+		Exchange:         exchange,
+		Tradingsymbol:    symbol,
+		TransactionType:  transactionType,
+		Quantity:         qty,
+		Product:          kiteconnect.ProductMIS,
+		OrderType:        kiteconnect.OrderTypeMarket,
+		Validity:         kiteconnect.ValidityDay,
+		MarketProtection: -1, // Unconditional immediate market execution without price protection collar
+		Tag:              tag,
+	}
+
+	resp, err := c.kc.PlaceOrder("regular", orderParams)
+	if err != nil {
+		return "", fmt.Errorf("kite place order error for %s (%s %d): %w", symbol, transactionType, qty, err)
+	}
+
+	return resp.OrderID, nil
+}
+
+func (c *Client) FetchPositions(ctx context.Context) (kiteconnect.Positions, error) {
+	c.waitRateLimit()
+
+	positions, err := c.kc.GetPositions()
+	if err != nil {
+		return kiteconnect.Positions{}, fmt.Errorf("kite get positions error: %w", err)
+	}
+
+	return positions, nil
+}
