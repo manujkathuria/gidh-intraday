@@ -1,25 +1,26 @@
-"use client";
+import React, { Suspense } from "react";
+import { HeaderControls } from "@/features/header";
+import { RadarLeaderboard } from "@/features/radar";
 
-import React, { useEffect } from "react";
-import { useReplayStore } from "@/stores/replayStore";
-import { HeaderControls } from "@/components/HeaderControls";
-import { IntradayVolumeTable } from "@/components/IntradayVolumeTable";
+export const metadata = {
+  title: "Radar Leaderboard | Gidh Intraday War Room",
+  description: "Real-Time 210-Civ Market Scouting & Replay Engine",
+};
 
 export default function ReplayWarRoom() {
-  const { init } = useReplayStore();
-
-  useEffect(() => {
-    init();
-  }, [init]);
-
   return (
     <main className="min-h-screen bg-background text-foreground flex flex-col font-sans transition-colors">
-      {/* 1. Header Controls with Theme Toggle & Scrubber */}
       <HeaderControls />
-
-      {/* 2. Main High-Density Monochrome Table */}
       <div className="w-full px-5 py-3 flex-1 flex flex-col">
-        <IntradayVolumeTable />
+        <Suspense
+          fallback={
+            <div className="p-8 font-mono text-xs text-foreground/40">
+              Loading Radar Leaderboard...
+            </div>
+          }
+        >
+          <RadarLeaderboard />
+        </Suspense>
       </div>
     </main>
   );
