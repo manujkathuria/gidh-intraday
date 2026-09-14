@@ -100,6 +100,7 @@ type MarketReader interface {
 	DailyFocus(context.Context, string) ([]DailyFocusItem, error)
 	ReplaySnapshot(ctx context.Context, sessionDate, asOfTime string) (*ReplaySnapshotResponse, error)
 	ReplayCandles(ctx context.Context, sessionDate, symbol, toTime string) ([]ReplayCandle, error)
+	WarmSessionDay(ctx context.Context, sessionDate string) error
 }
 
 func (r *Repository) DailyFocus(ctx context.Context, sessionDate string) ([]DailyFocusItem, error) {
@@ -128,9 +129,25 @@ func (r *Repository) DailyFocus(ctx context.Context, sessionDate string) ([]Dail
 	return items, rows.Err()
 }
 
-type Repository struct{ db *store.DB }
+type Repository struct {
+	db    *store.DB
+	redis *RedisCache
+}
 
-func NewRepository(db *store.DB) *Repository { return &Repository{db: db} }
+func NewRepository(db *store.DB) *Repository {
+	repo := &Repository{
+		db:    db,
+		redis: NewRedisCache(),
+	}
+	if repo.redis != nil {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_ = repo.PrepopulatePreopenBaselines(ctx)
+		}()
+	}
+	return repo
+}
 
 func (r *Repository) Ping(ctx context.Context) error { return r.db.Pool.Ping(ctx) }
 

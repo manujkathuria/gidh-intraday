@@ -18,36 +18,16 @@ smallest correct change, and verify the result.
 
 ## Gidh Forge sidecar
 
-When `gidh-forge` is available, use it to reduce exploration context. It is an
-optional sidecar: it never replaces this project contract or normal tools.
+When `gidh-forge` is available, use its 4 core superpowers to accelerate context and refactoring safety:
 
-- At the start of every coding or investigation task, run `gidh-forge -h`.
-  Treat its current command list and descriptions as the source of truth; do
-  not rely solely on this guidance or on remembered command syntax.
-- Start a non-trivial unfamiliar task with `gidh-forge map` to see code
-  ownership and filesystem context.
-- Use `gidh-forge search "<hypothesis>"` when the implementation point is
-  uncertain; then use `find`, `view`, or `get` for focused inspection instead
-  of reading whole code files by default.
-- Before changing a shared symbol, use `impact <symbol>` and, where supported,
-  `trace <symbol>`. Treat unresolved or text-only results as leads, not proof.
-- After changes, use `diff` to review semantic ownership and `check` for
-  syntax. `check` is not a compiler or typechecker: also run the project's
-  compiler/typechecker (for example, `tsc`, `go build`, or the project build).
-  Use `check --strict` when Tree-Sitter coverage is required.
-- Use `gidh-forge changed` for a quick summary of modified and untracked files.
-- Use `gidh-forge review` for a composite pre-commit report (diff + check +
-  blast radius).
-- Use `gidh-forge test-scope <symbol>` to find tests affected by a change.
-- Use `gidh-forge check <file1> <file2>` to validate specific files.
-- Append `--json` to any read command for structured output.
-- `gidh-forge init` owns only `.gidh/`. Do not overwrite user-owned agent or
-  editor instruction files outside this marked block.
+- **`map`**: Start non-trivial unfamiliar tasks with `gidh-forge map` to see code ownership, package topology, and symbol outlines in minimal tokens.
+- **`file <path>`**: Inspect a file with `gidh-forge file <path>` (macro outline + internal call graph) or `gidh-forge file <path> --focus <symbol>` (full target body + helper signatures) to understand code without reading 1,000s of lines.
+- **`impact <symbol>`**: Before changing shared functions or methods, run `gidh-forge impact <symbol>` (or `impact --diff`) to evaluate blast radius and callers across the workspace.
+- **`diff`**: Use `gidh-forge diff` to review semantic changes mapped directly to modified functions and classes.
+- Rely on standard tools (`view_file`, `grep_search`, `replace_file_content`) and the project's real compiler/test runner (`go build`, `cargo check`, `npm test`, `pytest`) for inspection, edits, and verification.
 
-If Gidh Forge is unavailable or does not support a language, use the project's
-existing tools and state that limitation.
+If Gidh Forge is unavailable, use standard tools directly.
 <!-- gidh-forge:end -->
-
 
 ## While coding
 

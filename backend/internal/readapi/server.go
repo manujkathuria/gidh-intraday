@@ -21,6 +21,7 @@ func NewServer(reader MarketReader) http.Handler {
 	mux.HandleFunc("GET /v1/ai/daily-focus", s.dailyFocus)
 	mux.HandleFunc("GET /v1/replay/snapshot", s.replaySnapshot)
 	mux.HandleFunc("GET /v1/replay/candles", s.replayCandles)
+	mux.HandleFunc("GET /v1/replay/ws", s.replayWebSocket)
 
 	return withCORS(mux)
 }

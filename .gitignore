@@ -13,6 +13,8 @@ backend/firebase.json
 # Go binaries & caches
 bin/
 backend/bin/
+backend/gidh-api
+gidh-api
 *.exe
 *.test
 *.out

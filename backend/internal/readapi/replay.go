@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"time"
 )
 
 type ReplayStock struct {
@@ -68,20 +69,32 @@ type ReplayCandle struct {
 }
 
 func (r *Repository) ReplaySnapshot(ctx context.Context, sessionDate, asOfTime string) (*ReplaySnapshotResponse, error) {
+	if r.redis != nil {
+		if cached, ok := r.redis.GetSnapshot(ctx, sessionDate, asOfTime); ok {
+			return cached, nil
+		}
+	}
+
+	if asOfTime <= "09:14:00" {
+		res, err := r.preopenBaseline(ctx, sessionDate, asOfTime)
+		if err == nil && r.redis != nil {
+			r.redis.SetSnapshot(ctx, sessionDate, asOfTime, res)
+		}
+		return res, err
+	}
+
 	query := `
 	WITH prev_date AS (
-		SELECT DISTINCT date(ts AT TIME ZONE 'Asia/Kolkata') as dt
-		FROM market.cash_candles_1m
-		WHERE (ts AT TIME ZONE 'Asia/Kolkata')::date < $1::date
+		SELECT DISTINCT session_date as dt
+		FROM market.cash_candles_1d
+		WHERE session_date < $1::date
 		ORDER BY dt DESC LIMIT 1
 	),
 	prev_close AS (
 		SELECT i.symbol, c.close as prev_close
-		FROM market.cash_candles_1m c 
+		FROM market.cash_candles_1d c
 		JOIN market.instruments i ON c.instrument_id = i.id
-		WHERE (c.ts AT TIME ZONE 'Asia/Kolkata')::date = (SELECT dt FROM prev_date)
-		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time >= '15:29:00'
-		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time <= '15:30:00'
+		WHERE c.session_date = (SELECT dt FROM prev_date)
 	),
 	open_candle AS (
 		SELECT i.symbol, MIN(c.open) as day_open
@@ -107,17 +120,11 @@ func (r *Repository) ReplaySnapshot(ctx context.Context, sessionDate, asOfTime s
 		GROUP BY i.symbol
 	),
 	hist_vol AS (
-		SELECT i.symbol, AVG(sub.vol_window) as avg_vol_hist
-		FROM (
-			SELECT instrument_id, date_trunc('day', ts AT TIME ZONE 'Asia/Kolkata') as day, SUM(volume) as vol_window
-			FROM market.cash_candles_1m
-			WHERE (ts AT TIME ZONE 'Asia/Kolkata')::time >= '09:15:00'
-			  AND (ts AT TIME ZONE 'Asia/Kolkata')::time <= $2::time
-			  AND (ts AT TIME ZONE 'Asia/Kolkata')::date < $1::date
-			  AND (ts AT TIME ZONE 'Asia/Kolkata')::date >= ($1::date - INTERVAL '30 days')
-			GROUP BY instrument_id, date_trunc('day', ts AT TIME ZONE 'Asia/Kolkata')
-		) sub
-		JOIN market.instruments i ON sub.instrument_id = i.id
+		SELECT i.symbol, AVG(c.volume) as avg_daily_vol
+		FROM market.cash_candles_1d c
+		JOIN market.instruments i ON c.instrument_id = i.id
+		WHERE c.session_date < $1::date
+		  AND c.session_date >= ($1::date - INTERVAL '30 days')
 		GROUP BY i.symbol
 	)
 	SELECT 
@@ -125,7 +132,7 @@ func (r *Repository) ReplaySnapshot(ctx context.Context, sessionDate, asOfTime s
 		COALESCE(ROUND(((o.day_open - p.prev_close) / p.prev_close * 100)::numeric, 2), 0) as gap_pct,
 		COALESCE(ROUND(((m.current_price - p.prev_close) / p.prev_close * 100)::numeric, 2), 0) as move_pct,
 		COALESCE(ROUND(((m.current_price - m.vwap_scout) / m.vwap_scout * 100)::numeric, 2), 0) as vwap_dist_pct,
-		COALESCE(ROUND((m.current_vol / NULLIF(h.avg_vol_hist, 0))::numeric, 2), 1.0) as rvol,
+		COALESCE(ROUND((m.current_vol / NULLIF(h.avg_daily_vol, 0) * 100)::numeric, 2), 0) as rvol,
 		COALESCE(ROUND(((m.current_price - m.low_scout) / NULLIF(m.high_scout - m.low_scout, 0))::numeric, 2), 0.5) as clv,
 		COALESCE(m.current_price, 0),
 		COALESCE(m.vwap_scout, 0),
@@ -260,7 +267,7 @@ func (r *Repository) ReplaySnapshot(ctx context.Context, sessionDate, asOfTime s
 		}
 	}
 
-	return &ReplaySnapshotResponse{
+	res := &ReplaySnapshotResponse{
 		SessionDate: sessionDate,
 		AsOfTime:    asOfTime,
 		Weather: ReplayWeather{
@@ -272,7 +279,13 @@ func (r *Repository) ReplaySnapshot(ctx context.Context, sessionDate, asOfTime s
 		Stocks:  stocks,
 		Sectors: sectors,
 		Traps:   traps,
-	}, nil
+	}
+
+	if r.redis != nil {
+		r.redis.SetSnapshot(ctx, sessionDate, asOfTime, res)
+	}
+
+	return res, nil
 }
 
 func (r *Repository) ReplayCandles(ctx context.Context, sessionDate, symbol, toTime string) ([]ReplayCandle, error) {
@@ -316,3 +329,452 @@ func (r *Repository) ReplayCandles(ctx context.Context, sessionDate, symbol, toT
 	}
 	return candles, nil
 }
+
+func (r *Repository) preopenBaseline(ctx context.Context, sessionDate, asOfTime string) (*ReplaySnapshotResponse, error) {
+	query := `
+	WITH prev_date AS (
+		SELECT DISTINCT date(ts AT TIME ZONE 'Asia/Kolkata') as dt
+		FROM market.cash_candles_1m
+		WHERE (ts AT TIME ZONE 'Asia/Kolkata')::date < $1::date
+		ORDER BY dt DESC LIMIT 1
+	)
+	SELECT DISTINCT ON (i.symbol)
+		i.symbol,
+		c.close as prev_close
+	FROM market.cash_candles_1m c 
+	JOIN market.instruments i ON c.instrument_id = i.id
+	WHERE (c.ts AT TIME ZONE 'Asia/Kolkata')::date = (SELECT dt FROM prev_date)
+	ORDER BY i.symbol, c.ts DESC;
+	`
+
+	rows, err := r.db.Pool.Query(ctx, query, sessionDate)
+	if err != nil {
+		return nil, fmt.Errorf("query preopen baseline: %w", err)
+	}
+	defer rows.Close()
+
+	stocks := []ReplayStock{}
+	sectorMap := map[string]*ReplaySector{}
+
+	for rows.Next() {
+		var sym string
+		var prevClose float64
+		if err := rows.Scan(&sym, &prevClose); err != nil {
+			return nil, err
+		}
+		sec := GetSector(sym)
+		stocks = append(stocks, ReplayStock{
+			Symbol:      sym,
+			Sector:      sec,
+			Price:       prevClose,
+			GapPct:      0.0,
+			MovePct:     0.0,
+			VWAP:        prevClose,
+			VWAPDistPct: 0.0,
+			RVOL:        0.0,
+			CLV:         0.5,
+			Volume:      0,
+			IsAboveVWAP: true,
+		})
+
+		if _, exists := sectorMap[sec]; !exists {
+			sectorMap[sec] = &ReplaySector{
+				Sector:       sec,
+				CivCount:     0,
+				AvgMovePct:   0.0,
+				AvgRVOL:      0.0,
+				PctAboveVWAP: 100.0,
+			}
+		}
+		sectorMap[sec].CivCount++
+	}
+
+	sectors := []ReplaySector{}
+	for _, s := range sectorMap {
+		sectors = append(sectors, *s)
+	}
+	sort.Slice(sectors, func(i, j int) bool {
+		return sectors[i].CivCount > sectors[j].CivCount
+	})
+
+	return &ReplaySnapshotResponse{
+		SessionDate: sessionDate,
+		AsOfTime:    asOfTime,
+		Weather: ReplayWeather{
+			TotalCivs:    len(stocks),
+			AboveVWAP:    len(stocks),
+			BelowVWAP:    0,
+			PctAboveVWAP: 100.0,
+		},
+		Stocks:  stocks,
+		Sectors: sectors,
+		Traps:   []ReplayTrap{},
+	}, nil
+}
+
+func (r *Repository) PrepopulatePreopenBaselines(ctx context.Context) error {
+	if r.redis == nil {
+		return nil
+	}
+
+	query := `
+	WITH ranked_days AS (
+		SELECT 
+			c.session_date,
+			i.symbol,
+			c.close as prev_close
+		FROM market.cash_candles_1d c
+		JOIN market.instruments i ON c.instrument_id = i.id
+		ORDER BY c.session_date ASC, i.symbol ASC
+	)
+	SELECT session_date::text, symbol, prev_close
+	FROM ranked_days;
+	`
+
+	rows, err := r.db.Pool.Query(ctx, query)
+	if err != nil {
+		return fmt.Errorf("query all daily closes: %w", err)
+	}
+	defer rows.Close()
+
+	type stockDay struct {
+		symbol    string
+		prevClose float64
+	}
+	daysMap := map[string][]stockDay{}
+
+	for rows.Next() {
+		var sDate, sym string
+		var prevClose float64
+		if err := rows.Scan(&sDate, &sym, &prevClose); err != nil {
+			return err
+		}
+		daysMap[sDate] = append(daysMap[sDate], stockDay{symbol: sym, prevClose: prevClose})
+	}
+
+	// For each session, build 09:14:00 baseline and save permanently in Redis
+	for sDate, stockList := range daysMap {
+		stocks := []ReplayStock{}
+		sectorMap := map[string]*ReplaySector{}
+
+		for _, s := range stockList {
+			sec := GetSector(s.symbol)
+			stocks = append(stocks, ReplayStock{
+				Symbol:      s.symbol,
+				Sector:      sec,
+				Price:       s.prevClose,
+				GapPct:      0.0,
+				MovePct:     0.0,
+				VWAP:        s.prevClose,
+				VWAPDistPct: 0.0,
+				RVOL:        0.0,
+				CLV:         0.5,
+				Volume:      0,
+				IsAboveVWAP: true,
+			})
+
+			if _, exists := sectorMap[sec]; !exists {
+				sectorMap[sec] = &ReplaySector{
+					Sector:       sec,
+					CivCount:     0,
+					AvgMovePct:   0.0,
+					AvgRVOL:      0.0,
+					PctAboveVWAP: 100.0,
+				}
+			}
+			sectorMap[sec].CivCount++
+		}
+
+		sectors := []ReplaySector{}
+		for _, secObj := range sectorMap {
+			sectors = append(sectors, *secObj)
+		}
+		sort.Slice(sectors, func(i, j int) bool {
+			return sectors[i].CivCount > sectors[j].CivCount
+		})
+
+		snap := &ReplaySnapshotResponse{
+			SessionDate: sDate,
+			AsOfTime:    "09:14:00",
+			Weather: ReplayWeather{
+				TotalCivs:    len(stocks),
+				AboveVWAP:    len(stocks),
+				BelowVWAP:    0,
+				PctAboveVWAP: 100.0,
+			},
+			Stocks:  stocks,
+			Sectors: sectors,
+			Traps:   []ReplayTrap{},
+		}
+		r.redis.SetSnapshot(ctx, sDate, "09:14:00", snap)
+	}
+
+	return nil
+}
+
+func (r *Repository) WarmSessionDay(ctx context.Context, sessionDate string) error {
+	if r.redis == nil || r.redis.IsDayWarmed(ctx, sessionDate) {
+		return nil
+	}
+
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+
+		// 1. Get 30-day baseline average volume & previous close for all 210 instruments
+		metaQuery := `
+		WITH prev_date AS (
+			SELECT DISTINCT session_date as dt
+			FROM market.cash_candles_1d
+			WHERE session_date < $1::date
+			ORDER BY dt DESC LIMIT 1
+		),
+		prev_close AS (
+			SELECT i.symbol, c.close as prev_close
+			FROM market.cash_candles_1d c
+			JOIN market.instruments i ON c.instrument_id = i.id
+			WHERE c.session_date = (SELECT dt FROM prev_date)
+		),
+		hist_vol AS (
+			SELECT i.symbol, AVG(c.volume) as avg_daily_vol
+			FROM market.cash_candles_1d c
+			JOIN market.instruments i ON c.instrument_id = i.id
+			WHERE c.session_date < $1::date
+			  AND c.session_date >= ($1::date - INTERVAL '30 days')
+			GROUP BY i.symbol
+		)
+		SELECT i.symbol, COALESCE(p.prev_close, 0), COALESCE(h.avg_daily_vol, 1)
+		FROM market.instruments i
+		LEFT JOIN prev_close p ON i.symbol = p.symbol
+		LEFT JOIN hist_vol h ON i.symbol = h.symbol
+		WHERE i.is_active;
+		`
+
+		metaRows, err := r.db.Pool.Query(bgCtx, metaQuery, sessionDate)
+		if err != nil {
+			return
+		}
+
+		type StockMeta struct {
+			PrevClose   float64
+			AvgDailyVol float64
+		}
+		stockMetaMap := map[string]StockMeta{}
+		for metaRows.Next() {
+			var sym string
+			var pc, adv float64
+			if err := metaRows.Scan(&sym, &pc, &adv); err == nil {
+				stockMetaMap[sym] = StockMeta{PrevClose: pc, AvgDailyVol: adv}
+			}
+		}
+		metaRows.Close()
+
+		// 2. Fetch all 1-minute candles for the whole session in one fast 250ms query
+		candlesQuery := `
+		SELECT 
+			i.symbol,
+			c.open, c.high, c.low, c.close, c.volume,
+			to_char(c.ts AT TIME ZONE 'Asia/Kolkata', 'HH24:MI:SS') as candle_time
+		FROM market.cash_candles_1m c
+		JOIN market.instruments i ON c.instrument_id = i.id
+		WHERE (c.ts AT TIME ZONE 'Asia/Kolkata')::date = $1::date
+		ORDER BY candle_time ASC, i.symbol ASC;
+		`
+
+		cRows, err := r.db.Pool.Query(bgCtx, candlesQuery, sessionDate)
+		if err != nil {
+			return
+		}
+
+		type MinBar struct {
+			Symbol string
+			Open   float64
+			High   float64
+			Low    float64
+			Close  float64
+			Volume int64
+			Time   string
+		}
+
+		timeGroupedBars := map[string][]MinBar{}
+		for cRows.Next() {
+			var b MinBar
+			if err := cRows.Scan(&b.Symbol, &b.Open, &b.High, &b.Low, &b.Close, &b.Volume, &b.Time); err == nil {
+				timeGroupedBars[b.Time] = append(timeGroupedBars[b.Time], b)
+			}
+		}
+		cRows.Close()
+
+		// 3. Vectorized state accumulators across the 375 minutes
+		type SymAcc struct {
+			DayOpen    float64
+			LastPrice  float64
+			CumVol     int64
+			CumTurn    float64
+			Low        float64
+			High       float64
+			HasOpen    bool
+		}
+		accMap := map[string]*SymAcc{}
+
+		allSnapshots := map[string]*ReplaySnapshotResponse{}
+
+		for min := 555; min <= 930; min++ {
+			timeStr := fmt.Sprintf("%02d:%02d:00", min/60, min%60)
+			bars := timeGroupedBars[timeStr]
+
+			for _, b := range bars {
+				acc, ok := accMap[b.Symbol]
+				if !ok {
+					acc = &SymAcc{
+						DayOpen:   b.Open,
+						LastPrice: b.Close,
+						CumVol:    b.Volume,
+						CumTurn:   b.Close * float64(b.Volume),
+						Low:       b.Low,
+						High:      b.High,
+						HasOpen:   true,
+					}
+					accMap[b.Symbol] = acc
+				} else {
+					acc.LastPrice = b.Close
+					acc.CumVol += b.Volume
+					acc.CumTurn += b.Close * float64(b.Volume)
+					if b.Low < acc.Low {
+						acc.Low = b.Low
+					}
+					if b.High > acc.High {
+						acc.High = b.High
+					}
+				}
+			}
+
+			// Build ReplaySnapshot for this minute
+			stocks := []ReplayStock{}
+			aboveCount := 0
+			sectorStats := map[string]*struct {
+				Count      int
+				SumMove    float64
+				SumRVOL    float64
+				AboveCount int
+			}{}
+
+			for sym, acc := range accMap {
+				meta := stockMetaMap[sym]
+				prevClose := meta.PrevClose
+				if prevClose <= 0 {
+					prevClose = acc.DayOpen
+				}
+
+				vwap := acc.LastPrice
+				if acc.CumVol > 0 {
+					vwap = acc.CumTurn / float64(acc.CumVol)
+				}
+
+				gapPct := 0.0
+				if prevClose > 0 && acc.HasOpen {
+					gapPct = math.Round(((acc.DayOpen-prevClose)/prevClose*100)*100) / 100
+				}
+				movePct := 0.0
+				if prevClose > 0 {
+					movePct = math.Round(((acc.LastPrice-prevClose)/prevClose*100)*100) / 100
+				}
+				vwapDistPct := 0.0
+				if vwap > 0 {
+					vwapDistPct = math.Round(((acc.LastPrice-vwap)/vwap*100)*100) / 100
+				}
+				rvol := 0.0
+				if meta.AvgDailyVol > 0 {
+					rvol = math.Round((float64(acc.CumVol)/meta.AvgDailyVol*100)*100) / 100
+				}
+				clv := 0.5
+				if acc.High > acc.Low {
+					clv = math.Round(((acc.LastPrice-acc.Low)/(acc.High-acc.Low))*100) / 100
+				}
+
+				isAbove := vwapDistPct >= 0
+				if isAbove {
+					aboveCount++
+				}
+
+				sec := GetSector(sym)
+				if _, exists := sectorStats[sec]; !exists {
+					sectorStats[sec] = &struct {
+						Count      int
+						SumMove    float64
+						SumRVOL    float64
+						AboveCount int
+					}{}
+				}
+				st := sectorStats[sec]
+				st.Count++
+				st.SumMove += movePct
+				st.SumRVOL += rvol
+				if isAbove {
+					st.AboveCount++
+				}
+
+				stocks = append(stocks, ReplayStock{
+					Symbol:      sym,
+					Sector:      sec,
+					Price:       acc.LastPrice,
+					GapPct:      gapPct,
+					MovePct:     movePct,
+					VWAP:        vwap,
+					VWAPDistPct: vwapDistPct,
+					RVOL:        rvol,
+					CLV:         clv,
+					Volume:      acc.CumVol,
+					IsAboveVWAP: isAbove,
+				})
+			}
+
+			total := len(stocks)
+			pctAbove := 0.0
+			if total > 0 {
+				pctAbove = math.Round((float64(aboveCount)/float64(total)*100)*10) / 10
+			}
+
+			sectors := []ReplaySector{}
+			for secName, st := range sectorStats {
+				avgMove := math.Round((st.SumMove/float64(st.Count))*100) / 100
+				avgRVOL := math.Round((st.SumRVOL/float64(st.Count))*100) / 100
+				pctAboveSec := math.Round((float64(st.AboveCount)/float64(st.Count)*100)*10) / 10
+
+				sectors = append(sectors, ReplaySector{
+					Sector:       secName,
+					CivCount:     st.Count,
+					AvgMovePct:   avgMove,
+					AvgRVOL:      avgRVOL,
+					PctAboveVWAP: pctAboveSec,
+				})
+			}
+			sort.Slice(sectors, func(i, j int) bool {
+				return sectors[i].AvgMovePct > sectors[j].AvgMovePct
+			})
+			sort.Slice(stocks, func(i, j int) bool {
+				return stocks[i].RVOL > stocks[j].RVOL
+			})
+
+			allSnapshots[timeStr] = &ReplaySnapshotResponse{
+				SessionDate: sessionDate,
+				AsOfTime:    timeStr,
+				Weather: ReplayWeather{
+					TotalCivs:    total,
+					AboveVWAP:    aboveCount,
+					BelowVWAP:    total - aboveCount,
+					PctAboveVWAP: pctAbove,
+				},
+				Stocks:  stocks,
+				Sectors: sectors,
+				Traps:   []ReplayTrap{},
+			}
+		}
+
+		// 4. Write all 375 snapshots into Redis in a single pipeline
+		_ = r.redis.SetDaySnapshots(bgCtx, sessionDate, allSnapshots)
+	}()
+
+	return nil
+}
+
