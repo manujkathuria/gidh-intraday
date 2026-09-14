@@ -144,3 +144,83 @@ export async function fetchReplayCandles(
     return [];
   }
 }
+
+export interface ActivePosition {
+  symbol: string;
+  instrument_token: number;
+  exchange: string;
+  side: "LONG" | "SHORT";
+  quantity: number;
+  entry_price: number;
+  current_ltp: number;
+  pnl_inr: number;
+  pnl_pct: number;
+  mfe_pct: number;
+  stop_floor_pct: number;
+  tactic?: string;
+  invalidation?: string;
+  broker_order_id?: string;
+  opened_at: string;
+  updated_at: string;
+}
+
+export interface OrderIntent {
+  symbol: string;
+  side: "LONG" | "SHORT";
+  margin_inr?: number;
+  tactic?: string;
+  invalidation?: string;
+}
+
+export interface LivePositionsResponse {
+  active_positions: ActivePosition[];
+  total_count: number;
+}
+
+export async function fetchLivePositions(): Promise<ActivePosition[]> {
+  try {
+    const res = await fetch(`${API_BASE}/v1/live/orders`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data: LivePositionsResponse = await res.json();
+    return data.active_positions || [];
+  } catch (err) {
+    console.error("Failed to fetch live positions:", err);
+    return [];
+  }
+}
+
+export async function createLiveOrder(intent: OrderIntent): Promise<ActivePosition | null> {
+  try {
+    const res = await fetch(`${API_BASE}/v1/live/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(intent),
+    });
+    if (!res.ok) {
+      const errJson = await res.json();
+      throw new Error(errJson.message || `HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (err: any) {
+    console.error("Failed to create live order:", err);
+    throw err;
+  }
+}
+
+export async function squareOffLivePosition(
+  symbol: string,
+  reason = "MANUAL_SQUARE_OFF"
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/v1/live/orders/square-off`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbol, reason }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error(`Failed to square off ${symbol}:`, err);
+    return false;
+  }
+}
+

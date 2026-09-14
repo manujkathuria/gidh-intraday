@@ -112,11 +112,10 @@ export const HeaderControls: React.FC = () => {
           <nav className="flex items-center gap-1 font-mono text-xs">
             <Link
               href="/"
-              className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${
-                pathname === "/"
+              className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${pathname === "/"
                   ? "bg-foreground text-background font-bold border-foreground shadow-sm"
                   : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
-              }`}
+                }`}
             >
               <Radar className="w-3.5 h-3.5" />
               <span>Radar Leaderboard</span>
@@ -124,11 +123,10 @@ export const HeaderControls: React.FC = () => {
 
             <Link
               href="/sectors"
-              className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${
-                pathname === "/sectors"
+              className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${pathname === "/sectors"
                   ? "bg-foreground text-background font-bold border-foreground shadow-sm"
                   : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
-              }`}
+                }`}
             >
               <Shield className="w-3.5 h-3.5" />
               <span>Sector Battalions</span>
@@ -136,11 +134,10 @@ export const HeaderControls: React.FC = () => {
 
             <Link
               href="/chart"
-              className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${
-                pathname === "/chart"
+              className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${pathname === "/chart"
                   ? "bg-foreground text-background font-bold border-foreground shadow-sm"
                   : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
-              }`}
+                }`}
             >
               <ChartIcon className="w-3.5 h-3.5" />
               <span>Charts</span>
@@ -216,11 +213,10 @@ export const HeaderControls: React.FC = () => {
           </button>
           <button
             onClick={togglePlay}
-            className={`px-3 py-1.5 rounded text-xs font-mono font-bold flex items-center gap-1.5 transition ${
-              isPlaying
+            className={`px-3 py-1.5 rounded text-xs font-mono font-bold flex items-center gap-1.5 transition ${isPlaying
                 ? "bg-foreground text-background shadow-sm"
                 : "bg-surface-muted hover:bg-surface-hover text-foreground border border-surface-border"
-            }`}
+              }`}
           >
             {isPlaying ? (
               <>
@@ -278,11 +274,10 @@ export const HeaderControls: React.FC = () => {
             <button
               key={spd}
               onClick={() => setPlaybackSpeed(spd)}
-              className={`px-2.5 py-0.5 text-[10px] font-medium rounded transition ${
-                playbackSpeed === spd
+              className={`px-2.5 py-0.5 text-[10px] font-medium rounded transition ${playbackSpeed === spd
                   ? "bg-foreground text-background font-bold"
                   : "text-foreground/50 hover:text-foreground"
-              }`}
+                }`}
             >
               {spd}x
             </button>

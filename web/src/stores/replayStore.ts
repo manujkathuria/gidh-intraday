@@ -13,7 +13,8 @@ const WS_BASE =
   process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:8080/v1/replay/ws";
 
 interface ReplayState {
-  // Session & Timeline State
+  // Mode & Timeline State
+  mode: "LIVE" | "REPLAY";
   sessions: string[];
   selectedDate: string;
   currentTimeMinutes: number; // 09:15 = 555 min, 15:30 = 930 min
@@ -36,6 +37,7 @@ interface ReplayState {
   // Actions
   init: () => Promise<void>;
   connectWebSocket: () => void;
+  setMode: (mode: "LIVE" | "REPLAY") => void;
   setSelectedDate: (date: string) => void;
   setCurrentTimeMinutes: (minutes: number) => void;
   stepForward: (step?: number) => void;
@@ -53,6 +55,7 @@ export function formatMinutesToTime(mins: number): string {
 }
 
 export const useReplayStore = create<ReplayState>((set, get) => ({
+  mode: "LIVE",
   sessions: [],
   selectedDate: "",
   currentTimeMinutes: 554, // 09:14 AM Pre-market standby
@@ -68,6 +71,17 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
   loading: false,
   error: null,
   ws: null,
+
+  setMode: (mode: "LIVE" | "REPLAY") => {
+    set({ mode });
+    if (mode === "LIVE") {
+      // Set to today's date and current market time
+      const now = new Date();
+      const currentMins = Math.max(555, Math.min(930, now.getHours() * 60 + now.getMinutes()));
+      set({ currentTimeMinutes: currentMins, isPlaying: false });
+      get().refreshSnapshot();
+    }
+  },
 
   connectWebSocket: () => {
     const existingWs = get().ws;
