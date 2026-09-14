@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useReplayStore, formatMinutesToTime } from "@/stores/replayStore";
 import { useLiveOrderStore } from "@/stores/liveOrderStore";
-import { LiveOrderPanel } from "@/components/LiveOrderPanel";
 import {
   Play,
   Pause,
@@ -21,7 +20,7 @@ import {
   Activity,
   CandlestickChart as ChartIcon,
   Radio,
-  RefreshCw,
+  Zap,
 } from "lucide-react";
 
 export const HeaderControls: React.FC = () => {
@@ -41,15 +40,20 @@ export const HeaderControls: React.FC = () => {
     stepForward,
     stepBackward,
     snapshot,
-    refreshSnapshot,
   } = useReplayStore();
 
-  const { initLiveOrders } = useLiveOrderStore();
+  const { activePositions, initLiveOrders } = useLiveOrderStore();
 
   const [localTime, setLocalTime] = useState<number>(currentTimeMinutes);
   const isDraggingRef = useRef<boolean>(false);
   const [isDark, setIsDark] = useState<boolean>(true);
   const [liveClock, setLiveClock] = useState<string>("");
+
+  const activeCount = Object.keys(activePositions).length;
+
+  useEffect(() => {
+    initLiveOrders();
+  }, [initLiveOrders]);
 
   // Real-time IST clock for LIVE mode
   useEffect(() => {
@@ -96,6 +100,7 @@ export const HeaderControls: React.FC = () => {
     } else {
       root.classList.remove("dark");
       root.setAttribute("data-theme", "light");
+      localStorage.setItem("gidh-theme", "light");
     }
   };
 
@@ -121,15 +126,15 @@ export const HeaderControls: React.FC = () => {
 
   return (
     <header className="border-b border-surface-border bg-surface select-none shrink-0 transition-colors flex flex-col">
-      {/* ROW 1: Brand, Navigation Menu & Mode Switcher */}
+      {/* ROW 1: Brand, Global Navigation Menu & Mode Switcher */}
       <div className="px-5 py-2 flex items-center justify-between border-b border-surface-border">
         {/* Left: Brand & Menu Tabs */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-5">
           <div className="flex items-center gap-2">
             <span className="text-sm font-black tracking-widest text-foreground">
               GIDH
             </span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-muted text-foreground/70 border border-surface-border">
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-muted text-foreground/70 border border-surface-border font-bold">
               WAR ROOM
             </span>
           </div>
@@ -147,7 +152,7 @@ export const HeaderControls: React.FC = () => {
               }`}
             >
               <Radar className="w-3.5 h-3.5" />
-              <span>Radar Leaderboard</span>
+              <span>Radar</span>
             </Link>
 
             <Link
@@ -159,7 +164,7 @@ export const HeaderControls: React.FC = () => {
               }`}
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>Sector Battalions</span>
+              <span>Sectors</span>
             </Link>
 
             <Link
@@ -173,6 +178,30 @@ export const HeaderControls: React.FC = () => {
               <ChartIcon className="w-3.5 h-3.5" />
               <span>Charts</span>
             </Link>
+
+            {/* Dedicated Positions & Orders Tab */}
+            <Link
+              href="/positions"
+              className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${
+                pathname === "/positions"
+                  ? "bg-emerald-500 text-black font-black border-emerald-500 shadow-sm"
+                  : "bg-surface-muted border-surface-border text-foreground/70 hover:text-foreground hover:bg-surface-hover"
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>Positions & Orders</span>
+              <span
+                className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                  pathname === "/positions"
+                    ? "bg-black text-white"
+                    : activeCount > 0
+                    ? "bg-emerald-500 text-black font-black"
+                    : "bg-surface-border text-foreground/60"
+                }`}
+              >
+                {activeCount}/5
+              </span>
+            </Link>
           </nav>
         </div>
 
@@ -182,7 +211,7 @@ export const HeaderControls: React.FC = () => {
           <div className="flex items-center bg-surface-muted border border-surface-border rounded p-0.5 font-mono text-xs shadow-inner">
             <button
               onClick={() => setMode("LIVE")}
-              className={`px-3 py-1 rounded flex items-center gap-1.5 font-bold transition text-xs ${
+              className={`px-2.5 py-1 rounded flex items-center gap-1.5 font-bold transition text-xs ${
                 mode === "LIVE"
                   ? "bg-emerald-500 text-black shadow-sm font-black"
                   : "text-foreground/60 hover:text-foreground"
@@ -202,7 +231,7 @@ export const HeaderControls: React.FC = () => {
             </button>
             <button
               onClick={() => setMode("REPLAY")}
-              className={`px-3 py-1 rounded flex items-center gap-1.5 font-bold transition text-xs ${
+              className={`px-2.5 py-1 rounded flex items-center gap-1.5 font-bold transition text-xs ${
                 mode === "REPLAY"
                   ? "bg-foreground text-background shadow-sm font-black"
                   : "text-foreground/60 hover:text-foreground"
@@ -258,47 +287,31 @@ export const HeaderControls: React.FC = () => {
         </div>
       </div>
 
-      {/* LIVE MODE: 5-Slot Live Order Manager & Live Bar */}
+      {/* ROW 2: Stream Status (LIVE) vs Timeline Scrubber (REPLAY) */}
       {mode === "LIVE" ? (
-        <>
-          <LiveOrderPanel />
-          <div className="px-5 py-1.5 bg-surface-muted/40 flex items-center justify-between text-xs font-mono border-t border-surface-border">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-                <span className="font-bold text-foreground">LIVE STREAM ACTIVE</span>
-              </div>
-              <span className="text-foreground/40">•</span>
-              <span className="text-foreground/60">210 F&O Universe 1-Min Batch Poller</span>
-              <span className="text-foreground/40">•</span>
-              <span className="text-foreground/60">Sub-Second Active Position Tick Feed</span>
+        <div className="px-5 py-1.5 bg-surface-muted/30 flex items-center justify-between text-xs font-mono">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="font-bold text-foreground">LIVE STREAM ACTIVE</span>
             </div>
+            <span className="text-foreground/40">•</span>
+            <span className="text-foreground/60">210 F&O Universe 1-Min Batch Poller</span>
+            <span className="text-foreground/40">•</span>
+            <span className="text-foreground/60">5-Slot MIS Leveraged Live Order Manager</span>
+          </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-surface border border-surface-border rounded">
-                <Clock className="w-3 h-3 text-emerald-500" />
-                <span className="font-bold text-foreground">{liveClock || "09:15:00"} IST</span>
-              </div>
-
-              <button
-                onClick={() => {
-                  refreshSnapshot();
-                  initLiveOrders();
-                }}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-surface border border-surface-border text-foreground/70 hover:text-foreground hover:bg-surface-hover transition text-[11px]"
-                title="Force refresh positions and radar snapshot"
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span>Sync</span>
-              </button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-surface border border-surface-border rounded">
+              <Clock className="w-3 h-3 text-emerald-500" />
+              <span className="font-bold text-foreground">{liveClock || "09:15:00"} IST</span>
             </div>
           </div>
-        </>
+        </div>
       ) : (
-        /* REPLAY MODE: Dedicated Replay & Timeline Scrubber Bar */
         <div className="px-5 py-2 bg-surface-muted/30 flex items-center justify-between gap-4">
           {/* Playback & Step Controls */}
           <div className="flex items-center gap-1">
