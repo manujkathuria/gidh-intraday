@@ -94,7 +94,8 @@ export async function fetchReplaySnapshot(
 ): Promise<ReplaySnapshot | null> {
   try {
     const res = await fetch(
-      `${API_BASE}/v1/replay/snapshot?session_date=${sessionDate}&time=${timeStr}`
+      `${API_BASE}/v1/replay/snapshot?session_date=${sessionDate}&time=${timeStr}&_t=${Date.now()}`,
+      { cache: "no-store" }
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
@@ -112,7 +113,8 @@ export async function fetchReplayCandles(
 ): Promise<Candle[]> {
   try {
     const res = await fetch(
-      `${API_BASE}/v1/replay/candles?session_date=${sessionDate}&symbol=${symbol}&to_time=${toTimeStr}&interval=${interval}`
+      `${API_BASE}/v1/replay/candles?session_date=${sessionDate}&symbol=${symbol}&to_time=${toTimeStr}&interval=${interval}&_t=${Date.now()}`,
+      { cache: "no-store" }
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const raw = await res.json();

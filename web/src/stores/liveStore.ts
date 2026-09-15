@@ -52,6 +52,8 @@ export function getISTMinutes(): { minutes: number; isMarketOpen: boolean; timeS
   return { minutes: effectiveMins, isMarketOpen, timeStr };
 }
 
+let isFetching = false;
+
 export const useLiveStore = create<LiveState>((set, get) => ({
   sessionDate: "",
   currentTimeMinutes: 555,
@@ -102,21 +104,13 @@ export const useLiveStore = create<LiveState>((set, get) => ({
       clearInterval(syncTimer);
     }
 
+    // Run continuous 5-second real-time sync
     syncTimer = setInterval(async () => {
-      const { minutes, isMarketOpen, timeStr } = getISTMinutes();
       const current = get();
-
-      // If minute rolled over or first sync
-      if (minutes !== lastSyncedMinute && current.sessionDate) {
-        lastSyncedMinute = minutes;
-        set({
-          currentTimeMinutes: minutes,
-          isMarketOpen,
-          lastSyncTime: timeStr,
-        });
+      if (current.sessionDate) {
         await current.refreshLive();
       }
-    }, 3000);
+    }, 5000);
   },
 
   stopLiveSync: () => {
@@ -143,10 +137,16 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   },
 
   refreshLive: async () => {
-    const { sessionDate, currentTimeMinutes, selectedSymbol } = get();
-    if (!sessionDate) return;
+    if (isFetching) return;
+    isFetching = true;
 
-    const timeStr = formatMinutesToTime(currentTimeMinutes);
+    const { sessionDate, selectedSymbol } = get();
+    if (!sessionDate) {
+      isFetching = false;
+      return;
+    }
+
+    const { minutes, isMarketOpen, timeStr } = getISTMinutes();
 
     try {
       const [snapshot, candles] = await Promise.all([
@@ -159,6 +159,9 @@ export const useLiveStore = create<LiveState>((set, get) => ({
           snapshot,
           traps: snapshot.traps || [],
           sectors: snapshot.sectors || [],
+          currentTimeMinutes: minutes,
+          isMarketOpen,
+          lastSyncTime: timeStr,
           loading: false,
         });
       }
@@ -168,6 +171,8 @@ export const useLiveStore = create<LiveState>((set, get) => ({
     } catch (err: any) {
       console.error("[LIVE STORE] refreshLive error:", err);
       set({ error: err.message || "Error syncing live market data", loading: false });
+    } finally {
+      isFetching = false;
     }
   },
 }));
