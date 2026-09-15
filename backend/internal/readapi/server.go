@@ -45,6 +45,7 @@ func NewServerWithOrders(
 	mux.HandleFunc("GET /v1/replay/snapshot", s.replaySnapshot)
 	mux.HandleFunc("GET /v1/replay/candles", s.replayCandles)
 	mux.HandleFunc("GET /v1/replay/ws", s.replayWebSocket)
+	mux.HandleFunc("GET /v1/live/market/ws", s.liveMarketWebSocket)
 
 	// Live Orders & Positions
 	mux.HandleFunc("GET /v1/live/orders", s.liveOrders)

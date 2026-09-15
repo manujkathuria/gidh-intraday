@@ -29,6 +29,7 @@ export function useHeaderState() {
     if (newMode === "LIVE") {
       liveStore.initLive();
     } else {
+      liveStore.stopLiveSync();
       replayStore.init();
     }
   };

@@ -16,6 +16,7 @@ export function useChartStudio() {
     sessionDate: selectedDate,
     currentTimeMinutes,
     snapshot,
+    candles,
     selectedSymbol,
     setSelectedSymbol,
     init,
@@ -73,6 +74,7 @@ export function useChartStudio() {
 
   useEffect(() => {
     if (!selectedDate || !activeSymbol) return;
+    if (mode === "LIVE" && interval !== "1h" && interval !== "1d") return;
 
     let isSubscribed = true;
     const toTimeStr = formatMinutesToTime(currentTimeMinutes);
@@ -96,12 +98,17 @@ export function useChartStudio() {
     return () => {
       isSubscribed = false;
     };
-  }, [selectedDate, activeSymbol, currentTimeMinutes, interval]);
+  }, [mode, selectedDate, activeSymbol, currentTimeMinutes, interval]);
 
   // Aggregate in-memory for 5m & 15m; use raw for 1m, 1h, 1d
+  const sourceCandles =
+    mode === "LIVE" && interval !== "1h" && interval !== "1d"
+      ? candles
+      : rawCandles;
+
   const chartCandles = useMemo(() => {
-    return aggregateCandles(rawCandles, interval);
-  }, [rawCandles, interval]);
+    return aggregateCandles(sourceCandles, interval);
+  }, [sourceCandles, interval]);
 
   const stockInfo = useMemo(() => {
     return snapshot?.stocks?.find((s) => s.symbol === activeSymbol);

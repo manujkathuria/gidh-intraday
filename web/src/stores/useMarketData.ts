@@ -31,6 +31,7 @@ export function useMarketData(): UnifiedMarketData {
     if (mode === "LIVE") {
       live.initLive();
     } else {
+      live.stopLiveSync();
       replay.init();
     }
   }, [mode]);

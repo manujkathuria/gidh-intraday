@@ -1,14 +1,22 @@
 import { create } from "zustand";
 import {
   fetchSessions,
-  fetchReplaySnapshot,
-  fetchReplayCandles,
   ReplaySnapshot,
   Candle,
   ReplaySector,
   ReplayTrap,
 } from "@/lib/api";
-import { formatMinutesToTime } from "./replayStore";
+
+const getLiveMarketWsUrl = () => {
+  if (process.env.NEXT_PUBLIC_LIVE_MARKET_WS_URL) {
+    return process.env.NEXT_PUBLIC_LIVE_MARKET_WS_URL;
+  }
+  if (typeof window !== "undefined") {
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${proto}//${window.location.host}/v1/live/market/ws`;
+  }
+  return "ws://127.0.0.1:8080/v1/live/market/ws";
+};
 
 interface LiveState {
   sessionDate: string;
@@ -24,6 +32,7 @@ interface LiveState {
   sectors: ReplaySector[];
   loading: boolean;
   error: string | null;
+  ws: WebSocket | null;
 
   // Actions
   initLive: () => Promise<void>;
@@ -33,26 +42,25 @@ interface LiveState {
   refreshLive: () => Promise<void>;
 }
 
-let syncTimer: NodeJS.Timeout | null = null;
-let lastSyncedMinute = -1;
+let shouldReconnectLiveMarket = true;
+let liveMarketReconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function getISTMinutes(): { minutes: number; isMarketOpen: boolean; timeStr: string } {
   const now = new Date();
   const utcHours = now.getUTCHours();
   const utcMinutes = now.getUTCMinutes();
-  const utcSeconds = now.getUTCSeconds();
 
   // IST is UTC + 5:30 (330 minutes)
   const totalISTMinutes = (utcHours * 60 + utcMinutes + 330) % 1440;
   const isMarketOpen = totalISTMinutes >= 555 && totalISTMinutes <= 930; // 09:15 to 15:30
 
   const effectiveMins = isMarketOpen ? totalISTMinutes : Math.min(930, Math.max(555, totalISTMinutes));
-  const timeStr = formatMinutesToTime(effectiveMins);
+  const hours = Math.floor(effectiveMins / 60);
+  const minutes = effectiveMins % 60;
+  const timeStr = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
 
   return { minutes: effectiveMins, isMarketOpen, timeStr };
 }
-
-let isFetching = false;
 
 export const useLiveStore = create<LiveState>((set, get) => ({
   sessionDate: "",
@@ -67,10 +75,10 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   sectors: [],
   loading: false,
   error: null,
+  ws: null,
 
   initLive: async () => {
-    // If already initialized with date and sync loop running, skip full init
-    if (get().sessionDate && syncTimer !== null) {
+    if (get().ws?.readyState === WebSocket.OPEN) {
       return;
     }
 
@@ -92,87 +100,99 @@ export const useLiveStore = create<LiveState>((set, get) => ({
         lastSyncTime: timeStr,
       });
 
-      await get().refreshLive();
       get().startLiveSync();
-    } catch (err: any) {
-      set({ error: err.message || "Failed to initialize live store", loading: false });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to initialize live store";
+      set({ error: message, loading: false });
     }
   },
 
   startLiveSync: () => {
-    if (syncTimer !== null) {
-      clearInterval(syncTimer);
+    shouldReconnectLiveMarket = true;
+    const existing = get().ws;
+    if (
+      existing &&
+      (existing.readyState === WebSocket.OPEN ||
+        existing.readyState === WebSocket.CONNECTING)
+    ) {
+      return;
     }
 
-    // Run continuous 5-second real-time sync
-    syncTimer = setInterval(async () => {
-      const current = get();
-      if (current.sessionDate) {
-        await current.refreshLive();
-      }
-    }, 5000);
+    try {
+      const socket = new WebSocket(getLiveMarketWsUrl());
+      set({ ws: socket, loading: true, error: null });
+
+      socket.onopen = () => {
+        const { selectedSymbol } = get();
+        socket.send(JSON.stringify({ action: "SELECT_SYMBOL", symbol: selectedSymbol }));
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "MARKET_SNAPSHOT" && data.snapshot) {
+            const timeParts = (data.time || data.snapshot.as_of_time || "09:15:00").split(":");
+            const mins = parseInt(timeParts[0], 10) * 60 + parseInt(timeParts[1], 10);
+
+            set({
+              sessionDate: data.session_date || data.snapshot.session_date || get().sessionDate,
+              currentTimeMinutes: mins,
+              lastSyncTime: data.time || data.snapshot.as_of_time || get().lastSyncTime,
+              isMarketOpen: mins >= 555 && mins <= 930,
+              snapshot: data.snapshot,
+              traps: data.snapshot.traps || [],
+              sectors: data.snapshot.sectors || [],
+              loading: false,
+              error: null,
+            });
+          } else if (data.type === "SYMBOL_CANDLES" && Array.isArray(data.candles)) {
+            set({ candles: data.candles, loading: false, error: null });
+          } else if (data.type === "ERROR") {
+            set({ error: data.error || "Live market stream error", loading: false });
+          }
+        } catch (err) {
+          console.error("[LIVE MARKET WS] Message parse error:", err);
+        }
+      };
+
+      socket.onclose = () => {
+        if (get().ws === socket) {
+          set({ ws: null });
+          if (shouldReconnectLiveMarket) {
+            liveMarketReconnectTimer = setTimeout(() => get().startLiveSync(), 2000);
+          }
+        }
+      };
+
+      socket.onerror = (err) => {
+        console.error("[LIVE MARKET WS] Error:", err);
+        set({ error: "Live market stream disconnected", loading: false });
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to connect live market stream";
+      set({ error: message, loading: false });
+    }
   },
 
   stopLiveSync: () => {
-    if (syncTimer !== null) {
-      clearInterval(syncTimer);
-      syncTimer = null;
+    shouldReconnectLiveMarket = false;
+    if (liveMarketReconnectTimer !== null) {
+      clearTimeout(liveMarketReconnectTimer);
+      liveMarketReconnectTimer = null;
     }
+    get().ws?.close();
+    set({ ws: null });
   },
 
   setSelectedSymbol: async (symbol: string) => {
     set({ selectedSymbol: symbol });
-    const { sessionDate, currentTimeMinutes } = get();
-    if (!sessionDate) return;
-
-    const timeStr = formatMinutesToTime(currentTimeMinutes);
-    try {
-      const candles = await fetchReplayCandles(sessionDate, symbol, timeStr, "1m");
-      if (candles) {
-        set({ candles });
-      }
-    } catch (err) {
-      console.error("[LIVE STORE] Failed to fetch candles for", symbol, err);
+    const { ws } = get();
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: "SELECT_SYMBOL", symbol }));
     }
   },
 
   refreshLive: async () => {
-    if (isFetching) return;
-    isFetching = true;
-
-    const { sessionDate, selectedSymbol } = get();
-    if (!sessionDate) {
-      isFetching = false;
-      return;
-    }
-
-    const { minutes, isMarketOpen, timeStr } = getISTMinutes();
-
-    try {
-      const [snapshot, candles] = await Promise.all([
-        fetchReplaySnapshot(sessionDate, timeStr),
-        selectedSymbol ? fetchReplayCandles(sessionDate, selectedSymbol, timeStr, "1m") : Promise.resolve([]),
-      ]);
-
-      if (snapshot) {
-        set({
-          snapshot,
-          traps: snapshot.traps || [],
-          sectors: snapshot.sectors || [],
-          currentTimeMinutes: minutes,
-          isMarketOpen,
-          lastSyncTime: timeStr,
-          loading: false,
-        });
-      }
-      if (candles && candles.length > 0) {
-        set({ candles });
-      }
-    } catch (err: any) {
-      console.error("[LIVE STORE] refreshLive error:", err);
-      set({ error: err.message || "Error syncing live market data", loading: false });
-    } finally {
-      isFetching = false;
-    }
+    get().startLiveSync();
   },
 }));
