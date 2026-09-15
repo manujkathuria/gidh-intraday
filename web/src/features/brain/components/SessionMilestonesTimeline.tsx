@@ -1,9 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
+import { fetchQuantOperatingSchedule } from "@/lib/api";
 
-const MILESTONES = [
+interface MilestoneItem {
+  time: string;
+  title: string;
+  desc: string;
+}
+
+const DEFAULT_MILESTONES: MilestoneItem[] = [
   { time: "08:45 AM", title: "Pre-Market Warmup", desc: "Token auth & 210 universe discovery" },
   { time: "09:15 AM", title: "Open Observation", desc: "Chill Guy Rule: Zero entries in first 15m" },
   { time: "09:30 AM", title: "Bar 1 Close (Entries)", desc: "Screen RVOL ≥ 5x Volume Leaders" },
@@ -14,6 +21,28 @@ const MILESTONES = [
 ];
 
 export const SessionMilestonesTimeline: React.FC = () => {
+  const [milestones, setMilestones] = useState<MilestoneItem[]>(DEFAULT_MILESTONES);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchQuantOperatingSchedule()
+      .then((data) => {
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          setMilestones(
+            data.map((item: any) => ({
+              time: item.time || item.checkpoint_time,
+              title: item.title || item.phase_name,
+              desc: item.desc || item.required_action,
+            }))
+          );
+        }
+      })
+      .catch((err) => console.error("Failed to load schedule from DB:", err));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <div className="bg-surface border border-surface-border rounded-lg p-3 text-xs shadow-xs select-none">
       <div className="flex items-center justify-between mb-2.5">
@@ -28,8 +57,8 @@ export const SessionMilestonesTimeline: React.FC = () => {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
-        {MILESTONES.map((m, idx) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10 gap-2">
+        {milestones.map((m, idx) => (
           <div
             key={idx}
             className="p-2 rounded-md bg-surface-muted border border-surface-border flex flex-col gap-0.5 hover:bg-surface-hover/50 transition-colors"
@@ -54,5 +83,6 @@ export const SessionMilestonesTimeline: React.FC = () => {
     </div>
   );
 };
+
 
 

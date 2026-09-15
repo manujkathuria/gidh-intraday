@@ -40,6 +40,8 @@ func NewServerWithOrders(
 	mux.HandleFunc("GET /v1/market/daily-features", s.dailyFeatures)
 	mux.HandleFunc("GET /v1/market/intraday-features", s.intradayFeatures)
 	mux.HandleFunc("GET /v1/ai/daily-focus", s.dailyFocus)
+	mux.HandleFunc("GET /v1/quant/brain-rules", s.quantBrainRules)
+	mux.HandleFunc("GET /v1/quant/operating-schedule", s.quantOperatingSchedule)
 	mux.HandleFunc("GET /v1/replay/snapshot", s.replaySnapshot)
 	mux.HandleFunc("GET /v1/replay/candles", s.replayCandles)
 	mux.HandleFunc("GET /v1/replay/ws", s.replayWebSocket)
@@ -189,6 +191,24 @@ func (s *Server) intradayFeatures(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, items)
+}
+
+func (s *Server) quantBrainRules(w http.ResponseWriter, r *http.Request) {
+	rules, err := s.reader.QuantBrainRules(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "query_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, rules)
+}
+
+func (s *Server) quantOperatingSchedule(w http.ResponseWriter, r *http.Request) {
+	schedule, err := s.reader.QuantOperatingSchedule(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "query_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, schedule)
 }
 
 func sessionDate(w http.ResponseWriter, r *http.Request) (string, bool) {

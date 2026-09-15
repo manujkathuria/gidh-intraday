@@ -33,6 +33,12 @@ func (f *fakeReader) ReplaySnapshot(context.Context, string, string) (*ReplaySna
 func (f *fakeReader) ReplayCandles(context.Context, string, string, string, string) ([]ReplayCandle, error) {
 	return []ReplayCandle{}, nil
 }
+func (f *fakeReader) QuantBrainRules(context.Context) ([]BrainRuleItem, error) {
+	return []BrainRuleItem{}, nil
+}
+func (f *fakeReader) QuantOperatingSchedule(context.Context) ([]OperatingScheduleItem, error) {
+	return []OperatingScheduleItem{}, nil
+}
 func (f *fakeReader) WarmSessionDay(context.Context, string) error {
 	return nil
 }

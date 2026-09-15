@@ -220,8 +220,33 @@ export async function squareOffLivePosition(
     });
     return res.ok;
   } catch (err) {
-    console.error(`Failed to square off ${symbol}:`, err);
+    console.error("Failed to square off position:", err);
     return false;
   }
 }
+
+export async function fetchQuantBrainRules(): Promise<any[]> {
+  try {
+    const res = await fetch(`${API_BASE}/v1/quant/brain-rules`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("Failed to fetch quant brain rules:", err);
+    return [];
+  }
+}
+
+export async function fetchQuantOperatingSchedule(): Promise<any[]> {
+  try {
+    const res = await fetch(`${API_BASE}/v1/quant/operating-schedule`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("Failed to fetch quant operating schedule:", err);
+    return [];
+  }
+}
+
+
+
 

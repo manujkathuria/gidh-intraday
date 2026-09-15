@@ -91,6 +91,30 @@ type DailyFocusItem struct {
 	AttentionScore float64   `json:"attention_score"`
 }
 
+type BrainRuleItem struct {
+	ID           string   `json:"id"`
+	Category     string   `json:"category"`
+	Name         string   `json:"name"`
+	Confidence   float64  `json:"confidence"`
+	TriggerTime  string   `json:"triggerTime,omitempty"`
+	Conditions   []string `json:"conditions"`
+	Action       string   `json:"action"`
+	Invalidation string   `json:"invalidation,omitempty"`
+	Notes        string   `json:"notes,omitempty"`
+}
+
+type OperatingScheduleItem struct {
+	ID             int    `json:"id"`
+	CheckpointTime string `json:"time"`
+	TimeWindow     string `json:"time_window"`
+	SequenceOrder  int    `json:"sequence_order"`
+	PhaseName      string `json:"title"`
+	TriggerEvent   string `json:"trigger_event"`
+	RequiredAction string `json:"desc"`
+	RiskConstraint string `json:"risk_constraint"`
+	Status         string `json:"status"`
+}
+
 type MarketReader interface {
 	Ping(context.Context) error
 	Universe(context.Context) ([]UniverseItem, error)
@@ -98,6 +122,8 @@ type MarketReader interface {
 	DailyFeatures(context.Context, string) ([]DailyFeature, error)
 	IntradayFeatures(context.Context, string, string, int) ([]IntradayFeature, error)
 	DailyFocus(context.Context, string) ([]DailyFocusItem, error)
+	QuantBrainRules(context.Context) ([]BrainRuleItem, error)
+	QuantOperatingSchedule(context.Context) ([]OperatingScheduleItem, error)
 	ReplaySnapshot(ctx context.Context, sessionDate, asOfTime string) (*ReplaySnapshotResponse, error)
 	ReplayCandles(ctx context.Context, sessionDate, symbol, toTime, interval string) ([]ReplayCandle, error)
 	WarmSessionDay(ctx context.Context, sessionDate string) error
@@ -127,6 +153,79 @@ func (r *Repository) DailyFocus(ctx context.Context, sessionDate string) ([]Dail
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+func (r *Repository) QuantBrainRules(ctx context.Context) ([]BrainRuleItem, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT rule_id, category, name, confidence, condition_json, action, COALESCE(invalidation, ''), evidence
+		FROM quant.brain_rules
+		WHERE status = 'ACTIVE'
+		ORDER BY 
+			CASE category 
+				WHEN 'ALLOCATION' THEN 1 
+				WHEN 'ENTRY' THEN 2 
+				WHEN 'INVALIDATION' THEN 3 
+				WHEN 'HOLD' THEN 4 
+				WHEN 'NO_TRADE' THEN 5 
+				WHEN 'CHARACTER' THEN 6 
+				WHEN 'BATTALION' THEN 7 
+				ELSE 8 
+			END, 
+			confidence DESC;
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query brain rules: %w", err)
+	}
+	defer rows.Close()
+
+	var rules []BrainRuleItem
+	for rows.Next() {
+		var item BrainRuleItem
+		var condMap map[string]interface{}
+		var invalidation, evidence string
+		if err := rows.Scan(&item.ID, &item.Category, &item.Name, &item.Confidence, &condMap, &item.Action, &invalidation, &evidence); err != nil {
+			return nil, err
+		}
+		item.Invalidation = invalidation
+		item.Notes = evidence
+
+		// Parse condition_json into clean human-readable bullet strings
+		var conditions []string
+		if chk, ok := condMap["checkpoint"].(string); ok && chk != "" {
+			item.TriggerTime = chk
+		}
+		for k, v := range condMap {
+			if k == "checkpoint" {
+				continue
+			}
+			conditions = append(conditions, fmt.Sprintf("%s: %v", k, v))
+		}
+		item.Conditions = conditions
+		rules = append(rules, item)
+	}
+	return rules, rows.Err()
+}
+
+func (r *Repository) QuantOperatingSchedule(ctx context.Context) ([]OperatingScheduleItem, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT id, checkpoint_time, time_window, sequence_order, phase_name, trigger_event, required_action, risk_constraint, status
+		FROM quant.operating_schedule
+		ORDER BY sequence_order ASC;
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query operating schedule: %w", err)
+	}
+	defer rows.Close()
+
+	var schedule []OperatingScheduleItem
+	for rows.Next() {
+		var item OperatingScheduleItem
+		if err := rows.Scan(&item.ID, &item.CheckpointTime, &item.TimeWindow, &item.SequenceOrder, &item.PhaseName, &item.TriggerEvent, &item.RequiredAction, &item.RiskConstraint, &item.Status); err != nil {
+			return nil, err
+		}
+		schedule = append(schedule, item)
+	}
+	return schedule, rows.Err()
 }
 
 type Repository struct {

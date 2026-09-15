@@ -1,21 +1,39 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { SessionMilestonesTimeline } from "./components/SessionMilestonesTimeline";
 import { BrainCategorySelect } from "./components/BrainCategorySelect";
 import { BrainRuleCard } from "./components/BrainRuleCard";
 import { ALL_BRAIN_RULES, BRAIN_CATEGORIES } from "./data";
+import { fetchQuantBrainRules } from "@/lib/api";
+import { BrainRule } from "./types";
 import { Search } from "lucide-react";
 
 export const QuantBrainView: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [search, setSearch] = useState<string>("");
+  const [rules, setRules] = useState<BrainRule[]>(ALL_BRAIN_RULES);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchQuantBrainRules()
+      .then((data) => {
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          setRules(data as BrainRule[]);
+        }
+      })
+      .catch((err) => console.error("Error loading brain rules:", err));
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filteredRules = useMemo(() => {
-    return ALL_BRAIN_RULES.filter((r) => {
+    return rules.filter((r) => {
       if (selectedCategory !== "ALL" && r.category !== selectedCategory) {
         return false;
       }
+
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchesName = r.name.toLowerCase().includes(q);
@@ -36,7 +54,6 @@ export const QuantBrainView: React.FC = () => {
     <div className="flex flex-col gap-3">
       {/* 1. Daily Operating Schedule Milestone Bar */}
       <SessionMilestonesTimeline />
-
 
       {/* 2. Controls Toolbar: Category Select + Search Filter + Count */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
