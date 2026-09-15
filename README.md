@@ -1,45 +1,53 @@
-# Gidh Intraday
+# Gidh Intraday (🦅)
 
-Day 0 foundation for an AI-native Indian intraday research system.
+Institutional-grade, zero-latency quantitative market terminal, replay engine, and MIS execution cockpit for the Indian equity and derivatives markets (NSE & NFO).
 
-The repository currently contains the market-data batch kernel and a minimal,
-read-only local API. The batch process builds and repairs canonical TimescaleDB
-market history and daily/one-minute derived features; the API exposes only
-backend-certified data for the future UI and AI runtime.
+## Architecture
 
-## Commands
+- **Web Cockpit**: Next.js 16 (App Router, TailwindCSS, Lightweight Charts, Firebase Auth Gate).
+- **Backend**: Go (Read API, Replay Streamer, Order Manager with Zerodha Kite & Paper Trading).
+- **Storage**: TimescaleDB 16 (3.45M+ 1m/1d candles and roll-forward features) & Redis 7 (Hot state & Pub/Sub).
+- **Edge**: Nginx SSL reverse proxy (`gidh.tech`).
 
-From the repository root:
+---
 
-```bash
-make auth        # renew the local Kite access token
-make universe    # refresh the 210 cash/futures pairs
-make history     # seed or repair raw candles
-make features    # publish the current daily baseline
-make integrity   # repair a closed session only when backend marks it non-ready
-make ai-test     # run AI read-layer tests
-make test
-```
-
-Start the local read API with:
+## Quick Start (Local Development)
 
 ```bash
-cd backend && go run ./cmd/gidh-api
+# 1. Start database & cache
+docker compose -f docker-compose.local.yml up timescaledb-local redis-local -d
+
+# 2. Run backend API (offline paper trading mode)
+make api-restart
+
+# 3. Start Web UI
+make web
 ```
 
-It listens on `127.0.0.1:8080` by default (`GIDH_API_ADDR` overrides this) and
-provides `GET /healthz`, `GET /v1/market/universe`,
-`GET /v1/market/sessions`, `GET /v1/market/daily-features?session_date=YYYY-MM-DD`,
-and `GET /v1/market/intraday-features?session_date=YYYY-MM-DD&symbol=SYMBOL`.
-Published AI research is served through
-`GET /v1/ai/daily-focus?session_date=YYYY-MM-DD`.
+- Web Terminal: `http://localhost:3000`
+- Read API: `http://localhost:8080/healthz`
 
-For the operating contract and schema ownership, start with
-[ai-docs/INDEX.md](ai-docs/INDEX.md).
+---
 
-## Principles
+## Make Commands
 
-- Backend owns data integrity and publication.
-- AI trusts backend-published market features; it does not repair or validate data.
-- Raw candles are canonical; all feature tables are reproducible.
-- Realtime ingestion will be an optional fast path. EOD batch integrity is the repair authority.
+```bash
+make web          # Start Next.js War Room UI (pnpm dev)
+make api          # Start Go API
+make api-restart  # Kill port 8080 and restart Go API
+make universe     # Sync 210 F&O instruments
+make history      # Backfill 1m / 1d historical candles
+make features     # Generate daily baseline features
+make test         # Run backend unit tests
+make auth TOKEN=x # Renew Zerodha daily access token
+```
+
+---
+
+## Documentation
+
+- [ai-docs/INDEX.md](ai-docs/INDEX.md) — System Architecture, Endpoints & DB Schema
+- [PRODUCT.md](PRODUCT.md) — Product Design & 5-Slot MIS Risk Model
+- [DESIGN.md](DESIGN.md) — Clinical Monochrome Design System
+- [UNIVERSE.md](UNIVERSE.md) — 210 F&O Active Universe Contract
+- [AGENTS.md](AGENTS.md) — Developer & Agent Contract
