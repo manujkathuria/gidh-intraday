@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Radar, Shield, CandlestickChart, Brain, Zap } from "lucide-react";
+import { Crosshair, Layers, LineChart, Brain, Briefcase } from "lucide-react";
 
 interface Props {
   activeCount: number;
@@ -14,11 +14,11 @@ export const NavigationItems: React.FC<Props> = ({ activeCount, isCollapsed }) =
   const pathname = usePathname();
 
   const links = [
-    { href: "/", label: "Radar", icon: Radar, badge: null },
-    { href: "/sectors", label: "Sectors", icon: Shield, badge: null },
-    { href: "/chart", label: "Charts", icon: CandlestickChart, badge: null },
+    { href: "/", label: "Radar", icon: Crosshair, badge: null },
+    { href: "/sectors", label: "Sectors", icon: Layers, badge: null },
+    { href: "/chart", label: "Charts", icon: LineChart, badge: null },
     { href: "/brain", label: "Quant Brain", icon: Brain, badge: null },
-    { href: "/positions", label: "Positions", icon: Zap, badge: `${activeCount}/5` },
+    { href: "/positions", label: "Positions", icon: Briefcase, badge: `${activeCount}/5` },
   ];
 
   return (

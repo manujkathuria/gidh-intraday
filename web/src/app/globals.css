@@ -18,36 +18,36 @@
 }
 
 :root {
-  /* Institutional Light Mode (Pure Greyscale) */
-  --background: 248 249 250;
-  --foreground: 24 24 27;
+  /* Institutional Light Mode (Subtle Slate/Zinc) */
+  --background: 246 248 250;
+  --foreground: 39 45 54;
 
   --surface: 255 255 255;
-  --surface-muted: 244 244 245;
-  --surface-hover: 228 228 231;
-  --surface-border: 212 212 216;
+  --surface-muted: 241 243 246;
+  --surface-hover: 232 235 240;
+  --surface-border: 218 222 229;
 
-  --primary: 24 24 27;
+  --primary: 45 55 72;
   --primary-foreground: 255 255 255;
-  --primary-hover: 39 39 42;
-  --primary-subtle: 244 244 245;
+  --primary-hover: 30 41 59;
+  --primary-subtle: 241 245 249;
 }
 
 [data-theme="dark"],
 .dark {
-  /* Institutional Dark Mode (Pure Carbon Greyscale) */
-  --background: 14 14 14;
-  --foreground: 240 240 240;
+  /* Institutional Dark Mode (Soft Carbon/Obsidian) */
+  --background: 17 19 23;
+  --foreground: 219 224 233;
 
-  --surface: 22 22 22;
-  --surface-muted: 30 30 30;
-  --surface-hover: 40 40 40;
-  --surface-border: 45 45 45;
+  --surface: 24 27 33;
+  --surface-muted: 33 37 45;
+  --surface-hover: 44 49 58;
+  --surface-border: 48 54 64;
 
-  --primary: 244 244 245;
-  --primary-foreground: 14 14 14;
-  --primary-hover: 228 228 231;
-  --primary-subtle: 32 32 32;
+  --primary: 226 232 240;
+  --primary-foreground: 15 23 42;
+  --primary-hover: 241 245 249;
+  --primary-subtle: 30 35 44;
 }
 
 body {
@@ -100,4 +100,17 @@ input[type='number']::-webkit-outer-spin-button {
 }
 input[type='number'] {
   -moz-appearance: textfield;
+}
+
+/* Hide TradingView / Lightweight Charts Watermark / Logo Anchor */
+#tv-attr-logo,
+a[href*="tradingview"],
+a[title*="TradingView"],
+.tv-watermark,
+[class*="chart-attribution"],
+[class*="tradingview"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }

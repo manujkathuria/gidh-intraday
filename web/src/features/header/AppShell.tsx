@@ -15,7 +15,7 @@ interface Props {
 }
 
 export const AppShell: React.FC<Props> = ({ children }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const {
     mode,

@@ -189,19 +189,29 @@ func (m *Manager) PlaceOrder(ctx context.Context, intent OrderIntent) (*ActivePo
 	}
 	grossExposure := margin * m.leverageMIS // default ₹50,000 gross
 
-	// Fetch current quote price
-	quotes, err := m.kiteClient.FetchQuote(ctx, fmt.Sprintf("%s:%s", targetInst.Exchange, targetInst.Symbol))
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch quote for %s: %w", intent.Symbol, err)
+	// Determine entry price (via live quote or fallback in paper mode)
+	var entryPrice float64
+	if m.kiteClient != nil {
+		quotes, err := m.kiteClient.FetchQuote(ctx, fmt.Sprintf("%s:%s", targetInst.Exchange, targetInst.Symbol))
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch quote for %s: %w", intent.Symbol, err)
+		}
+		key := fmt.Sprintf("%s:%s", targetInst.Exchange, targetInst.Symbol)
+		q, ok := quotes[key]
+		if !ok || q.LastPrice <= 0 {
+			return nil, fmt.Errorf("invalid quote received for %s", intent.Symbol)
+		}
+		entryPrice = q.LastPrice
+	} else if m.tracker != nil {
+		if tick, ok := m.tracker.GetLatestTick(targetInst.Symbol); ok && tick.LastPrice > 0 {
+			entryPrice = tick.LastPrice
+		}
 	}
 
-	key := fmt.Sprintf("%s:%s", targetInst.Exchange, targetInst.Symbol)
-	q, ok := quotes[key]
-	if !ok || q.LastPrice <= 0 {
-		return nil, fmt.Errorf("invalid quote received for %s", intent.Symbol)
+	if entryPrice <= 0 {
+		entryPrice = 1000.0 // Default mock price for offline paper trading
 	}
 
-	entryPrice := q.LastPrice
 	qty := int(math.Floor(grossExposure / entryPrice))
 	if qty <= 0 {
 		qty = 1

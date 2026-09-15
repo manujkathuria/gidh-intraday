@@ -43,20 +43,28 @@ func main() {
 	}
 	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
 
-	// Initialize Kite Client & Live Order Components
+	// Initialize Kite Client & Live Order Components (Production Broker ONLY)
 	cfg, _ := config.LoadData()
+	appEnv := os.Getenv("ENV")
 	var kc *kite.Client
 	var tracker *marketdata.ActivePositionTracker
-	if cfg != nil && cfg.KiteAPIKey != "" {
+	isPaper := appEnv != "production"
+
+	if !isPaper && cfg != nil && cfg.KiteAPIKey != "" && cfg.KiteAccessToken != "" {
 		kc = kite.NewClient(cfg.KiteAPIKey, cfg.KiteAccessToken)
 		tracker = marketdata.NewActivePositionTracker(cfg.KiteAPIKey, cfg.KiteAccessToken)
 		_ = tracker.Start()
+		log.Println("[ORDER MANAGER] Production mode: Connected to Zerodha live broker & ticker.")
+	} else {
+		log.Println("[ORDER MANAGER] Local development / Paper trading mode: Zerodha live connection disabled.")
 	}
 
 	orderStore := ordermanager.NewRedisOrderStore(rdb)
 	ir := store.NewMarketInstrumentRepo(db)
-	orderMgr := ordermanager.NewManager(kc, orderStore, ir, tracker, db, false)
-	_ = orderMgr.SyncWithZerodha(ctx)
+	orderMgr := ordermanager.NewManager(kc, orderStore, ir, tracker, db, isPaper)
+	if !isPaper {
+		_ = orderMgr.SyncWithZerodha(ctx)
+	}
 
 	wsHub := ordermanager.NewWSHub(rdb, orderStore)
 

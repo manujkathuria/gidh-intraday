@@ -65,8 +65,8 @@ export const UserAuthButton: React.FC = () => {
         </div>
 
         {/* Status Badge */}
-        <div className="px-2.5 py-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-          <Shield className="w-3 h-3" />
+        <div className="px-2.5 py-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-foreground/60">
+          <Shield className="w-3 h-3 text-foreground/70" />
           <span>Operator Verified</span>
         </div>
 
@@ -77,11 +77,11 @@ export const UserAuthButton: React.FC = () => {
           {({ focus }) => (
             <button
               onClick={signOut}
-              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium text-rose-600 dark:text-rose-400 transition cursor-pointer ${
-                focus ? "bg-rose-500/10" : ""
+              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-semibold text-foreground transition cursor-pointer ${
+                focus ? "bg-surface-hover" : ""
               }`}
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-3.5 h-3.5 text-foreground/70" />
               <span>Sign Out</span>
             </button>
           )}

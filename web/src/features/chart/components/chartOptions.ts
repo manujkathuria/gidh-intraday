@@ -13,6 +13,7 @@ export function getChartOptions(
       textColor: isDark ? "#A1A1AA" : "#71717A",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
       fontSize: 11,
+      attributionLogo: false,
     },
     grid: {
       vertLines: { visible: false },

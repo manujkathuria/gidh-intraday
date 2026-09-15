@@ -37,7 +37,7 @@ export const PositionsTerminal: React.FC = () => {
   } = usePositionsData();
 
   return (
-    <div className="w-full px-6 py-5 flex-1 flex flex-col gap-5 max-w-7xl mx-auto">
+    <div className="flex flex-col gap-3">
       {/* 1. Hero Stats Matrix */}
       <HeroStatsMatrix
         totalPnLINR={totalPnLINR}

@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Radar, Shield, CandlestickChart, Brain, Zap } from "lucide-react";
+import { Crosshair, Layers, LineChart, Brain, Briefcase } from "lucide-react";
 
 interface Props {
   activeCount: number;
@@ -34,7 +34,7 @@ export const BrandNavigation: React.FC<Props> = ({ activeCount }) => {
               : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
           }`}
         >
-          <Radar className="w-3.5 h-3.5" />
+          <Crosshair className="w-3.5 h-3.5" />
           <span>Radar</span>
         </Link>
 
@@ -46,7 +46,7 @@ export const BrandNavigation: React.FC<Props> = ({ activeCount }) => {
               : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
           }`}
         >
-          <Shield className="w-3.5 h-3.5" />
+          <Layers className="w-3.5 h-3.5" />
           <span>Sectors</span>
         </Link>
 
@@ -58,7 +58,7 @@ export const BrandNavigation: React.FC<Props> = ({ activeCount }) => {
               : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
           }`}
         >
-          <CandlestickChart className="w-3.5 h-3.5" />
+          <LineChart className="w-3.5 h-3.5" />
           <span>Charts</span>
         </Link>
 
@@ -82,7 +82,7 @@ export const BrandNavigation: React.FC<Props> = ({ activeCount }) => {
               : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
           }`}
         >
-          <Zap className="w-3.5 h-3.5" />
+          <Briefcase className="w-3.5 h-3.5" />
           <span>Positions</span>
           <span
             className={`text-[10px] px-1.5 py-0.2 rounded border ${

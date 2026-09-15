@@ -23,12 +23,12 @@ export function useChartStudio() {
   const [activeSymbol, setActiveSymbol] = useState<string>(
     urlSymbol || selectedSymbol || "RELIANCE"
   );
-  const [interval, setInterval] = useState<ChartInterval>("1m");
+  const [interval, setInterval] = useState<ChartInterval>("5m");
 
   // In REPLAY mode, restrict to intraday intervals only (1m, 5m, 15m)
   useEffect(() => {
     if (mode === "REPLAY" && (interval === "1h" || interval === "1d")) {
-      setInterval("1m");
+      setInterval("5m");
     }
   }, [mode, interval]);
   const [searchTerm, setSearchTerm] = useState<string>("");

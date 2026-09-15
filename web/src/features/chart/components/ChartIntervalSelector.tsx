@@ -30,17 +30,17 @@ export const ChartIntervalSelector: React.FC<Props> = ({
 }) => {
   const intervals = mode === "REPLAY" ? REPLAY_INTERVALS : LIVE_INTERVALS;
   return (
-    <div className="flex items-center bg-surface-muted/60 border border-surface-border rounded-md p-0.5 select-none shrink-0">
+    <div className="flex items-center gap-0.5 select-none shrink-0">
       {intervals.map((item) => {
         const isActive = item.value === interval;
         return (
           <button
             key={item.value}
             onClick={() => onChangeInterval(item.value)}
-            className={`px-1.5 py-0.5 text-[11px] font-bold rounded transition-colors cursor-pointer ${
+            className={`px-2 py-1 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
               isActive
                 ? "bg-foreground text-background shadow-xs font-black"
-                : "text-foreground/50 hover:text-foreground hover:bg-surface-hover/50"
+                : "text-foreground/50 hover:text-foreground hover:bg-surface-hover"
             }`}
           >
             {item.label}
