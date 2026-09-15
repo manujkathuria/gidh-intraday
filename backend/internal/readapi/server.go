@@ -50,7 +50,8 @@ func NewServerWithOrders(
 	mux.HandleFunc("POST /v1/live/orders/square-off", s.squareOffLiveOrder)
 	mux.HandleFunc("GET /v1/live/orders/ws", s.liveOrdersWebSocket)
 
-	return withCORS(mux)
+	authMiddleware := NewAuthMiddleware()
+	return withCORS(authMiddleware.WrapHTTP(mux))
 }
 
 func withCORS(next http.Handler) http.Handler {
@@ -98,8 +99,12 @@ func (s *Server) replayCandles(w http.ResponseWriter, r *http.Request) {
 	if toTime == "" {
 		toTime = "15:30:00"
 	}
+	interval := strings.TrimSpace(r.URL.Query().Get("interval"))
+	if interval == "" {
+		interval = "1m"
+	}
 
-	candles, err := s.reader.ReplayCandles(r.Context(), date, symbol, toTime)
+	candles, err := s.reader.ReplayCandles(r.Context(), date, symbol, toTime, interval)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "query_failed", err.Error())
 		return

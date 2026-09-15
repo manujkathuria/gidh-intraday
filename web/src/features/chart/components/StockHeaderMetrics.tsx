@@ -3,6 +3,10 @@
 import React from "react";
 import { formatMinutesToTime } from "@/stores/replayStore";
 import { ReplayStock } from "@/lib/api";
+import { StockSearchCombobox } from "./StockSearchCombobox";
+import { ChartIntervalSelector } from "./ChartIntervalSelector";
+import { StockSummaryItem } from "../types";
+import { ChartInterval } from "./candleAggregator";
 
 interface Props {
   activeSymbol: string;
@@ -11,6 +15,11 @@ interface Props {
   candlesCount: number;
   lastClosePrice: number;
   lastVwap: number;
+  allSymbols?: StockSummaryItem[];
+  onSelectSymbol?: (sym: string) => void;
+  interval?: ChartInterval;
+  onChangeInterval?: (interval: ChartInterval) => void;
+  mode?: "LIVE" | "REPLAY";
 }
 
 export const StockHeaderMetrics: React.FC<Props> = ({
@@ -20,6 +29,11 @@ export const StockHeaderMetrics: React.FC<Props> = ({
   candlesCount,
   lastClosePrice,
   lastVwap,
+  allSymbols = [],
+  onSelectSymbol,
+  interval = "1m",
+  onChangeInterval,
+  mode = "LIVE",
 }) => {
   const price = stockInfo?.price || lastClosePrice;
   const movePct = stockInfo?.move_pct || 0;
@@ -29,72 +43,86 @@ export const StockHeaderMetrics: React.FC<Props> = ({
   const isAboveVwap = stockInfo?.is_above_vwap ?? price >= vwap;
 
   return (
-    <div className="bg-surface border border-surface-border rounded-lg p-3.5 flex flex-wrap items-center justify-between gap-4 select-none">
-      {/* Symbol & Sector Info */}
-      <div className="flex items-center gap-3">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-black tracking-tight text-foreground">
-              {activeSymbol}
-            </h1>
-            <span className="text-xs px-2 py-0.5 rounded bg-surface-muted border border-surface-border text-foreground/70">
-              {stockInfo?.sector || "EQUITY"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-foreground/50 mt-0.5">
-            <span>As of {formatMinutesToTime(currentTimeMinutes).slice(0, 5)} IST</span>
-            <span>•</span>
-            <span>{candlesCount} 1m Bars Loaded</span>
-          </div>
-        </div>
+    <div className="h-10 px-3 bg-surface border border-surface-border rounded-lg flex items-center justify-between gap-3 select-none text-xs shrink-0">
+      {/* Left: Stock Selector + Sector + Interval Pills */}
+      <div className="flex items-center gap-2 min-w-0">
+        {onSelectSymbol ? (
+          <StockSearchCombobox
+            allSymbols={allSymbols}
+            activeSymbol={activeSymbol}
+            onSelectSymbol={onSelectSymbol}
+          />
+        ) : (
+          <span className="font-black text-sm text-foreground uppercase tracking-tight">
+            {activeSymbol}
+          </span>
+        )}
+
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-muted text-foreground/70 font-semibold border border-surface-border">
+          {stockInfo?.sector || "EQUITY"}
+        </span>
+
+        {onChangeInterval && (
+          <ChartIntervalSelector
+            interval={interval}
+            onChangeInterval={onChangeInterval}
+            mode={mode}
+          />
+        )}
       </div>
 
-      {/* Live Metrics Matrix (Monochrome) */}
-      <div className="flex items-center gap-4 text-xs">
-        {/* LTP */}
-        <div className="flex flex-col items-end px-3 py-1 bg-surface-muted border border-surface-border rounded">
-          <span className="text-[10px] text-foreground/40 font-bold">LTP</span>
-          <span className="text-sm font-black text-foreground">
+      {/* Right: Inline Ticker Strip (No bulky card boxes) */}
+      <div className="flex items-center gap-3.5 text-xs overflow-x-auto no-scrollbar">
+        {/* LTP & % Change */}
+        <div className="flex items-center gap-1.5 tabular-nums">
+          <span className="font-black text-foreground text-sm">
             ₹{price.toFixed(2)}
           </span>
-        </div>
-
-        {/* Change */}
-        <div className="flex flex-col items-end px-3 py-1 bg-surface-muted border border-surface-border rounded">
-          <span className="text-[10px] text-foreground/40 font-bold">CHANGE</span>
-          <span className="text-sm font-black text-foreground">
+          <span
+            className={`font-bold text-xs ${
+              movePct > 0
+                ? "text-emerald-600 dark:text-emerald-400"
+                : movePct < 0
+                ? "text-rose-600 dark:text-rose-400"
+                : "text-foreground/60"
+            }`}
+          >
             {movePct >= 0 ? "+" : ""}
             {movePct.toFixed(2)}%
           </span>
         </div>
 
+        <span className="text-foreground/20 hidden sm:inline">•</span>
+
         {/* VWAP */}
-        <div className="flex flex-col items-end px-3 py-1 bg-surface-muted border border-surface-border rounded">
-          <span className="text-[10px] text-foreground/40 font-bold">VWAP</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm font-black text-foreground">
-              ₹{vwap.toFixed(2)}
-            </span>
-            <span className="px-1 py-0.2 rounded text-[9px] font-bold border border-surface-border bg-surface text-foreground/70">
-              {isAboveVwap ? "BULL" : "BEAR"}
-            </span>
-          </div>
+        <div className="hidden sm:flex items-center gap-1.5 tabular-nums">
+          <span className="text-foreground/40 text-[10px] font-bold tracking-wider">VWAP</span>
+          <span className="font-bold text-foreground">₹{vwap.toFixed(2)}</span>
+          <span
+            className={`text-[9px] px-1 py-0.2 rounded font-black ${
+              isAboveVwap
+                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+            }`}
+          >
+            {isAboveVwap ? "BULL" : "BEAR"}
+          </span>
         </div>
+
+        <span className="text-foreground/20 hidden md:inline">•</span>
 
         {/* RVOL */}
-        <div className="flex flex-col items-end px-3 py-1 bg-surface-muted border border-surface-border rounded">
-          <span className="text-[10px] text-foreground/40 font-bold">RVOL PACE</span>
-          <span className="text-sm font-black text-foreground">
-            {rvol.toFixed(2)}x
-          </span>
+        <div className="hidden md:flex items-center gap-1 tabular-nums">
+          <span className="text-foreground/40 text-[10px] font-bold tracking-wider">RVOL</span>
+          <span className="font-bold text-foreground">{rvol.toFixed(2)}x</span>
         </div>
 
+        <span className="text-foreground/20 hidden lg:inline">•</span>
+
         {/* CLV */}
-        <div className="flex flex-col items-end px-3 py-1 bg-surface-muted border border-surface-border rounded">
-          <span className="text-[10px] text-foreground/40 font-bold">CLV (0-1)</span>
-          <span className="text-sm font-black text-foreground">
-            {clv.toFixed(2)}
-          </span>
+        <div className="hidden lg:flex items-center gap-1 tabular-nums">
+          <span className="text-foreground/40 text-[10px] font-bold tracking-wider">CLV</span>
+          <span className="font-bold text-foreground">{clv.toFixed(2)}</span>
         </div>
       </div>
     </div>

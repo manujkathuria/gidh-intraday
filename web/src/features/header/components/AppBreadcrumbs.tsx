@@ -7,6 +7,7 @@ import { ChevronRight, PanelLeft, Clock, Play, Pause } from "lucide-react";
 import { formatMinutesToTime } from "@/stores/replayStore";
 import { ThemeToggle } from "./ThemeToggle";
 import { SessionCalendarPopover } from "./SessionCalendarPopover";
+import { UserAuthButton } from "./UserAuthButton";
 
 interface Props {
   isCollapsed: boolean;
@@ -120,6 +121,11 @@ export const AppBreadcrumbs: React.FC<Props> = ({
 
         {/* Theme Toggle */}
         <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
+
+        <div className="h-2.5 w-px bg-surface-border mx-0.5" />
+
+        {/* User Auth / Profile */}
+        <UserAuthButton />
       </div>
     </div>
   );

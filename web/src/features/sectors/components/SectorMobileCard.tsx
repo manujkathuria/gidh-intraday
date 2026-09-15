@@ -101,27 +101,30 @@ export const SectorMobileCard: React.FC<Props> = ({
             {stocks.map((st) => {
               const move = st.move_pct || 0;
               return (
-                <div
+                <Link
                   key={st.symbol}
-                  className="bg-surface border border-surface-border rounded p-2 flex items-center justify-between"
+                  href={`/chart?symbol=${encodeURIComponent(st.symbol)}`}
+                  className="bg-surface hover:bg-surface-hover border border-surface-border hover:border-foreground/40 rounded p-2 flex items-center justify-between transition-colors group cursor-pointer"
                 >
-                  <span className="font-bold text-foreground text-xs">{st.symbol}</span>
+                  <span className="font-bold text-foreground group-hover:text-foreground text-xs">
+                    {st.symbol}
+                  </span>
                   <div className="flex items-center gap-1.5">
                     <span
                       className={`text-[11px] font-bold tabular-nums ${
-                        move > 0 ? "text-emerald-600 dark:text-emerald-400" : move < 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground/60"
+                        move > 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : move < 0
+                          ? "text-rose-600 dark:text-rose-400"
+                          : "text-foreground/60"
                       }`}
                     >
-                      {move >= 0 ? "+" : ""}{move.toFixed(1)}%
+                      {move >= 0 ? "+" : ""}
+                      {move.toFixed(1)}%
                     </span>
-                    <Link
-                      href={`/chart?symbol=${encodeURIComponent(st.symbol)}`}
-                      className="p-1 rounded text-foreground/40 hover:text-foreground"
-                    >
-                      <LineChart className="w-3.5 h-3.5" />
-                    </Link>
+                    <LineChart className="w-3.5 h-3.5 text-foreground/30 group-hover:text-foreground transition-colors" />
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

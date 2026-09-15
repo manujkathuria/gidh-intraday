@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function ChartPage() {
   return (
-    <div className="w-full px-5 py-3 flex-1 flex flex-col">
+    <div className="w-full h-full flex-1 flex flex-col min-h-0 overflow-hidden">
       <Suspense
         fallback={
           <div className="p-8 text-xs text-foreground/40">

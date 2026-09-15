@@ -24,11 +24,11 @@ export const StockSelectorSidebar: React.FC<Props> = ({
   onSelectSymbol,
 }) => {
   return (
-    <div className="w-80 bg-surface border border-surface-border rounded-lg flex flex-col overflow-hidden shrink-0">
+    <div className="w-full lg:w-72 xl:w-80 bg-surface border border-surface-border rounded-lg flex flex-col overflow-hidden shrink-0 min-h-[420px] lg:min-h-0">
       <div className="p-3 border-b border-surface-border flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-black tracking-wider uppercase text-foreground/70 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5" /> F&O Universe ({allSymbols.length})
+            <Layers className="w-3.5 h-3.5" /> Stocks ({allSymbols.length})
           </span>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-muted text-foreground/60 border border-surface-border">
             {selectedDate || "LIVE"}
@@ -68,25 +68,12 @@ export const StockSelectorSidebar: React.FC<Props> = ({
                     : "hover:bg-surface-hover text-foreground/80 hover:text-foreground"
                 }`}
               >
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold tracking-tight">
-                      {item.symbol}
-                    </span>
-                    {item.rvol >= 4.0 && (
-                      <span
-                        className={`px-1 py-0.2 rounded text-[9px] font-bold ${
-                          isSelected
-                            ? "bg-background text-foreground"
-                            : "bg-foreground text-background"
-                        }`}
-                      >
-                        RVOL
-                      </span>
-                    )}
-                  </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-bold tracking-tight truncate">
+                    {item.symbol}
+                  </span>
                   <span
-                    className={`text-[10px] ${
+                    className={`text-[10px] truncate ${
                       isSelected ? "text-background/70" : "text-foreground/40"
                     }`}
                   >

@@ -1,4 +1,5 @@
 import { Candle } from "@/lib/api";
+import { ChartInterval } from "./components/candleAggregator";
 
 export interface StockSummaryItem {
   symbol: string;
@@ -14,4 +15,6 @@ export interface ChartProps {
   symbol: string;
   theme?: "dark" | "light";
   height?: number;
+  interval?: ChartInterval;
+  selectedDate?: string;
 }

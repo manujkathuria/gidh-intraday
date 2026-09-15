@@ -7,6 +7,7 @@ import { MobileDrawerSidebar } from "./components/MobileDrawerSidebar";
 import { BottomCockpitFooter } from "./components/BottomCockpitFooter";
 import { useHeaderState } from "./hooks/useHeaderState";
 
+import { SidebarModeSwitcher } from "./components/SidebarModeSwitcher";
 import { AppBreadcrumbs } from "./components/AppBreadcrumbs";
 
 interface Props {
@@ -59,21 +60,32 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         onClose={() => setIsMobileOpen(false)}
         activeCount={activeCount}
         breadth={breadth}
+        mode={mode}
+        setMode={setMode}
       />
 
       {/* 2. Desktop / iPad Rail (Hidden on mobile, visible md+) */}
       <aside
-        className={`hidden md:flex bg-surface border-r border-surface-border flex-col justify-between transition-all duration-200 shrink-0 z-20 ${isCollapsed ? "w-14 p-2" : "w-52 p-3.5"
-          }`}
+        className={`hidden md:flex bg-surface border-r border-surface-border flex-col justify-between transition-all duration-200 shrink-0 z-20 ${
+          isCollapsed ? "w-14 p-2" : "w-52 p-3"
+        }`}
       >
-        <div className="flex flex-col gap-4">
-          {/* Navigation Links (No Branding Clutter) */}
+        <div className="flex flex-col gap-3">
+          {/* Top Mode Switcher (LIVE / REPLAY) */}
+          <SidebarModeSwitcher
+            mode={mode}
+            setMode={setMode}
+            isCollapsed={isCollapsed}
+          />
+
+          {/* Navigation Links */}
           <NavigationItems activeCount={activeCount} isCollapsed={isCollapsed} />
         </div>
 
         {/* Footer Status */}
         <SidebarFooterStatus breadth={breadth} isCollapsed={isCollapsed} />
       </aside>
+
 
       {/* 3. Main Workspace Viewport */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">

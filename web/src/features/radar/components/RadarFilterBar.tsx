@@ -29,10 +29,10 @@ export const RadarFilterBar: React.FC<Props> = ({
   totalCount,
 }) => {
   const presets: { id: RadarPreset; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: "ALL", label: "All 210", icon: Layers },
-    { id: "SURGES", label: "Volume Surges (≥2.5x)", icon: Flame },
-    { id: "LEADERS", label: "Top Bulls", icon: TrendingUp },
-    { id: "DUMPERS", label: "Top Bears", icon: TrendingDown },
+    { id: "ALL", label: "All", icon: Layers },
+    { id: "SURGES", label: "RVOL", icon: Flame },
+    { id: "LEADERS", label: "Bulls", icon: TrendingUp },
+    { id: "DUMPERS", label: "Bears", icon: TrendingDown },
   ];
 
   return (

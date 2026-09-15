@@ -102,9 +102,10 @@ export const SectorFormationRow: React.FC<Props> = ({ sector, isExpanded, onTogg
               {stocks.map((st: ReplayStock) => {
                 const move = st.move_pct || 0;
                 return (
-                  <div
+                  <Link
                     key={st.symbol}
-                    className="bg-surface border border-surface-border rounded-md p-2 flex items-center justify-between shadow-xs hover:border-foreground/30 transition"
+                    href={`/chart?symbol=${encodeURIComponent(st.symbol)}`}
+                    className="bg-surface hover:bg-surface-hover border border-surface-border hover:border-foreground/40 rounded-md p-2 flex items-center justify-between shadow-xs transition-colors group cursor-pointer"
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span
@@ -112,22 +113,27 @@ export const SectorFormationRow: React.FC<Props> = ({ sector, isExpanded, onTogg
                           st.is_above_vwap ? "bg-foreground" : "bg-surface-border"
                         }`}
                       />
-                      <span className="font-bold text-foreground truncate">{st.symbol}</span>
+                      <span className="font-bold text-foreground group-hover:text-foreground truncate">
+                        {st.symbol}
+                      </span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px] shrink-0">
-                      <span className={`font-bold tabular-nums ${move > 0 ? "text-emerald-600 dark:text-emerald-400" : move < 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground/60"}`}>
-                        {move >= 0 ? "+" : ""}{move.toFixed(2)}%
-                      </span>
-                      <Link
-                        href={`/chart?symbol=${encodeURIComponent(st.symbol)}`}
-                        className="p-1 rounded hover:bg-foreground hover:text-background text-foreground/40 transition"
-                        title={`Open ${st.symbol} Chart`}
+                    <div className="flex items-center gap-1.5 text-[11px] shrink-0">
+                      <span
+                        className={`font-bold tabular-nums ${
+                          move > 0
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : move < 0
+                            ? "text-rose-600 dark:text-rose-400"
+                            : "text-foreground/60"
+                        }`}
                       >
-                        <LineChart className="w-3.5 h-3.5" />
-                      </Link>
+                        {move >= 0 ? "+" : ""}
+                        {move.toFixed(2)}%
+                      </span>
+                      <LineChart className="w-3.5 h-3.5 text-foreground/30 group-hover:text-foreground transition-colors" />
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

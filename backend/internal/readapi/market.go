@@ -99,7 +99,7 @@ type MarketReader interface {
 	IntradayFeatures(context.Context, string, string, int) ([]IntradayFeature, error)
 	DailyFocus(context.Context, string) ([]DailyFocusItem, error)
 	ReplaySnapshot(ctx context.Context, sessionDate, asOfTime string) (*ReplaySnapshotResponse, error)
-	ReplayCandles(ctx context.Context, sessionDate, symbol, toTime string) ([]ReplayCandle, error)
+	ReplayCandles(ctx context.Context, sessionDate, symbol, toTime, interval string) ([]ReplayCandle, error)
 	WarmSessionDay(ctx context.Context, sessionDate string) error
 }
 

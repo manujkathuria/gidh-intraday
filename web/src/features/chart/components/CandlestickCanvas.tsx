@@ -5,107 +5,103 @@ import {
   createChart,
   IChartApi,
   ISeriesApi,
-  ColorType,
   CandlestickSeries,
   LineSeries,
-  HistogramSeries,
   UTCTimestamp,
 } from "lightweight-charts";
 import { ChartProps } from "../types";
+import { getChartOptions, CANDLE_COLORS } from "./chartOptions";
 
 export const CandlestickCanvas: React.FC<ChartProps> = ({
   candles,
   symbol,
   theme = "dark",
-  height = 580,
+  interval = "1m",
+  selectedDate = "",
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const vwapSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-
+  const lastKeyRef = useRef<string>("");
   const isDark = theme === "dark";
+  const isIntraday = interval === "1m" || interval === "5m" || interval === "15m";
 
+  // 1. Initialize Chart Canvas ONCE on mount
   useEffect(() => {
     if (!chartContainerRef.current) return;
-
     const container = chartContainerRef.current;
-    const chart = createChart(container, {
-      width: container.clientWidth,
-      height: height,
-      layout: {
-        background: { type: ColorType.Solid, color: "transparent" },
-        textColor: isDark ? "#A1A1AA" : "#71717A",
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
-        fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" },
-        horzLines: { color: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" },
-      },
-      timeScale: {
-        timeVisible: true,
-        secondsVisible: false,
-        borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
-      },
-      rightPriceScale: {
-        borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
-        autoScale: true,
-      },
-      crosshair: {
-        vertLine: { color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)" },
-        horzLine: { color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)" },
-      },
-    });
+    const width = container.clientWidth || 800;
+    const height = container.clientHeight || 400;
+
+    const chart = createChart(container, getChartOptions(isDark, interval, width, height));
+    const colors = isDark ? CANDLE_COLORS.dark : CANDLE_COLORS.light;
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: isDark ? "#FAFAFA" : "#18181B",
-      downColor: isDark ? "#71717A" : "#A1A1AA",
+      upColor: colors.upColor,
+      downColor: colors.downColor,
       borderVisible: true,
-      borderUpColor: isDark ? "#FAFAFA" : "#18181B",
-      borderDownColor: isDark ? "#71717A" : "#A1A1AA",
-      wickUpColor: isDark ? "#FAFAFA" : "#18181B",
-      wickDownColor: isDark ? "#71717A" : "#A1A1AA",
+      borderUpColor: colors.borderUpColor,
+      borderDownColor: colors.borderDownColor,
+      wickUpColor: colors.wickUpColor,
+      wickDownColor: colors.wickDownColor,
     });
 
     const vwapSeries = chart.addSeries(LineSeries, {
-      color: isDark ? "#F59E0B" : "#D97706",
+      color: colors.vwapColor,
       lineWidth: 2,
       priceLineVisible: false,
       title: "VWAP",
     });
 
-    const volumeSeries = chart.addSeries(HistogramSeries, {
-      priceFormat: { type: "volume" },
-      priceScaleId: "",
-    });
-
-    volumeSeries.priceScale().applyOptions({
-      scaleMargins: { top: 0.8, bottom: 0 },
-    });
-
     chartRef.current = chart;
     candleSeriesRef.current = candleSeries as any;
-    volumeSeriesRef.current = volumeSeries as any;
     vwapSeriesRef.current = vwapSeries as any;
 
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect && chartRef.current) {
+          const { width: w, height: h } = entry.contentRect;
+          if (w > 0 && h > 0) chartRef.current.applyOptions({ width: w, height: h });
+        }
       }
-    };
-    window.addEventListener("resize", handleResize);
+    });
+
+    resizeObserver.observe(container);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
+      resizeObserver.disconnect();
       chart.remove();
+      chartRef.current = null;
     };
-  }, [theme, height]);
+  }, []);
 
+  // 2. Dynamically Update Theme & Interval formatting
   useEffect(() => {
-    if (!candleSeriesRef.current || !volumeSeriesRef.current || !vwapSeriesRef.current)
-      return;
+    if (!chartRef.current || !candleSeriesRef.current || !vwapSeriesRef.current) return;
+    const colors = isDark ? CANDLE_COLORS.dark : CANDLE_COLORS.light;
+
+    chartRef.current.applyOptions(getChartOptions(isDark, interval));
+
+    candleSeriesRef.current.applyOptions({
+      upColor: colors.upColor,
+      downColor: colors.downColor,
+      borderUpColor: colors.borderUpColor,
+      borderDownColor: colors.borderDownColor,
+      wickUpColor: colors.wickUpColor,
+      wickDownColor: colors.wickDownColor,
+    });
+
+    // VWAP only visible for intraday 1m/5m/15m
+    vwapSeriesRef.current.applyOptions({
+      color: colors.vwapColor,
+      visible: isIntraday,
+    });
+  }, [isDark, interval, isIntraday]);
+
+  // 3. Update Candles Data & Frame On Stock or Interval Switch
+  useEffect(() => {
+    if (!candleSeriesRef.current || !vwapSeriesRef.current || !chartRef.current) return;
 
     const candleData = candles.map((c) => ({
       time: c.time as UTCTimestamp,
@@ -115,28 +111,39 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       close: c.close,
     }));
 
-    const volumeData = candles.map((c) => ({
-      time: c.time as UTCTimestamp,
-      value: c.volume,
-      color:
-        c.close >= c.open
-          ? isDark
-            ? "rgba(255,255,255,0.2)"
-            : "rgba(0,0,0,0.2)"
-          : isDark
-          ? "rgba(255,255,255,0.08)"
-          : "rgba(0,0,0,0.08)",
-    }));
-
-    const vwapData = candles.map((c) => ({
-      time: c.time as UTCTimestamp,
-      value: c.vwap,
-    }));
-
     candleSeriesRef.current.setData(candleData);
-    volumeSeriesRef.current.setData(volumeData);
-    vwapSeriesRef.current.setData(vwapData);
-  }, [candles, isDark]);
+
+    // Only supply VWAP data when intraday
+    if (isIntraday) {
+      const vwapData = candles.map((c) => ({
+        time: c.time as UTCTimestamp,
+        value: c.vwap,
+      }));
+      vwapSeriesRef.current.setData(vwapData);
+    } else {
+      vwapSeriesRef.current.setData([]);
+    }
+
+    if (candleData.length > 0) {
+      chartRef.current.priceScale("right").applyOptions({ autoScale: true });
+      const currentKey = `${symbol}_${interval}_${selectedDate}`;
+      if (lastKeyRef.current !== currentKey) {
+        lastKeyRef.current = currentKey;
+        const ts = chartRef.current.timeScale();
+        ts.resetTimeScale();
+        if (candleData.length <= 40) {
+          // For shorter datasets, fit all candles neatly
+          ts.fitContent();
+        } else {
+          // For richer datasets (e.g. 1d year history, 1h 10-day history), show the most recent ~60 bars with right breathing room
+          ts.setVisibleLogicalRange({
+            from: candleData.length - 60,
+            to: candleData.length + 3,
+          });
+        }
+      }
+    }
+  }, [candles, symbol, interval, selectedDate, isIntraday]);
 
   return <div ref={chartContainerRef} className="w-full h-full" />;
 };

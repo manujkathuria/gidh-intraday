@@ -22,10 +22,10 @@ export const SectorFilterBar: React.FC<Props> = ({
   totalCount,
 }) => {
   const presets: { id: SectorPreset; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: "ALL", label: `All Sectors (${totalCount})`, icon: Layers },
-    { id: "LEADERS", label: "Top Bulls", icon: TrendingUp },
-    { id: "SURGES", label: "Volume Surges (≥1.8x)", icon: Flame },
-    { id: "LAGGARDS", label: "Top Bears", icon: TrendingDown },
+    { id: "ALL", label: "All", icon: Layers },
+    { id: "SURGES", label: "RVOL", icon: Flame },
+    { id: "LEADERS", label: "Bulls", icon: TrendingUp },
+    { id: "LAGGARDS", label: "Bears", icon: TrendingDown },
   ];
 
   return (

@@ -70,10 +70,10 @@ export function useRadarFilters() {
       .filter((s) => {
         if (selectedSector !== "ALL" && s.sector !== selectedSector) return false;
 
-        // Spectator Presets
+        // Spectator Presets: Pure change % without VWAP gating
         if (preset === "SURGES" && (s.rvol || 0) < 2.5) return false;
-        if (preset === "LEADERS" && (!s.is_above_vwap || (s.move_pct || 0) <= 0)) return false;
-        if (preset === "DUMPERS" && (s.is_above_vwap || (s.move_pct || 0) >= 0)) return false;
+        if (preset === "LEADERS" && (s.move_pct || 0) <= 0) return false;
+        if (preset === "DUMPERS" && (s.move_pct || 0) >= 0) return false;
 
         const query = search.toLowerCase();
         if (

@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Activity } from "lucide-react";
-import { StockSelectorSidebar } from "./components/StockSelectorSidebar";
 import { StockHeaderMetrics } from "./components/StockHeaderMetrics";
 import { CandlestickCanvas } from "./components/CandlestickCanvas";
 import { useChartStudio } from "./hooks/useChartStudio";
@@ -11,6 +10,8 @@ export const ChartStudio: React.FC = () => {
   const {
     activeSymbol,
     handleSelectSymbol,
+    interval,
+    setInterval,
     searchTerm,
     setSearchTerm,
     chartCandles,
@@ -21,49 +22,45 @@ export const ChartStudio: React.FC = () => {
     stockInfo,
     allSymbols,
     filteredSymbols,
+    mode,
   } = useChartStudio();
 
   const lastClose = chartCandles.length > 0 ? chartCandles[chartCandles.length - 1].close : 0;
   const lastVwap = chartCandles.length > 0 ? chartCandles[chartCandles.length - 1].vwap : 0;
 
   return (
-    <div className="flex-1 w-full px-5 py-3 flex gap-4 overflow-hidden">
-      {/* 1. Left Stock Selector Sidebar */}
-      <StockSelectorSidebar
-        allSymbols={allSymbols}
-        filteredSymbols={filteredSymbols}
+    <div className="flex-1 w-full flex flex-col gap-2 min-h-0 overflow-hidden">
+      {/* 1. Header Metrics with Stock Search Combobox & Intervals */}
+      <StockHeaderMetrics
         activeSymbol={activeSymbol}
-        selectedDate={selectedDate}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
+        stockInfo={stockInfo}
+        currentTimeMinutes={currentTimeMinutes}
+        candlesCount={chartCandles.length}
+        lastClosePrice={lastClose}
+        lastVwap={lastVwap}
+        allSymbols={allSymbols}
         onSelectSymbol={handleSelectSymbol}
+        interval={interval}
+        onChangeInterval={setInterval}
+        mode={mode}
       />
 
-      {/* 2. Right Chart Studio Panel */}
-      <div className="flex-1 flex flex-col gap-3 min-w-0">
-        <StockHeaderMetrics
-          activeSymbol={activeSymbol}
-          stockInfo={stockInfo}
-          currentTimeMinutes={currentTimeMinutes}
-          candlesCount={chartCandles.length}
-          lastClosePrice={lastClose}
-          lastVwap={lastVwap}
-        />
+      {/* 2. Edge-to-Edge Candlestick Studio (Fits exact remaining height, NO scroll) */}
+      <div className="flex-1 w-full bg-surface border border-surface-border rounded-lg p-2 flex flex-col min-h-0 relative overflow-hidden">
+        {loadingCandles && (
+          <div className="absolute top-3 right-3 z-20 bg-surface/90 border border-surface-border px-3 py-1.5 rounded text-xs text-foreground/70 flex items-center gap-2 shadow-lg backdrop-blur-sm">
+            <Activity className="w-3.5 h-3.5 animate-spin text-foreground" />
+            Syncing 1m stream...
+          </div>
+        )}
 
-        {/* Candlestick Studio Box */}
-        <div className="flex-1 bg-surface border border-surface-border rounded-lg p-2 flex flex-col min-h-[580px] relative">
-          {loadingCandles && (
-            <div className="absolute top-4 right-4 z-20 bg-surface/90 border border-surface-border px-3 py-1.5 rounded text-xs text-foreground/70 flex items-center gap-2 shadow-lg backdrop-blur-sm">
-              <Activity className="w-3.5 h-3.5 animate-spin text-foreground" />
-              Syncing 1m stream...
-            </div>
-          )}
-
+        <div className="flex-1 w-full h-full min-h-0">
           <CandlestickCanvas
             candles={chartCandles}
             symbol={activeSymbol}
             theme={theme}
-            height={580}
+            interval={interval}
+            selectedDate={selectedDate}
           />
         </div>
       </div>

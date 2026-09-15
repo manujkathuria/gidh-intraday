@@ -67,9 +67,9 @@ export function useSectorFormations() {
   const sortedSectors = useMemo(() => {
     return enrichedSectors
       .filter((s) => {
-        // Presets filtering
-        if (preset === "LEADERS" && ((s.avg_move_pct || 0) <= 0 || (s.pct_above_vwap || 0) < 50)) return false;
-        if (preset === "LAGGARDS" && ((s.avg_move_pct || 0) >= 0 || (s.pct_above_vwap || 0) > 50)) return false;
+        // Presets filtering: Pure change % without VWAP gating
+        if (preset === "LEADERS" && (s.avg_move_pct || 0) <= 0) return false;
+        if (preset === "LAGGARDS" && (s.avg_move_pct || 0) >= 0) return false;
         if (preset === "SURGES" && (s.avg_rvol || 0) < 1.8) return false;
 
         if (!search) return true;

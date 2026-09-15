@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { AppShell } from "@/features/header";
+import { AuthProvider } from "@/features/auth/AuthProvider";
+import { AuthGate } from "@/features/auth/AuthGate";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground">
-        <AppShell>{children}</AppShell>
+        <AuthProvider>
+          <AuthGate>
+            <AppShell>{children}</AppShell>
+          </AuthGate>
+        </AuthProvider>
       </body>
     </html>
   );

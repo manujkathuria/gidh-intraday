@@ -288,7 +288,98 @@ func (r *Repository) ReplaySnapshot(ctx context.Context, sessionDate, asOfTime s
 	return res, nil
 }
 
-func (r *Repository) ReplayCandles(ctx context.Context, sessionDate, symbol, toTime string) ([]ReplayCandle, error) {
+func (r *Repository) ReplayCandles(ctx context.Context, sessionDate, symbol, toTime, interval string) ([]ReplayCandle, error) {
+	if interval == "1d" {
+		query := `
+		SELECT 
+			EXTRACT(EPOCH FROM (c.session_date::timestamp AT TIME ZONE 'Asia/Kolkata'))::bigint as time_sec,
+			c.open,
+			c.high,
+			c.low,
+			c.close,
+			c.volume,
+			c.close as vwap
+		FROM market.cash_candles_1d c
+		JOIN market.instruments i ON c.instrument_id = i.id
+		WHERE c.session_date <= $1::date
+		  AND i.symbol = $2
+		ORDER BY c.session_date ASC;
+		`
+		rows, err := r.db.Pool.Query(ctx, query, sessionDate, symbol)
+		if err != nil {
+			return nil, fmt.Errorf("query daily replay candles: %w", err)
+		}
+		defer rows.Close()
+
+		candles := []ReplayCandle{}
+		for rows.Next() {
+			var c ReplayCandle
+			if err := rows.Scan(&c.Time, &c.Open, &c.High, &c.Low, &c.Close, &c.Volume, &c.VWAP); err != nil {
+				return nil, err
+			}
+			candles = append(candles, c)
+		}
+		return candles, nil
+	}
+
+	if interval == "1h" {
+		query := `
+		WITH recent_sessions AS (
+			SELECT DISTINCT (ts AT TIME ZONE 'Asia/Kolkata')::date as dt
+			FROM market.cash_candles_1m
+			WHERE (ts AT TIME ZONE 'Asia/Kolkata')::date <= $1::date
+			ORDER BY dt DESC LIMIT 10
+		),
+		minute_bars AS (
+			SELECT 
+				c.ts,
+				c.open,
+				c.high,
+				c.low,
+				c.close,
+				c.volume,
+				(c.ts AT TIME ZONE 'Asia/Kolkata')::date as bar_date,
+				date_trunc('hour', c.ts AT TIME ZONE 'Asia/Kolkata') as hour_bucket
+			FROM market.cash_candles_1m c
+			JOIN market.instruments i ON c.instrument_id = i.id
+			JOIN recent_sessions rs ON (c.ts AT TIME ZONE 'Asia/Kolkata')::date = rs.dt
+			WHERE i.symbol = $2
+			  AND ((c.ts AT TIME ZONE 'Asia/Kolkata')::date < $1::date OR (c.ts AT TIME ZONE 'Asia/Kolkata')::time <= $3::time)
+		),
+		hourly_aggregated AS (
+			SELECT 
+				EXTRACT(EPOCH FROM (hour_bucket AT TIME ZONE 'Asia/Kolkata'))::bigint as time_sec,
+				(ARRAY_AGG(open ORDER BY ts ASC))[1] as open,
+				MAX(high) as high,
+				MIN(low) as low,
+				(ARRAY_AGG(close ORDER BY ts DESC))[1] as close,
+				SUM(volume) as volume,
+				SUM(close * volume) / NULLIF(SUM(volume), 0) as vwap
+			FROM minute_bars
+			GROUP BY hour_bucket
+			ORDER BY hour_bucket ASC
+		)
+		SELECT time_sec, open, high, low, close, volume, COALESCE(vwap, close)
+		FROM hourly_aggregated;
+		`
+		rows, err := r.db.Pool.Query(ctx, query, sessionDate, symbol, toTime)
+		if err != nil {
+			return nil, fmt.Errorf("query hourly replay candles: %w", err)
+		}
+		defer rows.Close()
+
+		candles := []ReplayCandle{}
+		for rows.Next() {
+			var c ReplayCandle
+			if err := rows.Scan(&c.Time, &c.Open, &c.High, &c.Low, &c.Close, &c.Volume, &c.VWAP); err != nil {
+				return nil, err
+			}
+			candles = append(candles, c)
+		}
+		return candles, nil
+	}
+
+	// Default: Today's 1-minute replay bars
 	query := `
 	WITH session_bars AS (
 		SELECT 

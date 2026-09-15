@@ -74,11 +74,50 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
 
   setMode: (mode: "LIVE" | "REPLAY") => {
     set({ mode });
+    const { sessions, ws, playbackSpeed, selectedSymbol } = get();
     if (mode === "LIVE") {
-      // Set to today's date and current market time
+      const latestDate = sessions.length > 0 ? sessions[0] : "";
+      
       const now = new Date();
-      const currentMins = Math.max(555, Math.min(930, now.getHours() * 60 + now.getMinutes()));
-      set({ currentTimeMinutes: currentMins, isPlaying: false });
+      // Current IST time in minutes
+      const istMinutes = (now.getUTCHours() * 60 + now.getUTCMinutes() + 330) % 1440;
+      const isMarketOpen = istMinutes >= 555 && istMinutes <= 930;
+
+      // If during active market hours: current minutes; if outside market hours: 15:30 (930 min, full completed day)
+      const currentMins = isMarketOpen ? istMinutes : 930;
+      const timeStr = formatMinutesToTime(currentMins);
+
+      set({ selectedDate: latestDate, currentTimeMinutes: currentMins, isPlaying: false });
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: "PAUSE" }));
+        ws.send(
+          JSON.stringify({
+            action: "SUBSCRIBE",
+            session_date: latestDate,
+            time: timeStr,
+            speed: 1,
+            symbol: selectedSymbol,
+          })
+        );
+      }
+      get().refreshSnapshot();
+    } else {
+      // In REPLAY mode, reset time to 09:14:00 (554 mins) for clean pre-market start
+      const { selectedDate } = get();
+      set({ currentTimeMinutes: 554, isPlaying: false });
+      if (ws && ws.readyState === WebSocket.OPEN && selectedDate) {
+        ws.send(JSON.stringify({ action: "PAUSE" }));
+        ws.send(
+          JSON.stringify({
+            action: "SUBSCRIBE",
+            session_date: selectedDate,
+            time: "09:14:00",
+            speed: playbackSpeed,
+            symbol: selectedSymbol,
+          })
+        );
+      }
       get().refreshSnapshot();
     }
   },
@@ -163,7 +202,12 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
         return;
       }
       const defaultDate = sessions[0];
-      set({ sessions, selectedDate: defaultDate, currentTimeMinutes: 554, loading: false });
+      const now = new Date();
+      const istMinutes = (now.getUTCHours() * 60 + now.getUTCMinutes() + 330) % 1440;
+      const isMarketOpen = istMinutes >= 555 && istMinutes <= 930;
+      const initialMins = isMarketOpen ? istMinutes : 930;
+
+      set({ sessions, selectedDate: defaultDate, currentTimeMinutes: initialMins, loading: false });
 
       // Connect persistent WebSocket
       get().connectWebSocket();
@@ -177,6 +221,7 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
     set({ selectedDate: date, isPlaying: false, currentTimeMinutes: 554 });
     const { ws, playbackSpeed, selectedSymbol } = get();
     if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: "PAUSE" }));
       ws.send(
         JSON.stringify({
           action: "SUBSCRIBE",

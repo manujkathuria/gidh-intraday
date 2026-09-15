@@ -30,7 +30,7 @@ func (f *fakeReader) DailyFocus(context.Context, string) ([]DailyFocusItem, erro
 func (f *fakeReader) ReplaySnapshot(context.Context, string, string) (*ReplaySnapshotResponse, error) {
 	return &ReplaySnapshotResponse{}, nil
 }
-func (f *fakeReader) ReplayCandles(context.Context, string, string, string) ([]ReplayCandle, error) {
+func (f *fakeReader) ReplayCandles(context.Context, string, string, string, string) ([]ReplayCandle, error) {
 	return []ReplayCandle{}, nil
 }
 func (f *fakeReader) WarmSessionDay(context.Context, string) error {

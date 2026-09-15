@@ -180,7 +180,7 @@ func (m *ReplaySessionManager) sendCandlesFrame(ctx context.Context) {
 		return
 	}
 	timeStr := formatMinutesToString(m.currentMin)
-	candles, err := m.reader.ReplayCandles(ctx, m.sessionDate, m.symbol, timeStr)
+	candles, err := m.reader.ReplayCandles(ctx, m.sessionDate, m.symbol, timeStr, "1m")
 	if err != nil {
 		return
 	}

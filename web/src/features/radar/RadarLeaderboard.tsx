@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { RadarFilterBar } from "./components/RadarFilterBar";
 import { RadarTableHeader } from "./components/RadarTableHeader";
 import { RadarTableRow } from "./components/RadarTableRow";
@@ -8,6 +9,7 @@ import { RadarMobileCard } from "./components/RadarMobileCard";
 import { useRadarFilters } from "./hooks/useRadarFilters";
 
 export const RadarLeaderboard: React.FC = () => {
+  const router = useRouter();
   const {
     stocks,
     preset,
@@ -24,6 +26,11 @@ export const RadarLeaderboard: React.FC = () => {
     sectorOptions,
     filteredAndSorted,
   } = useRadarFilters();
+
+  const handleStockClick = (symbol: string) => {
+    setSelectedSymbol(symbol);
+    router.push(`/chart?symbol=${encodeURIComponent(symbol)}`);
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -53,7 +60,7 @@ export const RadarLeaderboard: React.FC = () => {
               stock={stock}
               index={idx}
               isSelected={stock.symbol === selectedSymbol}
-              onSelect={setSelectedSymbol}
+              onSelect={handleStockClick}
             />
           ))
         )}
@@ -85,7 +92,7 @@ export const RadarLeaderboard: React.FC = () => {
                     stock={stock}
                     index={idx}
                     isSelected={stock.symbol === selectedSymbol}
-                    onSelect={setSelectedSymbol}
+                    onSelect={handleStockClick}
                   />
                 ))
               )}

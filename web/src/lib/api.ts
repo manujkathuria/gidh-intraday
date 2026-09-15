@@ -101,11 +101,12 @@ export async function fetchReplaySnapshot(
 export async function fetchReplayCandles(
   sessionDate: string,
   symbol: string,
-  toTimeStr: string
+  toTimeStr: string,
+  interval: string = "1m"
 ): Promise<Candle[]> {
   try {
     const res = await fetch(
-      `${API_BASE}/v1/replay/candles?session_date=${sessionDate}&symbol=${symbol}&to_time=${toTimeStr}`
+      `${API_BASE}/v1/replay/candles?session_date=${sessionDate}&symbol=${symbol}&to_time=${toTimeStr}&interval=${interval}`
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const raw = await res.json();

@@ -3,6 +3,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useReplayStore, formatMinutesToTime } from "@/stores/replayStore";
 import { fetchReplayCandles, Candle } from "@/lib/api";
 import { StockSummaryItem } from "../types";
+import { ChartInterval, aggregateCandles } from "../components/candleAggregator";
 
 export function useChartStudio() {
   const searchParams = useSearchParams();
@@ -10,6 +11,7 @@ export function useChartStudio() {
   const urlSymbol = searchParams.get("symbol");
 
   const {
+    mode,
     selectedDate,
     currentTimeMinutes,
     snapshot,
@@ -21,8 +23,16 @@ export function useChartStudio() {
   const [activeSymbol, setActiveSymbol] = useState<string>(
     urlSymbol || selectedSymbol || "RELIANCE"
   );
+  const [interval, setInterval] = useState<ChartInterval>("1m");
+
+  // In REPLAY mode, restrict to intraday intervals only (1m, 5m, 15m)
+  useEffect(() => {
+    if (mode === "REPLAY" && (interval === "1h" || interval === "1d")) {
+      setInterval("1m");
+    }
+  }, [mode, interval]);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [chartCandles, setChartCandles] = useState<Candle[]>([]);
+  const [rawCandles, setRawCandles] = useState<Candle[]>([]);
   const [loadingCandles, setLoadingCandles] = useState<boolean>(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
@@ -67,10 +77,13 @@ export function useChartStudio() {
     const toTimeStr = formatMinutesToTime(currentTimeMinutes);
 
     setLoadingCandles(true);
-    fetchReplayCandles(selectedDate, activeSymbol, toTimeStr)
+    // For 1m, 5m, 15m: fetch today's 1m stream; for 1h / 1d fetch backend interval
+    const fetchInt = interval === "1h" || interval === "1d" ? interval : "1m";
+
+    fetchReplayCandles(selectedDate, activeSymbol, toTimeStr, fetchInt)
       .then((data) => {
         if (isSubscribed) {
-          setChartCandles(data);
+          setRawCandles(data);
           setLoadingCandles(false);
         }
       })
@@ -82,7 +95,12 @@ export function useChartStudio() {
     return () => {
       isSubscribed = false;
     };
-  }, [selectedDate, activeSymbol, currentTimeMinutes]);
+  }, [selectedDate, activeSymbol, currentTimeMinutes, interval]);
+
+  // Aggregate in-memory for 5m & 15m; use raw for 1m, 1h, 1d
+  const chartCandles = useMemo(() => {
+    return aggregateCandles(rawCandles, interval);
+  }, [rawCandles, interval]);
 
   const stockInfo = useMemo(() => {
     return snapshot?.stocks?.find((s) => s.symbol === activeSymbol);
@@ -113,6 +131,8 @@ export function useChartStudio() {
   return {
     activeSymbol,
     handleSelectSymbol,
+    interval,
+    setInterval,
     searchTerm,
     setSearchTerm,
     chartCandles,
@@ -123,5 +143,6 @@ export function useChartStudio() {
     stockInfo,
     allSymbols,
     filteredSymbols,
+    mode,
   };
 }
