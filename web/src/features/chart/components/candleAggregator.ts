@@ -3,11 +3,17 @@ import { Candle } from "@/lib/api";
 export type ChartInterval = "1m" | "5m" | "15m" | "1h" | "1d";
 
 export function aggregateCandles(candles: Candle[], interval: ChartInterval): Candle[] {
-  if (interval === "1m" || interval === "1h" || interval === "1d" || candles.length === 0) {
+  if (interval === "1m" || candles.length === 0) {
     return candles;
   }
 
-  const bucketSeconds = interval === "5m" ? 300 : 900; // 5 min or 15 min
+  const bucketSecondsByInterval: Record<Exclude<ChartInterval, "1m">, number> = {
+    "5m": 300,
+    "15m": 900,
+    "1h": 3600,
+    "1d": 86400,
+  };
+  const bucketSeconds = bucketSecondsByInterval[interval];
   const aggregated: Candle[] = [];
   let currentBucket: Candle[] = [];
   let currentBucketTime = Math.floor(candles[0].time / bucketSeconds) * bucketSeconds;

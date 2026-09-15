@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strconv"
 	"sync"
 	"time"
 
@@ -36,10 +37,10 @@ type LiveMarketSource interface {
 }
 
 type liveMarketClient struct {
-	conn           *websocket.Conn
-	symbol         string
-	lastCandleTime int64
-	needsCandles   bool
+	conn                *websocket.Conn
+	symbol              string
+	lastCandleSignature string
+	needsCandles        bool
 }
 
 type LiveMarketHub struct {
@@ -91,7 +92,7 @@ func (h *LiveMarketHub) readLoop(conn *websocket.Conn) {
 			h.mu.Lock()
 			if client, ok := h.clients[conn]; ok {
 				client.symbol = msg.Symbol
-				client.lastCandleTime = 0
+				client.lastCandleSignature = ""
 				client.needsCandles = true
 			}
 			h.mu.Unlock()
@@ -179,11 +180,11 @@ func (h *LiveMarketHub) broadcastFrame() bool {
 			if client.symbol != symbol {
 				return false
 			}
-			latest := latestCandleTime(candles)
-			if !client.needsCandles && latest <= client.lastCandleTime {
+			signature := latestCandleSignature(candles)
+			if !client.needsCandles && signature == client.lastCandleSignature {
 				return false
 			}
-			client.lastCandleTime = latest
+			client.lastCandleSignature = signature
 			client.needsCandles = false
 			return true
 		})
@@ -253,21 +254,40 @@ func currentISTTime() string {
 	return now.Format("15:04:05")
 }
 
-func latestCandleTime(candles any) int64 {
+func latestCandleSignature(candles any) string {
 	value := reflect.ValueOf(candles)
 	if value.Kind() != reflect.Slice || value.Len() == 0 {
-		return 0
+		return ""
 	}
 	last := value.Index(value.Len() - 1)
 	if last.Kind() == reflect.Pointer {
 		last = last.Elem()
 	}
 	if last.Kind() != reflect.Struct {
-		return 0
+		return ""
 	}
-	field := last.FieldByName("Time")
-	if !field.IsValid() || !field.CanInt() {
-		return 0
+	return candleField(last, "Time") + "|" +
+		candleField(last, "Open") + "|" +
+		candleField(last, "High") + "|" +
+		candleField(last, "Low") + "|" +
+		candleField(last, "Close") + "|" +
+		candleField(last, "Volume") + "|" +
+		candleField(last, "VWAP")
+}
+
+func candleField(value reflect.Value, name string) string {
+	field := value.FieldByName(name)
+	if !field.IsValid() {
+		return ""
 	}
-	return field.Int()
+	switch field.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(field.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return strconv.FormatUint(field.Uint(), 10)
+	case reflect.Float32, reflect.Float64:
+		return strconv.FormatFloat(field.Float(), 'f', 4, 64)
+	default:
+		return ""
+	}
 }

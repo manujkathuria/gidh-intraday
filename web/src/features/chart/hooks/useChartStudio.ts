@@ -74,7 +74,7 @@ export function useChartStudio() {
 
   useEffect(() => {
     if (!selectedDate || !activeSymbol) return;
-    if (mode === "LIVE" && interval !== "1h" && interval !== "1d") return;
+    if (mode === "LIVE") return;
 
     let isSubscribed = true;
     const toTimeStr = formatMinutesToTime(currentTimeMinutes);
@@ -102,9 +102,7 @@ export function useChartStudio() {
 
   // Aggregate in-memory for 5m & 15m; use raw for 1m, 1h, 1d
   const sourceCandles =
-    mode === "LIVE" && interval !== "1h" && interval !== "1d"
-      ? candles
-      : rawCandles;
+    mode === "LIVE" ? candles : rawCandles;
 
   const chartCandles = useMemo(() => {
     return aggregateCandles(sourceCandles, interval);
