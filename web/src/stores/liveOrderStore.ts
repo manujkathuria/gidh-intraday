@@ -7,8 +7,17 @@ import {
   OrderIntent,
 } from "@/lib/api";
 
-const LIVE_WS_BASE =
-  process.env.NEXT_PUBLIC_LIVE_WS_URL || "ws://127.0.0.1:8080/v1/live/orders/ws";
+const getLiveWsUrl = () => {
+  if (process.env.NEXT_PUBLIC_LIVE_WS_URL) {
+    return process.env.NEXT_PUBLIC_LIVE_WS_URL;
+  }
+  if (typeof window !== "undefined") {
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${proto}//${window.location.host}/v1/live/orders/ws`;
+  }
+  return "ws://127.0.0.1:8080/v1/live/orders/ws";
+};
+
 
 interface LiveOrderState {
   activePositions: Record<string, ActivePosition>;
@@ -38,7 +47,7 @@ export const useLiveOrderStore = create<LiveOrderState>((set, get) => ({
     }
 
     try {
-      const socket = new WebSocket(LIVE_WS_BASE);
+      const socket = new WebSocket(getLiveWsUrl());
 
       socket.onopen = () => {
         set({ isConnected: true, ws: socket });
