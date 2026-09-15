@@ -81,11 +81,26 @@ func (p *LivePoller) Run(ctx context.Context) error {
 	}
 }
 
+func (p *LivePoller) isMarketHours(nowIST time.Time) bool {
+	// Mon (1) to Fri (5)
+	if nowIST.Weekday() == time.Saturday || nowIST.Weekday() == time.Sunday {
+		return false
+	}
+	minOfDay := nowIST.Hour()*60 + nowIST.Minute()
+	// 9:15 AM (555 mins) to 3:30 PM (930 mins)
+	return minOfDay >= 555 && minOfDay <= 930
+}
+
 func (p *LivePoller) pollOnce(ctx context.Context, quoteKeys []string, instMap map[string]store.ActiveInstrument, loc *time.Location) {
 	start := time.Now()
 	nowIST := start.In(loc)
 	todayStr := nowIST.Format("2006-01-02")
 	timeStr := nowIST.Format("15:04:05")
+
+	if !p.isMarketHours(nowIST) {
+		log.Printf("[LIVE POLLER] Market closed (%s IST). Polling paused until 09:15 IST.", timeStr)
+		return
+	}
 
 	// Kite quote batch in chunks of 200
 	chunkSize := 200

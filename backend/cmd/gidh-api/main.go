@@ -61,9 +61,27 @@ func main() {
 
 	orderStore := ordermanager.NewRedisOrderStore(rdb)
 	ir := store.NewMarketInstrumentRepo(db)
+	candleRepo := store.NewMarketCandleRepo(db)
+	dailyFeatureRepo := store.NewDailyFeatureRepo(db)
+
 	orderMgr := ordermanager.NewManager(kc, orderStore, ir, tracker, db, isPaper)
 	if !isPaper {
 		_ = orderMgr.SyncWithZerodha(ctx)
+
+		// Start 1-minute live universe REST quote poller in background
+		poller := marketdata.NewLivePoller(
+			kc,
+			ir,
+			candleRepo,
+			dailyFeatureRepo,
+			60*time.Second,
+		)
+		go func() {
+			log.Println("[LIVE ENGINE] Background 1-minute live poller active (9:15 - 15:30 IST)...")
+			if err := poller.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+				log.Printf("[LIVE ENGINE WARN] Poller halted: %v", err)
+			}
+		}()
 	}
 
 	wsHub := ordermanager.NewWSHub(rdb, orderStore)
