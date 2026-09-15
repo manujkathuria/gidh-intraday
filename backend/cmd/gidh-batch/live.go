@@ -14,6 +14,8 @@ import (
 	"gidh-intraday/backend/internal/kite"
 	"gidh-intraday/backend/internal/marketdata"
 	"gidh-intraday/backend/internal/store"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func runLiveIngestion(args []string) {
@@ -49,11 +51,19 @@ func runLiveIngestion(args []string) {
 	cr := store.NewMarketCandleRepo(db)
 	fr := store.NewDailyFeatureRepo(db)
 
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "127.0.0.1:6379"
+	}
+	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
+	defer rdb.Close()
+
 	poller := marketdata.NewLivePoller(
 		kc,
 		ir,
 		cr,
 		fr,
+		rdb,
 		time.Duration(*intervalSec)*time.Second,
 	)
 

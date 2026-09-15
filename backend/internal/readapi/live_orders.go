@@ -16,6 +16,9 @@ func (s *Server) liveOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Authoritatively reconcile against Zerodha so UI always shows exact live broker state
+	_ = s.orderManager.SyncWithZerodha(r.Context())
+
 	positions, err := s.orderStore.GetActivePositions(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())

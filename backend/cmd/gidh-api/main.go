@@ -53,8 +53,7 @@ func main() {
 	if !isPaper && cfg != nil && cfg.KiteAPIKey != "" && cfg.KiteAccessToken != "" {
 		kc = kite.NewClient(cfg.KiteAPIKey, cfg.KiteAccessToken)
 		tracker = marketdata.NewActivePositionTracker(cfg.KiteAPIKey, cfg.KiteAccessToken)
-		_ = tracker.Start()
-		log.Println("[ORDER MANAGER] Production mode: Connected to Zerodha live broker & ticker.")
+		log.Println("[ORDER MANAGER] Production mode: Connected to Zerodha live broker.")
 	} else {
 		log.Println("[ORDER MANAGER] Local development / Paper trading mode: Zerodha live connection disabled.")
 	}
@@ -68,18 +67,21 @@ func main() {
 	if !isPaper {
 		_ = orderMgr.SyncWithZerodha(ctx)
 
-		// Start 1-minute live universe REST quote poller in background
-		poller := marketdata.NewLivePoller(
-			kc,
+		// Start real-time WebSocket 1-minute Universe Stream & 47-Feature Engine
+		universeEngine := marketdata.NewUniverseStreamEngine(
+			cfg.KiteAPIKey,
+			cfg.KiteAccessToken,
 			ir,
 			candleRepo,
 			dailyFeatureRepo,
-			60*time.Second,
 		)
+		if tracker != nil {
+			tracker.AttachUniverseEngine(universeEngine)
+		}
 		go func() {
-			log.Println("[LIVE ENGINE] Background 1-minute live poller active (9:15 - 15:30 IST)...")
-			if err := poller.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
-				log.Printf("[LIVE ENGINE WARN] Poller halted: %v", err)
+			log.Println("[UNIVERSE ENGINE] Starting real-time WebSocket 1-minute candle & 47-feature aggregator (9:15 - 15:30 IST)...")
+			if err := universeEngine.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
+				log.Printf("[UNIVERSE ENGINE WARN] Engine halted: %v", err)
 			}
 		}()
 	}

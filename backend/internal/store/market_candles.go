@@ -18,6 +18,11 @@ type MarketCandle struct {
 	OI        int64
 }
 
+type MarketCandleWithID struct {
+	InstrumentID int64
+	Candle       MarketCandle
+}
+
 type RejectedMarketCandle struct {
 	MarketCandle
 	Reason string
@@ -37,6 +42,42 @@ func (r *MarketCandleRepo) UpsertFutureDaily(ctx context.Context, contractID int
 
 func (r *MarketCandleRepo) UpsertCashMinute(ctx context.Context, instrumentID int64, candles []MarketCandle) (int64, int, error) {
 	return r.upsert(ctx, "market.cash_candles_1m", "ts", "instrument_id", instrumentID, candles, false, false)
+}
+
+func (r *MarketCandleRepo) UpsertCashMinuteBulk(ctx context.Context, items []MarketCandleWithID) error {
+	if len(items) == 0 {
+		return nil
+	}
+	batch := &pgx.Batch{}
+	query := `
+		INSERT INTO market.cash_candles_1m (ts, instrument_id, open, high, low, close, volume, source_ts, received_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+		ON CONFLICT (ts, instrument_id) DO UPDATE SET
+			open = EXCLUDED.open,
+			high = EXCLUDED.high,
+			low = EXCLUDED.low,
+			close = EXCLUDED.close,
+			volume = EXCLUDED.volume,
+			source_ts = EXCLUDED.source_ts,
+			received_at = NOW();
+	`
+	for _, item := range items {
+		c := item.Candle
+		if c.Open <= 0 || c.High <= 0 || c.Low <= 0 || c.Close <= 0 {
+			continue
+		}
+		batch.Queue(query, c.Timestamp, item.InstrumentID, c.Open, c.High, c.Low, c.Close, c.Volume, c.Timestamp)
+	}
+
+	results := r.db.Pool.SendBatch(ctx, batch)
+	defer results.Close()
+
+	for i := 0; i < batch.Len(); i++ {
+		if _, err := results.Exec(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *MarketCandleRepo) UpsertFutureMinute(ctx context.Context, contractID int64, candles []MarketCandle) (int64, int, error) {

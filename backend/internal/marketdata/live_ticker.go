@@ -10,13 +10,14 @@ import (
 )
 
 type ActivePositionTracker struct {
-	ticker        *kiteticker.Ticker
-	apiKey        string
-	accessToken   string
-	mu            sync.RWMutex
-	subscribed    map[uint32]string // token -> symbol
-	lastTicks     map[string]kitemodels.Tick
-	onTickHandler func(symbol string, tick kitemodels.Tick)
+	ticker         *kiteticker.Ticker
+	apiKey         string
+	accessToken    string
+	universeEngine *UniverseStreamEngine
+	mu             sync.RWMutex
+	subscribed     map[uint32]string // token -> symbol
+	lastTicks      map[string]kitemodels.Tick
+	onTickHandler  func(symbol string, tick kitemodels.Tick)
 }
 
 func NewActivePositionTracker(apiKey, accessToken string) *ActivePositionTracker {
@@ -32,6 +33,23 @@ func (t *ActivePositionTracker) SetOnTickHandler(fn func(symbol string, tick kit
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.onTickHandler = fn
+}
+
+func (t *ActivePositionTracker) AttachUniverseEngine(engine *UniverseStreamEngine) {
+	t.mu.Lock()
+	t.universeEngine = engine
+	t.mu.Unlock()
+
+	engine.RegisterTickListener(func(symbol string, tick kitemodels.Tick) {
+		t.mu.Lock()
+		t.lastTicks[symbol] = tick
+		handler := t.onTickHandler
+		t.mu.Unlock()
+
+		if handler != nil {
+			handler(symbol, tick)
+		}
+	})
 }
 
 func (t *ActivePositionTracker) Start() error {
@@ -84,14 +102,17 @@ func (t *ActivePositionTracker) Start() error {
 
 func (t *ActivePositionTracker) SubscribePosition(symbol string, token uint32) {
 	t.mu.Lock()
-	defer t.mu.Unlock()
-
 	t.subscribed[token] = symbol
-	if t.ticker != nil {
+	engine := t.universeEngine
+	t.mu.Unlock()
+
+	if engine != nil {
+		engine.SubscribeDynamicToken(token, symbol)
+	} else if t.ticker != nil {
 		t.ticker.Subscribe([]uint32{token})
 		t.ticker.SetMode(kiteticker.ModeFull, []uint32{token})
-		log.Printf("[WEBSOCKET TICKER] Subscribed active trade: %s (Token: %d)", symbol, token)
 	}
+	log.Printf("[POSITION TRACKER] Subscribed active trade: %s (Token: %d)", symbol, token)
 }
 
 func (t *ActivePositionTracker) UnsubscribePosition(token uint32) {

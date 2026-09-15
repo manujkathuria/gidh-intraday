@@ -69,7 +69,16 @@ type ReplayCandle struct {
 }
 
 func (r *Repository) ReplaySnapshot(ctx context.Context, sessionDate, asOfTime string) (*ReplaySnapshotResponse, error) {
-	if r.redis != nil {
+	loc, err := time.LoadLocation("Asia/Kolkata")
+	if err != nil {
+		loc = time.Local
+	}
+	todayStr := time.Now().In(loc).Format("2006-01-02")
+	isToday := sessionDate == todayStr
+
+	// Only use static Redis snapshot cache for historical closed sessions.
+	// Active live session (today) always queries fresh live candles.
+	if !isToday && r.redis != nil {
 		if cached, ok := r.redis.GetSnapshot(ctx, sessionDate, asOfTime); ok {
 			return cached, nil
 		}
@@ -77,7 +86,7 @@ func (r *Repository) ReplaySnapshot(ctx context.Context, sessionDate, asOfTime s
 
 	if asOfTime <= "09:14:00" {
 		res, err := r.preopenBaseline(ctx, sessionDate, asOfTime)
-		if err == nil && r.redis != nil {
+		if err == nil && !isToday && r.redis != nil {
 			r.redis.SetSnapshot(ctx, sessionDate, asOfTime, res)
 		}
 		return res, err
@@ -281,7 +290,7 @@ func (r *Repository) ReplaySnapshot(ctx context.Context, sessionDate, asOfTime s
 		Traps:   traps,
 	}
 
-	if r.redis != nil {
+	if !isToday && r.redis != nil {
 		r.redis.SetSnapshot(ctx, sessionDate, asOfTime, res)
 	}
 
@@ -604,6 +613,16 @@ func (r *Repository) PrepopulatePreopenBaselines(ctx context.Context) error {
 }
 
 func (r *Repository) WarmSessionDay(ctx context.Context, sessionDate string) error {
+	loc, err := time.LoadLocation("Asia/Kolkata")
+	if err != nil {
+		loc = time.Local
+	}
+	todayStr := time.Now().In(loc).Format("2006-01-02")
+	if sessionDate == todayStr {
+		// Do not pre-warm future/in-progress minutes of active live trading day
+		return nil
+	}
+
 	if r.redis == nil || r.redis.IsDayWarmed(ctx, sessionDate) {
 		return nil
 	}
