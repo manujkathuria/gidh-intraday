@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
-import { useReplayStore } from "@/stores/replayStore";
+import { useMarketData } from "@/stores/useMarketData";
 import { SectorSortField, SectorItemWithStocks, SectorPreset } from "../types";
 
 export function useSectorFormations() {
-  const { sectors, snapshot, init } = useReplayStore();
+  const { sectors, snapshot, init } = useMarketData();
 
   useEffect(() => {
     init();

@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
-import { useReplayStore } from "@/stores/replayStore";
+import { useMarketData } from "@/stores/useMarketData";
 import { SortField, RadarPreset, SectorOption } from "../types";
 
 export function useRadarFilters() {
   const { snapshot, selectedSymbol, setSelectedSymbol, sectors, init } =
-    useReplayStore();
+    useMarketData();
 
   useEffect(() => {
     init();

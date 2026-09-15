@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useReplayStore, formatMinutesToTime } from "@/stores/replayStore";
+import { useMarketData } from "@/stores/useMarketData";
+import { formatMinutesToTime } from "@/stores/replayStore";
 import { fetchReplayCandles, Candle } from "@/lib/api";
 import { StockSummaryItem } from "../types";
 import { ChartInterval, aggregateCandles } from "../components/candleAggregator";
@@ -12,13 +13,13 @@ export function useChartStudio() {
 
   const {
     mode,
-    selectedDate,
+    sessionDate: selectedDate,
     currentTimeMinutes,
     snapshot,
     selectedSymbol,
     setSelectedSymbol,
     init,
-  } = useReplayStore();
+  } = useMarketData();
 
   const [activeSymbol, setActiveSymbol] = useState<string>(
     urlSymbol || selectedSymbol || "RELIANCE"

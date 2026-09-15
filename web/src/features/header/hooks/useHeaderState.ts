@@ -1,15 +1,20 @@
 import { useState, useEffect, useRef } from "react";
+import { useAppModeStore } from "@/stores/appModeStore";
+import { useMarketData } from "@/stores/useMarketData";
 import { useReplayStore } from "@/stores/replayStore";
+import { useLiveStore } from "@/stores/liveStore";
 import { useLiveOrderStore } from "@/stores/liveOrderStore";
 
 export function useHeaderState() {
+  const { mode, setMode: setAppMode } = useAppModeStore();
+  const { snapshot, currentTimeMinutes } = useMarketData();
+  const liveStore = useLiveStore();
+  const replayStore = useReplayStore();
+
   const {
-    mode,
-    setMode,
     sessions,
     selectedDate,
     setSelectedDate,
-    currentTimeMinutes,
     setCurrentTimeMinutes,
     isPlaying,
     togglePlay,
@@ -17,8 +22,16 @@ export function useHeaderState() {
     setPlaybackSpeed,
     stepForward,
     stepBackward,
-    snapshot,
-  } = useReplayStore();
+  } = replayStore;
+
+  const setMode = (newMode: "LIVE" | "REPLAY") => {
+    setAppMode(newMode);
+    if (newMode === "LIVE") {
+      liveStore.initLive();
+    } else {
+      replayStore.init();
+    }
+  };
 
   const { activePositions, initLiveOrders } = useLiveOrderStore();
 
