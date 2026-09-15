@@ -53,6 +53,8 @@ type InstrumentState struct {
 	MinVolume       int64
 	LastDayCashVol  int64
 	HasTickInMinute bool
+
+	Candles []LiveCandle
 }
 
 type UniverseStreamEngine struct {
@@ -70,8 +72,9 @@ type UniverseStreamEngine struct {
 	sessionDate   string
 	loc           *time.Location
 
-	tickListeners []func(symbol string, tick kitemodels.Tick)
-	isRunning     bool
+	tickListeners  []func(symbol string, tick kitemodels.Tick)
+	sectorResolver func(symbol string) string
+	isRunning      bool
 }
 
 func NewUniverseStreamEngine(
@@ -95,6 +98,12 @@ func NewUniverseStreamEngine(
 		symbolToToken:    make(map[string]uint32),
 		loc:              loc,
 	}
+}
+
+func (e *UniverseStreamEngine) SetSectorResolver(resolve func(symbol string) string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.sectorResolver = resolve
 }
 
 func (e *UniverseStreamEngine) RegisterTickListener(listener func(symbol string, tick kitemodels.Tick)) {
@@ -227,6 +236,15 @@ func (e *UniverseStreamEngine) Hydrate(ctx context.Context, todayStr string) err
 					}
 				}
 				state.LastClose = c.Close
+				state.Candles = append(state.Candles, LiveCandle{
+					Time:   c.Timestamp.Unix(),
+					Open:   c.Open,
+					High:   c.High,
+					Low:    c.Low,
+					Close:  c.Close,
+					Volume: c.Volume,
+					VWAP:   liveVWAP(state, c.Close),
+				})
 				hydratedBars++
 			}
 		}
@@ -456,6 +474,18 @@ func (e *UniverseStreamEngine) flushCompletedMinute(ctx context.Context, candleT
 			InstrumentID: s.InstrumentID,
 			Candle:       candle,
 		})
+		s.Candles = append(s.Candles, LiveCandle{
+			Time:   candleTime.Unix(),
+			Open:   cOpen,
+			High:   cHigh,
+			Low:    cLow,
+			Close:  cClose,
+			Volume: cVol,
+			VWAP:   liveVWAP(s, cClose),
+		})
+		if len(s.Candles) > 390 {
+			s.Candles = s.Candles[len(s.Candles)-390:]
+		}
 
 		// Derive all 47 features in < 1 microsecond in memory
 		feat := e.calculateFeatures(s, candleTime, cOpen, cHigh, cLow, cClose, cVol, minutesSinceOpen, runID)

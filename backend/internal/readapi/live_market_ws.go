@@ -5,11 +5,14 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"reflect"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
-const liveMarketFPS = time.Second
+const liveMarketInterval = time.Second
 
 var errNoLiveSession = errors.New("no live market session available")
 
@@ -19,31 +22,46 @@ type LiveMarketClientMessage struct {
 }
 
 type LiveMarketServerMessage struct {
-	Type        string                  `json:"type"`
-	SessionDate string                  `json:"session_date,omitempty"`
-	Time        string                  `json:"time,omitempty"`
-	Snapshot    *ReplaySnapshotResponse `json:"snapshot,omitempty"`
-	Candles     []ReplayCandle          `json:"candles,omitempty"`
-	Error       string                  `json:"error,omitempty"`
+	Type        string `json:"type"`
+	SessionDate string `json:"session_date,omitempty"`
+	Time        string `json:"time,omitempty"`
+	Snapshot    any    `json:"snapshot,omitempty"`
+	Candles     any    `json:"candles,omitempty"`
+	Error       string `json:"error,omitempty"`
 }
 
-type LiveMarketSessionManager struct {
-	reader MarketReader
-	conn   websocketConn
+type LiveMarketSource interface {
+	LiveSnapshot() (any, bool)
+	LiveCandles(symbol string) (any, bool)
+}
 
-	mu               sync.RWMutex
-	symbol           string
+type liveMarketClient struct {
+	conn           *websocket.Conn
+	symbol         string
+	lastCandleTime int64
+	needsCandles   bool
+}
+
+type LiveMarketHub struct {
+	reader MarketReader
+	source LiveMarketSource
+
+	mu               sync.Mutex
+	clients          map[*websocket.Conn]*liveMarketClient
+	started          bool
 	sessionDate      string
 	lastSessionCheck time.Time
 }
 
-type websocketConn interface {
-	ReadJSON(v any) error
-	WriteJSON(v any) error
-	Close() error
+func NewLiveMarketHub(reader MarketReader, source LiveMarketSource) *LiveMarketHub {
+	return &LiveMarketHub{
+		reader:  reader,
+		source:  source,
+		clients: make(map[*websocket.Conn]*liveMarketClient),
+	}
 }
 
-func (s *Server) liveMarketWebSocket(w http.ResponseWriter, r *http.Request) {
+func (h *LiveMarketHub) HandleWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("[LIVE MARKET WS] Upgrade error: %v", err)
@@ -51,122 +69,169 @@ func (s *Server) liveMarketWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	mgr := &LiveMarketSessionManager{
-		reader: s.reader,
-		conn:   conn,
-		symbol: "RELIANCE",
+	h.mu.Lock()
+	h.clients[conn] = &liveMarketClient{conn: conn, symbol: "RELIANCE", needsCandles: true}
+	if !h.started {
+		h.started = true
+		go h.broadcastLoop()
 	}
+	h.mu.Unlock()
 
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
-
-	go mgr.readLoop(cancel)
-	mgr.writeLoop(ctx)
+	defer h.remove(conn)
+	h.readLoop(conn)
 }
 
-func (m *LiveMarketSessionManager) readLoop(cancel context.CancelFunc) {
-	defer cancel()
+func (h *LiveMarketHub) readLoop(conn *websocket.Conn) {
 	for {
 		var msg LiveMarketClientMessage
-		if err := m.conn.ReadJSON(&msg); err != nil {
+		if err := conn.ReadJSON(&msg); err != nil {
 			return
 		}
 		if msg.Action == "SELECT_SYMBOL" && msg.Symbol != "" {
-			m.mu.Lock()
-			m.symbol = msg.Symbol
-			m.mu.Unlock()
+			h.mu.Lock()
+			if client, ok := h.clients[conn]; ok {
+				client.symbol = msg.Symbol
+				client.lastCandleTime = 0
+				client.needsCandles = true
+			}
+			h.mu.Unlock()
 		}
 	}
 }
 
-func (m *LiveMarketSessionManager) writeLoop(ctx context.Context) {
-	ticker := time.NewTicker(liveMarketFPS)
+func (h *LiveMarketHub) broadcastLoop() {
+	ticker := time.NewTicker(liveMarketInterval)
 	defer ticker.Stop()
 
-	m.writeFrame(ctx)
-	for {
-		select {
-		case <-ctx.Done():
+	for range ticker.C {
+		if !h.broadcastFrame() {
 			return
-		case <-ticker.C:
-			if !m.writeFrame(ctx) {
-				return
-			}
 		}
 	}
 }
 
-func (m *LiveMarketSessionManager) writeFrame(ctx context.Context) bool {
-	frameCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+func (h *LiveMarketHub) broadcastFrame() bool {
+	h.mu.Lock()
+	if len(h.clients) == 0 {
+		h.started = false
+		h.mu.Unlock()
+		return false
+	}
+	symbols := make(map[string]struct{}, len(h.clients))
+	for _, client := range h.clients {
+		if client.symbol != "" {
+			symbols[client.symbol] = struct{}{}
+		}
+	}
+	h.mu.Unlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	sessionDate, timeStr, err := m.currentLiveSession(frameCtx)
-	if err != nil {
-		return m.writeError(err.Error())
+	var sessionDate, timeStr string
+	var snapshot any
+	if h.source != nil {
+		if liveSnapshot, ok := h.source.LiveSnapshot(); ok {
+			snapshot = liveSnapshot
+		}
 	}
-
-	snapshot, err := m.reader.ReplaySnapshot(frameCtx, sessionDate, timeStr)
-	if err != nil {
-		return m.writeError(err.Error())
+	if snapshot == nil {
+		var err error
+		sessionDate, timeStr, err = h.currentLiveSession(ctx)
+		if err != nil {
+			h.broadcast(LiveMarketServerMessage{Type: "ERROR", Error: err.Error()}, nil)
+			return true
+		}
+		dbSnapshot, err := h.reader.ReplaySnapshot(ctx, sessionDate, timeStr)
+		if err != nil {
+			h.broadcast(LiveMarketServerMessage{Type: "ERROR", Error: err.Error()}, nil)
+			return true
+		}
+		snapshot = dbSnapshot
 	}
-	if err := m.conn.WriteJSON(LiveMarketServerMessage{
+	h.broadcast(LiveMarketServerMessage{
 		Type:        "MARKET_SNAPSHOT",
 		SessionDate: sessionDate,
 		Time:        timeStr,
 		Snapshot:    snapshot,
-	}); err != nil {
-		return false
-	}
+	}, nil)
 
-	m.mu.RLock()
-	symbol := m.symbol
-	m.mu.RUnlock()
-	if symbol == "" {
-		return true
-	}
-
-	candles, err := m.reader.ReplayCandles(frameCtx, sessionDate, symbol, timeStr, "1m")
-	if err != nil {
-		return true
-	}
-	if err := m.conn.WriteJSON(LiveMarketServerMessage{
-		Type:        "SYMBOL_CANDLES",
-		SessionDate: sessionDate,
-		Time:        timeStr,
-		Candles:     candles,
-	}); err != nil {
-		return false
+	for symbol := range symbols {
+		var candles any
+		if h.source != nil {
+			if liveCandles, ok := h.source.LiveCandles(symbol); ok {
+				candles = liveCandles
+			}
+		}
+		if candles == nil {
+			dbCandles, err := h.reader.ReplayCandles(ctx, sessionDate, symbol, timeStr, "1m")
+			if err != nil {
+				continue
+			}
+			candles = dbCandles
+		}
+		h.broadcast(LiveMarketServerMessage{
+			Type:        "SYMBOL_CANDLES",
+			SessionDate: sessionDate,
+			Time:        timeStr,
+			Candles:     candles,
+		}, func(client *liveMarketClient) bool {
+			if client.symbol != symbol {
+				return false
+			}
+			latest := latestCandleTime(candles)
+			if !client.needsCandles && latest <= client.lastCandleTime {
+				return false
+			}
+			client.lastCandleTime = latest
+			client.needsCandles = false
+			return true
+		})
 	}
 	return true
 }
 
-func (m *LiveMarketSessionManager) writeError(message string) bool {
-	return m.conn.WriteJSON(LiveMarketServerMessage{
-		Type:  "ERROR",
-		Error: message,
-	}) == nil
+func (h *LiveMarketHub) broadcast(msg LiveMarketServerMessage, match func(*liveMarketClient) bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for conn, client := range h.clients {
+		if match != nil && !match(client) {
+			continue
+		}
+		if err := conn.WriteJSON(msg); err != nil {
+			conn.Close()
+			delete(h.clients, conn)
+		}
+	}
 }
 
-func (m *LiveMarketSessionManager) currentLiveSession(ctx context.Context) (string, string, error) {
-	m.mu.RLock()
-	sessionDate := m.sessionDate
-	lastCheck := m.lastSessionCheck
-	m.mu.RUnlock()
+func (h *LiveMarketHub) remove(conn *websocket.Conn) {
+	h.mu.Lock()
+	delete(h.clients, conn)
+	h.mu.Unlock()
+}
+
+func (h *LiveMarketHub) currentLiveSession(ctx context.Context) (string, string, error) {
+	h.mu.Lock()
+	sessionDate := h.sessionDate
+	lastCheck := h.lastSessionCheck
+	h.mu.Unlock()
 
 	if sessionDate == "" || time.Since(lastCheck) >= time.Minute {
-		sessions, err := m.reader.Sessions(ctx)
+		sessions, err := h.reader.Sessions(ctx)
 		if err != nil {
 			return "", "", err
 		}
 		if len(sessions) == 0 {
 			return "", "", errNoLiveSession
 		}
-
 		sessionDate = sessions[0].Date
-		m.mu.Lock()
-		m.sessionDate = sessionDate
-		m.lastSessionCheck = time.Now()
-		m.mu.Unlock()
+
+		h.mu.Lock()
+		h.sessionDate = sessionDate
+		h.lastSessionCheck = time.Now()
+		h.mu.Unlock()
 	}
 
 	return sessionDate, currentISTTime(), nil
@@ -186,4 +251,23 @@ func currentISTTime() string {
 		return "15:30:00"
 	}
 	return now.Format("15:04:05")
+}
+
+func latestCandleTime(candles any) int64 {
+	value := reflect.ValueOf(candles)
+	if value.Kind() != reflect.Slice || value.Len() == 0 {
+		return 0
+	}
+	last := value.Index(value.Len() - 1)
+	if last.Kind() == reflect.Pointer {
+		last = last.Elem()
+	}
+	if last.Kind() != reflect.Struct {
+		return 0
+	}
+	field := last.FieldByName("Time")
+	if !field.IsValid() || !field.CanInt() {
+		return 0
+	}
+	return field.Int()
 }

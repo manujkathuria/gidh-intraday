@@ -15,10 +15,11 @@ type Server struct {
 	orderManager *ordermanager.Manager
 	orderStore   *ordermanager.RedisOrderStore
 	wsHub        *ordermanager.WSHub
+	liveMarket   *LiveMarketHub
 }
 
 func NewServer(reader MarketReader) http.Handler {
-	return NewServerWithOrders(reader, nil, nil, nil)
+	return NewServerWithOrders(reader, nil, nil, nil, nil)
 }
 
 func NewServerWithOrders(
@@ -26,12 +27,14 @@ func NewServerWithOrders(
 	om *ordermanager.Manager,
 	os *ordermanager.RedisOrderStore,
 	hub *ordermanager.WSHub,
+	liveSource LiveMarketSource,
 ) http.Handler {
 	s := &Server{
 		reader:       reader,
 		orderManager: om,
 		orderStore:   os,
 		wsHub:        hub,
+		liveMarket:   NewLiveMarketHub(reader, liveSource),
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.health)
@@ -45,7 +48,7 @@ func NewServerWithOrders(
 	mux.HandleFunc("GET /v1/replay/snapshot", s.replaySnapshot)
 	mux.HandleFunc("GET /v1/replay/candles", s.replayCandles)
 	mux.HandleFunc("GET /v1/replay/ws", s.replayWebSocket)
-	mux.HandleFunc("GET /v1/live/market/ws", s.liveMarketWebSocket)
+	mux.HandleFunc("GET /v1/live/market/ws", s.liveMarket.HandleWS)
 
 	// Live Orders & Positions
 	mux.HandleFunc("GET /v1/live/orders", s.liveOrders)

@@ -48,6 +48,7 @@ func main() {
 	appEnv := os.Getenv("ENV")
 	var kc *kite.Client
 	var tracker *marketdata.ActivePositionTracker
+	var universeEngine *marketdata.UniverseStreamEngine
 	isPaper := appEnv != "production"
 
 	if !isPaper && cfg != nil && cfg.KiteAPIKey != "" && cfg.KiteAccessToken != "" {
@@ -68,13 +69,14 @@ func main() {
 		_ = orderMgr.SyncWithZerodha(ctx)
 
 		// Start real-time WebSocket 1-minute Universe Stream & 47-Feature Engine
-		universeEngine := marketdata.NewUniverseStreamEngine(
+		universeEngine = marketdata.NewUniverseStreamEngine(
 			cfg.KiteAPIKey,
 			cfg.KiteAccessToken,
 			ir,
 			candleRepo,
 			dailyFeatureRepo,
 		)
+		universeEngine.SetSectorResolver(readapi.GetSector)
 		if tracker != nil {
 			tracker.AttachUniverseEngine(universeEngine)
 		}
@@ -93,6 +95,7 @@ func main() {
 		orderMgr,
 		orderStore,
 		wsHub,
+		universeEngine,
 	)
 
 	server := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second}
