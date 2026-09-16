@@ -14,6 +14,9 @@ const getReplayWsUrl = () => {
     return process.env.NEXT_PUBLIC_WS_URL;
   }
   if (typeof window !== "undefined") {
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      return "ws://127.0.0.1:8080/v1/replay/ws";
+    }
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
     return `${proto}//${window.location.host}/v1/replay/ws`;
   }

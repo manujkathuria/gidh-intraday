@@ -1,0 +1,128 @@
+package ordermanager
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"math"
+	"time"
+
+	"gidh-intraday/backend/internal/store"
+)
+
+// PlaceOrder validates risk rules, computes sizing, and executes order
+func (m *Manager) PlaceOrder(ctx context.Context, intent OrderIntent) (*ActivePosition, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	activePositions, err := m.redisStore.GetActivePositions(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query active positions: %w", err)
+	}
+
+	if len(activePositions) >= m.maxSlots {
+		return nil, fmt.Errorf("max concurrent slots reached (%d/%d). Cannot enter %s", len(activePositions), m.maxSlots, intent.Symbol)
+	}
+
+	if _, exists := activePositions[intent.Symbol]; exists {
+		return nil, fmt.Errorf("position for %s already active", intent.Symbol)
+	}
+
+	instruments, err := m.instrumentRepo.GetActiveInstruments(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch instruments: %w", err)
+	}
+
+	var targetInst *store.ActiveInstrument
+	for _, inst := range instruments {
+		if inst.Symbol == intent.Symbol {
+			targetInst = &inst
+			break
+		}
+	}
+	if targetInst == nil {
+		return nil, fmt.Errorf("symbol %s not found in active universe", intent.Symbol)
+	}
+
+	margin := intent.MarginINR
+	if margin <= 0 {
+		margin = m.marginPerSlot
+	}
+	grossExposure := margin * m.leverageMIS
+
+	var entryPrice float64
+	if m.kiteClient != nil {
+		quotes, err := m.kiteClient.FetchQuote(ctx, fmt.Sprintf("%s:%s", targetInst.Exchange, targetInst.Symbol))
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch quote for %s: %w", intent.Symbol, err)
+		}
+		key := fmt.Sprintf("%s:%s", targetInst.Exchange, targetInst.Symbol)
+		q, ok := quotes[key]
+		if !ok || q.LastPrice <= 0 {
+			return nil, fmt.Errorf("invalid quote received for %s", intent.Symbol)
+		}
+		entryPrice = q.LastPrice
+	} else if m.tracker != nil {
+		if tick, ok := m.tracker.GetLatestTick(targetInst.Symbol); ok && tick.LastPrice > 0 {
+			entryPrice = tick.LastPrice
+		}
+	}
+
+	if entryPrice <= 0 {
+		entryPrice = 1000.0
+	}
+
+	qty := int(math.Floor(grossExposure / entryPrice))
+	if qty <= 0 {
+		qty = 1
+	}
+
+	txnType := "BUY"
+	if intent.Side == SideShort {
+		txnType = "SELL"
+	}
+
+	brokerOrderID := fmt.Sprintf("PAPER-%d", time.Now().UnixNano())
+	if !m.isPaperTrading && m.kiteClient != nil {
+		placedID, err := m.kiteClient.PlaceMISMarketOrder(ctx, targetInst.Exchange, targetInst.Symbol, txnType, qty, "GIDH")
+		if err != nil {
+			return nil, fmt.Errorf("zerodha order placement failed for %s: %w", targetInst.Symbol, err)
+		}
+		brokerOrderID = placedID
+		log.Printf("[ORDER MANAGER] Placed Zerodha MIS Market Order (%s %s %d) | OrderID: %s", txnType, targetInst.Symbol, qty, brokerOrderID)
+	}
+
+	pos := &ActivePosition{
+		Symbol:          targetInst.Symbol,
+		InstrumentToken: uint32(targetInst.CashToken),
+		Exchange:        targetInst.Exchange,
+		Side:            intent.Side,
+		Quantity:        qty,
+		EntryPrice:      entryPrice,
+		CurrentLTP:      entryPrice,
+		PnLINR:          0.0,
+		PnLPct:          0.0,
+		MFEPct:          0.0,
+		StopFloorPct:    -1.50,
+		Tactic:          intent.Tactic,
+		Invalidation:    intent.Invalidation,
+		BrokerOrderID:   brokerOrderID,
+		OpenedAt:        time.Now(),
+		UpdatedAt:       time.Now(),
+	}
+
+	if err := m.redisStore.SaveActivePosition(ctx, pos); err != nil {
+		return nil, fmt.Errorf("failed to save active position to redis: %w", err)
+	}
+	_ = m.redisStore.AddWSToken(ctx, pos.InstrumentToken)
+
+	if m.tracker != nil && pos.InstrumentToken > 0 {
+		m.tracker.SubscribePosition(pos.Symbol, pos.InstrumentToken)
+	}
+
+	_ = m.redisStore.PublishLiveEvent(ctx, "POSITION_OPENED", pos)
+	log.Printf("[ORDER MANAGER] Entered %s %s @ %.2f (Qty: %d, Exposure: ₹%.2f) | Tactic: %s",
+		pos.Side, pos.Symbol, pos.EntryPrice, pos.Quantity, float64(pos.Quantity)*pos.EntryPrice, pos.Tactic)
+
+	return pos, nil
+}

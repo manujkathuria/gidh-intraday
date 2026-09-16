@@ -1,126 +1,112 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# Gidh Intraday - Local Build & Production VM Image Deployment Script
-# ==============================================================================
-# Builds Linux/AMD64 Docker images locally on your Mac, streams them to the VM,
-# and applies/recreates containers instantly with zero build overhead on the VM.
-#
-# Usage:
-#   ./scripts/deploy.sh [target]
-#
-# Targets:
-#   all               Build and deploy both backend and frontend, restart nginx (default)
-#   backend | be      Build and deploy backend engine only
-#   frontend | fe     Build and deploy frontend cockpit only, restart nginx
-#   nginx             Restart nginx reverse proxy only
-# ==============================================================================
-
 set -euo pipefail
 
-# Configuration
-VM_HOST="manuj@148.230.66.138"
-VM_DIR="/home/manuj/workspace/gidh/gidh-intraday"
-VM_SUDO_PASS="1912"
-COMPOSE_FILE="docker-compose.prod.yml"
+# ==============================================================================
+# GIDH INTRADAY — MODULAR PRODUCTION DEPLOYMENT SCRIPT
+# Usage: ./scripts/deploy.sh [all | backend | frontend]
+# ==============================================================================
 
-# Visual formatting
-BOLD='\033[1m'
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[0;33m'
-CYAN='\033[0;36m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+TARGET="${1:-${TARGET:-all}}"
+VM_HOST="${VM_HOST:-148.230.66.138}"
+VM_USER="${VM_USER:-manuj}"
+VM_PATH="${VM_PATH:-/home/manuj/workspace/gidh/gidh-intraday}"
 
-START_TIME=$(date +%s)
+COLOR_RESET="\033[0m"
+COLOR_GREEN="\033[1;32m"
+COLOR_YELLOW="\033[1;33m"
+COLOR_RED="\033[1;31m"
+COLOR_CYAN="\033[1;36m"
 
-TARGET="${1:-all}"
-case "$TARGET" in
-  all|"")
-    BUILD_SERVICES=("backend" "frontend")
-    DEPLOY_SERVICES="backend frontend"
-    RESTART_NGINX=true
-    ;;
-  backend|be|api)
-    BUILD_SERVICES=("backend")
-    DEPLOY_SERVICES="backend"
-    RESTART_NGINX=false
-    ;;
-  frontend|fe|web)
-    BUILD_SERVICES=("frontend")
-    DEPLOY_SERVICES="frontend"
-    RESTART_NGINX=true
-    ;;
-  nginx)
-    BUILD_SERVICES=()
-    DEPLOY_SERVICES=""
-    RESTART_NGINX=true
-    ;;
-  *)
-    echo -e "${RED}Error: Unknown target '$TARGET'${NC}"
-    echo -e "Valid targets: ${CYAN}all | backend | frontend | nginx${NC}"
+log_info() { echo -e "${COLOR_CYAN}[DEPLOY INFO]${COLOR_RESET} $1"; }
+log_ok()   { echo -e "${COLOR_GREEN}[DEPLOY OK]${COLOR_RESET} $1"; }
+log_warn() { echo -e "${COLOR_YELLOW}[DEPLOY WARN]${COLOR_RESET} $1"; }
+log_err()  { echo -e "${COLOR_RED}[DEPLOY ERROR]${COLOR_RESET} $1"; }
+
+GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "latest")
+TAG="prod-${GIT_COMMIT}"
+
+log_info "Target Host   : ${VM_USER}@${VM_HOST}:${VM_PATH}"
+log_info "Deploy Target : [${TARGET^^}]"
+log_info "Release Tag   : ${TAG}"
+
+# 1. Pre-flight SSH check
+log_info "1/5 Verifying SSH connection to ${VM_HOST}..."
+if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "${VM_USER}@${VM_HOST}" "mkdir -p ${VM_PATH}" >/dev/null 2>&1; then
+    log_err "Failed to connect to ${VM_USER}@${VM_HOST} via SSH. Please check your SSH connection."
     exit 1
-    ;;
-esac
+fi
+log_ok "SSH connectivity established."
 
-echo -e "${BOLD}${BLUE}====================================================================${NC}"
-echo -e "${BOLD}${BLUE}🚀 GIDH PRODUCTION DEPLOYER (Local Build -> VM Apply)${NC}"
-echo -e "${BOLD}${BLUE}====================================================================${NC}"
-echo -e "Target:   ${CYAN}${TARGET}${NC}"
-echo -e "Host:     ${CYAN}${VM_HOST}${NC}"
-echo -e "Platform: ${CYAN}linux/amd64${NC}"
-echo ""
+# 2. Build backend if needed
+IMAGES_TO_SAVE=()
+if [ "$TARGET" = "all" ] || [ "$TARGET" = "backend" ]; then
+    log_info "2/5 Testing & Building Backend (Linux/AMD64)..."
+    (cd backend && go test ./...)
+    
+    mkdir -p bin
+    (cd backend && \
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o ../bin/gidh-auth ./cmd/gidh-auth && \
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o ../bin/gidh-batch ./cmd/gidh-batch)
 
-# Step 1: Local Docker Build
-if [ ${#BUILD_SERVICES[@]} -gt 0 ]; then
-  echo -e "${BOLD}${YELLOW}[1/3] Building images locally for linux/amd64...${NC}"
-  for svc in "${BUILD_SERVICES[@]}"; do
-    echo -e "  ⚙️  Building ${CYAN}${svc}${NC}..."
-    DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose -f "$COMPOSE_FILE" build "$svc"
-  done
-  echo -e "  ${GREEN}✓ Local build complete.${NC}\n"
-
-  # Step 2: Stream Images to Remote VM
-  echo -e "${BOLD}${YELLOW}[2/3] Streaming built images to production VM (${VM_HOST})...${NC}"
-  IMAGE_NAMES=()
-  for svc in "${BUILD_SERVICES[@]}"; do
-    IMAGE_NAMES+=("gidh-intraday-${svc}:latest")
-  done
-
-  echo -e "  📦 Transferring: ${CYAN}${IMAGE_NAMES[*]}${NC}"
-  docker save "${IMAGE_NAMES[@]}" | gzip -3 | \
-    ssh -o Compression=no "$VM_HOST" "echo $VM_SUDO_PASS | sudo -S docker load"
-  echo -e "  ${GREEN}✓ Images loaded into VM Docker daemon.${NC}\n"
-else
-  echo -e "${BOLD}${YELLOW}[1/2] Skipping image build (nginx restart only)...${NC}\n"
+    docker buildx build --platform linux/amd64 -t "gidh-intraday-backend:${TAG}" -t "gidh-intraday-backend:latest" ./backend
+    IMAGES_TO_SAVE+=("gidh-intraday-backend:latest")
+    log_ok "Backend image & CLI binaries built."
 fi
 
-# Step 3: Apply on VM
-STEP_NUM="3/3"
-if [ ${#BUILD_SERVICES[@]} -eq 0 ]; then
-  STEP_NUM="2/2"
+# 3. Build frontend if needed
+if [ "$TARGET" = "all" ] || [ "$TARGET" = "frontend" ]; then
+    log_info "Building Frontend (Linux/AMD64)..."
+    docker buildx build --platform linux/amd64 -t "gidh-intraday-frontend:${TAG}" -t "gidh-intraday-frontend:latest" ./web
+    IMAGES_TO_SAVE+=("gidh-intraday-frontend:latest")
+    log_ok "Frontend image built."
 fi
 
-echo -e "${BOLD}${YELLOW}[$STEP_NUM] Applying changes on VM...${NC}"
+# 4. Stream compressed Docker images to remote VM
+log_info "3/5 Streaming ${#IMAGES_TO_SAVE[@]} Docker image(s) to remote VM..."
+docker save "${IMAGES_TO_SAVE[@]}" | gzip -1 | ssh "${VM_USER}@${VM_HOST}" "gunzip | docker load"
+log_ok "Images loaded into remote Docker daemon."
 
-REMOTE_CMDS=()
-if [ -n "$DEPLOY_SERVICES" ]; then
-  REMOTE_CMDS+=("cd $VM_DIR && echo $VM_SUDO_PASS | sudo -S docker compose -f $COMPOSE_FILE up -d --no-build $DEPLOY_SERVICES")
-fi
+# 5. Sync configs, scripts, and host binaries
+log_info "4/5 Syncing configs, scripts, and binaries..."
+rsync -avz --exclude '.git' --exclude 'node_modules' --exclude '.venv' \
+    docker-compose.prod.yml Makefile scripts bin infra database "${VM_USER}@${VM_HOST}:${VM_PATH}/"
+log_ok "Sync completed."
 
-if [ "$RESTART_NGINX" = true ]; then
-  REMOTE_CMDS+=("echo $VM_SUDO_PASS | sudo -S docker restart gidh-nginx")
-fi
+# 6. Restart targeted containers & verify health on VM
+log_info "5/5 Updating containers and verifying health on VM..."
+ssh "${VM_USER}@${VM_HOST}" bash << EOF
+    set -euo pipefail
+    cd ${VM_PATH}
+    chmod +x scripts/*.sh bin/* 2>/dev/null || true
 
-# Execute remote compose commands
-COMBINED_CMD=$(IFS=" && "; echo "${REMOTE_CMDS[*]}")
-ssh "$VM_HOST" "$COMBINED_CMD"
+    if [ "$TARGET" = "backend" ]; then
+        docker compose -f docker-compose.prod.yml up -d --no-deps backend
+    elif [ "$TARGET" = "frontend" ]; then
+        docker compose -f docker-compose.prod.yml up -d --no-deps frontend
+    else
+        docker compose -f docker-compose.prod.yml up -d --remove-orphans
+    fi
 
-END_TIME=$(date +%s)
-ELAPSED=$((END_TIME - START_TIME))
+    # If backend was updated, run health verification
+    if [ "$TARGET" = "all" ] || [ "$TARGET" = "backend" ]; then
+        echo "Waiting for Go backend healthcheck..."
+        for i in {1..10}; do
+            sleep 2
+            if docker exec gidh-backend wget -qO- http://127.0.0.1:8080/healthz 2>/dev/null | grep -q 'ok'; then
+                echo "[HEALTH OK] Backend is live and healthy!"
+                break
+            fi
+            if [ "\$i" -eq 10 ]; then
+                echo "[HEALTH WARN] Backend healthcheck timed out. Inspecting logs:"
+                docker logs --tail 30 gidh-backend
+                exit 1
+            fi
+        done
+    fi
 
-echo ""
-echo -e "${BOLD}${GREEN}====================================================================${NC}"
-echo -e "${BOLD}${GREEN}✓ DEPLOYMENT SUCCESSFUL in ${ELAPSED}s${NC}"
-echo -e "${BOLD}${GREEN}====================================================================${NC}"
-ssh "$VM_HOST" "echo $VM_SUDO_PASS | sudo -S docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+    docker image prune -f >/dev/null 2>&1 || true
+EOF
+
+log_ok "======================================================="
+log_ok " [${TARGET^^}] DEPLOYMENT SUCCESSFUL -> ${TAG} ON ${VM_HOST}"
+log_ok "======================================================="

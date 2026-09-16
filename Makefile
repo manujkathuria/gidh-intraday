@@ -1,8 +1,8 @@
-.PHONY: help ai ai-test api api-restart web lab auth live eod universe history features integrity test
+.PHONY: help ai ai-test api api-restart web lab auth eod universe history features integrity test deploy
 
 help:
 	@echo "Gidh Intraday Engine & War Room"
-	@echo "  make live        Start live universe REST quote polling & feature engine"
+	@echo "  make deploy      Build locally & deploy to remote VM (VM_HOST=x.x.x.x)"
 	@echo "  make eod         Run EOD integrity verification & pre-warm Redis replay"
 	@echo "  make api         Start the Go read-only market & replay API"
 	@echo "  make api-restart Kill any running instance on port 8080 and start Go API"
@@ -10,6 +10,15 @@ help:
 	@echo "  make lab         Start the Streamlit analysis sandbox"
 	@echo "  make ai          Run the AI quantitative engine"
 	@echo "  make test        Run Go tests"
+
+deploy:
+	@./scripts/deploy.sh all
+
+deploy-backend:
+	@./scripts/deploy.sh backend
+
+deploy-frontend:
+	@./scripts/deploy.sh frontend
 
 lab:
 	@cd analysis && ./.venv/bin/streamlit run app.py --server.port 8501
@@ -26,16 +35,13 @@ web:
 	@cd web && pnpm dev
 
 ai:
-	@cd ai && python3 cli/main.py $(ARGS)
+	@./.venv/bin/python3 ai/cli/main.py $(ARGS)
 
 ai-test:
-	@cd ai && python3 -m unittest discover -s tests
+	@./.venv/bin/python3 -m unittest discover -s ai/tests
 
 auth:
 	@cd backend && go run ./cmd/gidh-auth $(TOKEN)
-
-live:
-	@cd backend && go run ./cmd/gidh-batch live $(ARGS)
 
 eod:
 	@cd backend && go run ./cmd/gidh-batch eod $(ARGS)
