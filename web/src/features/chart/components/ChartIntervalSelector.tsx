@@ -21,6 +21,8 @@ const REPLAY_INTERVALS: { label: string; value: ChartInterval }[] = [
   { label: "1m", value: "1m" },
   { label: "5m", value: "5m" },
   { label: "15m", value: "15m" },
+  { label: "1h", value: "1h" },
+  { label: "1d", value: "1d" },
 ];
 
 export const ChartIntervalSelector: React.FC<Props> = ({

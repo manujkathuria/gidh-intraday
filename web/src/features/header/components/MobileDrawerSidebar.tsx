@@ -62,6 +62,15 @@ export const MobileDrawerSidebar: React.FC<Props> = ({
             </button>
           </div>
 
+          {/* Navigation Items (auto-close on click handled in links) */}
+          <div onClick={onClose}>
+            <NavigationItems activeCount={activeCount} isCollapsed={false} />
+          </div>
+
+        </div>
+
+        {/* Bottom Group: Mode Switcher + VWAP & Engine Status */}
+        <div className="flex flex-col gap-3">
           {/* Mode Switcher */}
           <SidebarModeSwitcher
             mode={mode}
@@ -69,15 +78,9 @@ export const MobileDrawerSidebar: React.FC<Props> = ({
             isCollapsed={false}
           />
 
-          {/* Navigation Items (auto-close on click handled in links) */}
-          <div onClick={onClose}>
-            <NavigationItems activeCount={activeCount} isCollapsed={false} />
-          </div>
+          {/* Footer Breadth & Engine Status */}
+          <SidebarFooterStatus breadth={breadth} isCollapsed={false} />
         </div>
-
-
-        {/* Footer Breadth & Engine Status */}
-        <SidebarFooterStatus breadth={breadth} isCollapsed={false} />
       </aside>
     </div>
   );

@@ -55,36 +55,23 @@ export const AppBreadcrumbs: React.FC<Props> = ({
 
   return (
     <div className="flex items-center justify-between select-none shrink-0 text-xs py-0 w-full">
-      {/* Left: Sidebar Toggle + Divider + Breadcrumbs */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onToggleSidebar}
-          title={isCollapsed ? "Open Sidebar (Ctrl+B)" : "Close Sidebar (Ctrl+B)"}
-          className="p-1 -ml-1 rounded-md hover:bg-surface-hover text-foreground/70 hover:text-foreground transition flex items-center justify-center cursor-pointer"
-          aria-label="Toggle Navigation Sidebar"
+      {/* Left: Breadcrumbs */}
+      <div className="flex items-center gap-1.5">
+        <Link
+          href={pathname}
+          className="font-bold text-foreground text-xs hover:opacity-80 transition tracking-wide leading-none"
         >
-          <PanelLeft className="w-3.5 h-3.5" />
-        </button>
+          {currentRouteName}
+        </Link>
 
-        <div className="h-2.5 w-px bg-surface-border" />
-
-        <div className="flex items-center gap-1.5">
-          <Link
-            href={pathname}
-            className="font-bold text-foreground text-xs hover:opacity-80 transition tracking-wide leading-none"
-          >
-            {currentRouteName}
-          </Link>
-
-          {symbolParam && (
-            <div className="flex items-center gap-2 text-foreground/40 leading-none">
-              <ChevronRight className="w-3.5 h-3.5 text-foreground/30 shrink-0" />
-              <span className="font-bold text-foreground text-sm">
-                {symbolParam}
-              </span>
-            </div>
-          )}
-        </div>
+        {symbolParam && (
+          <div className="flex items-center gap-2 text-foreground/40 leading-none">
+            <ChevronRight className="w-3.5 h-3.5 text-foreground/30 shrink-0" />
+            <span className="font-bold text-foreground text-sm">
+              {symbolParam}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Right: Replay Date Calendar + Play/Pause + Clock + Theme Toggle */}
@@ -112,12 +99,9 @@ export const AppBreadcrumbs: React.FC<Props> = ({
         )}
 
         {/* Clock */}
-        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-foreground/75 hover:bg-surface-hover hover:text-foreground transition cursor-default">
-          <Clock className="w-3 h-3 text-foreground/50" />
-          <span className="font-bold tracking-wider text-[11px] tabular-nums">
-            {mode === "LIVE" ? liveClock || "09:15:00" : timeFormatted}
-          </span>
-        </div>
+        <span className="font-bold tracking-wider text-xs md:text-sm tabular-nums text-foreground/90 select-none px-1">
+          {mode === "LIVE" ? liveClock || "09:15:00" : timeFormatted}
+        </span>
 
         {/* Theme Toggle */}
         <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />

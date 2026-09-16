@@ -18,12 +18,9 @@ export const LiveStreamBar: React.FC<Props> = ({ liveClock }) => {
         <span className="font-black text-foreground tracking-wide text-xs">LIVE STREAM</span>
       </div>
 
-      <div className="flex items-center gap-1.5 px-2 py-0.5 bg-surface-muted border border-surface-border rounded">
-        <Clock className="w-3 h-3 text-foreground/50" />
-        <span className="font-bold text-foreground tracking-wider">
-          {liveClock || "09:15:00"} IST
-        </span>
-      </div>
+      <span className="font-bold text-foreground/90 tracking-wider text-xs md:text-sm tabular-nums select-none">
+        {liveClock || "09:15:00"} IST
+      </span>
     </div>
   );
 };

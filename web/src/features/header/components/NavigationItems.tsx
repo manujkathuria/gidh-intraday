@@ -32,22 +32,22 @@ export const NavigationItems: React.FC<Props> = ({ activeCount, isCollapsed }) =
             key={item.href}
             href={item.href}
             title={isCollapsed ? `${item.label}${item.badge ? ` (${item.badge})` : ""}` : undefined}
-            className={`rounded-lg transition-all flex items-center group border ${
-              isCollapsed ? "p-2.5 justify-center" : "px-3 py-2 justify-between"
+            className={`rounded-lg transition-colors flex items-center group border whitespace-nowrap h-9 ${
+              isCollapsed ? "justify-center w-full" : "px-3 justify-between w-full"
             } ${
               isActive
                 ? "bg-foreground text-background font-black border-foreground shadow-sm"
                 : "bg-transparent border-transparent text-foreground/60 hover:text-foreground hover:bg-surface-hover"
             }`}
           >
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
               <Icon className="w-4 h-4 shrink-0" />
-              {!isCollapsed && <span className="tracking-wide">{item.label}</span>}
+              {!isCollapsed && <span className="tracking-wide truncate text-xs">{item.label}</span>}
             </div>
 
             {!isCollapsed && item.badge && (
               <span
-                className={`text-[10px] px-1.5 py-0.2 rounded border ${
+                className={`text-[10px] px-1.5 py-0.2 rounded border shrink-0 ${
                   isActive
                     ? "bg-background text-foreground border-background font-black"
                     : "bg-surface border-surface-border text-foreground/60"

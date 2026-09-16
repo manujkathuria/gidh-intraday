@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import {
   fetchSessions,
+  fetchReplaySnapshot,
+  fetchReplayCandles,
   ReplaySnapshot,
   Candle,
   ReplaySector,
@@ -81,10 +83,6 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   ws: null,
 
   initLive: async () => {
-    if (get().ws?.readyState === WebSocket.OPEN) {
-      return;
-    }
-
     try {
       set({ loading: true });
       const sessions = await fetchSessions();
@@ -103,6 +101,21 @@ export const useLiveStore = create<LiveState>((set, get) => ({
         lastSyncTime: timeStr,
       });
 
+      if (!isMarketOpen) {
+        // Off-market hours: Load static snapshot via REST
+        const snap = await fetchReplaySnapshot(todayDate, "15:30:00");
+        const candles = await fetchReplayCandles(todayDate, get().selectedSymbol, "15:30:00");
+        set({
+          snapshot: snap,
+          traps: snap?.traps || [],
+          sectors: snap?.sectors || [],
+          candles: candles || [],
+          loading: false,
+          error: null,
+        });
+        return;
+      }
+
       get().startLiveSync();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to initialize live store";
@@ -111,6 +124,10 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   },
 
   startLiveSync: () => {
+    const { isMarketOpen } = getISTMinutes();
+    if (!isMarketOpen) {
+      return;
+    }
     shouldReconnectLiveMarket = true;
     const existing = get().ws;
     if (
@@ -136,12 +153,13 @@ export const useLiveStore = create<LiveState>((set, get) => ({
           if (data.type === "MARKET_SNAPSHOT" && data.snapshot) {
             const timeParts = (data.time || data.snapshot.as_of_time || "09:15:00").split(":");
             const mins = parseInt(timeParts[0], 10) * 60 + parseInt(timeParts[1], 10);
+            const { isMarketOpen: openNow } = getISTMinutes();
 
             set({
               sessionDate: data.session_date || data.snapshot.session_date || get().sessionDate,
               currentTimeMinutes: mins,
               lastSyncTime: data.time || data.snapshot.as_of_time || get().lastSyncTime,
-              isMarketOpen: mins >= 555 && mins <= 930,
+              isMarketOpen: openNow,
               snapshot: data.snapshot,
               traps: data.snapshot.traps || [],
               sectors: data.snapshot.sectors || [],
@@ -189,13 +207,16 @@ export const useLiveStore = create<LiveState>((set, get) => ({
 
   setSelectedSymbol: async (symbol: string) => {
     set({ selectedSymbol: symbol });
-    const { ws } = get();
+    const { ws, sessionDate, isMarketOpen } = get();
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ action: "SELECT_SYMBOL", symbol }));
+    } else if (!isMarketOpen && sessionDate) {
+      const candles = await fetchReplayCandles(sessionDate, symbol, "15:30:00");
+      set({ candles: candles || [] });
     }
   },
 
   refreshLive: async () => {
-    get().startLiveSync();
+    get().initLive();
   },
 }));

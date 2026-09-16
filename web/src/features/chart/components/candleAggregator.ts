@@ -59,3 +59,37 @@ function buildAggregatedBar(bars: Candle[], time: number): Candle {
     vwap: lastVwap,
   };
 }
+
+/**
+ * Merges historical HTF candles (1h / 1d) with today's real-time live intraday candles.
+ * Updates or appends the latest live candle for today.
+ */
+export function mergeLiveCandleIntoHTF(
+  historical: Candle[],
+  liveIntraday: Candle[],
+  interval: "1h" | "1d"
+): Candle[] {
+  if (historical.length === 0) {
+    return aggregateCandles(liveIntraday, interval);
+  }
+  if (liveIntraday.length === 0) {
+    return historical;
+  }
+
+  const liveHTF = aggregateCandles(liveIntraday, interval);
+  if (liveHTF.length === 0) {
+    return historical;
+  }
+
+  const merged = [...historical];
+  for (const liveBar of liveHTF) {
+    const existingIndex = merged.findIndex((h) => h.time === liveBar.time);
+    if (existingIndex >= 0) {
+      merged[existingIndex] = liveBar;
+    } else {
+      merged.push(liveBar);
+    }
+  }
+
+  return merged.sort((a, b) => a.time - b.time);
+}

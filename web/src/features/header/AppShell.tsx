@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { PanelLeft } from "lucide-react";
 import { NavigationItems } from "./components/NavigationItems";
 import { SidebarFooterStatus } from "./components/SidebarFooterStatus";
 import { MobileDrawerSidebar } from "./components/MobileDrawerSidebar";
@@ -66,24 +67,48 @@ export const AppShell: React.FC<Props> = ({ children }) => {
 
       {/* 2. Desktop / iPad Rail (Hidden on mobile, visible md+) */}
       <aside
-        className={`hidden md:flex bg-surface border-r border-surface-border flex-col justify-between transition-all duration-200 shrink-0 z-20 ${
-          isCollapsed ? "w-14 p-2" : "w-52 p-3"
+        className={`hidden md:flex bg-surface border-r border-surface-border flex-col justify-between shrink-0 z-20 select-none p-2.5 ${
+          isCollapsed ? "w-14" : "w-52"
         }`}
       >
-        <div className="flex flex-col gap-3">
-          {/* Top Mode Switcher (LIVE / REPLAY) */}
+        <div className="flex flex-col gap-2 min-w-0">
+          {/* Top Sidebar Header with Collapse Button & Brand */}
+          <div
+            className={`flex items-center h-8 pb-2 border-b border-surface-border ${
+              isCollapsed ? "justify-center" : "justify-between px-1"
+            }`}
+          >
+            {!isCollapsed && (
+              <span className="font-extrabold text-xs tracking-wider text-foreground select-none uppercase whitespace-nowrap">
+                GIDH WAR ROOM
+              </span>
+            )}
+            <button
+              onClick={handleToggleSidebar}
+              title={isCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)"}
+              className="p-1.5 rounded-md hover:bg-surface-hover text-foreground/70 hover:text-foreground transition flex items-center justify-center cursor-pointer"
+              aria-label="Toggle Sidebar"
+            >
+              <PanelLeft className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Navigation Links */}
+          <NavigationItems activeCount={activeCount} isCollapsed={isCollapsed} />
+        </div>
+
+        {/* Bottom Section: Mode Switcher + VWAP / Engine Status */}
+        <div className="flex flex-col gap-2.5">
+          {/* Mode Switcher (LIVE / REPLAY) - Placed at bottom above VWAP */}
           <SidebarModeSwitcher
             mode={mode}
             setMode={setMode}
             isCollapsed={isCollapsed}
           />
 
-          {/* Navigation Links */}
-          <NavigationItems activeCount={activeCount} isCollapsed={isCollapsed} />
+          {/* Footer Status */}
+          <SidebarFooterStatus breadth={breadth} isCollapsed={isCollapsed} />
         </div>
-
-        {/* Footer Status */}
-        <SidebarFooterStatus breadth={breadth} isCollapsed={isCollapsed} />
       </aside>
 
 

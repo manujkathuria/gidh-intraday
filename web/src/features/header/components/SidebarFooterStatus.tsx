@@ -2,6 +2,8 @@
 
 import React from "react";
 import { Activity } from "lucide-react";
+import { useLiveStore } from "@/stores/liveStore";
+import { useAppModeStore } from "@/stores/appModeStore";
 
 interface Props {
   breadth: number;
@@ -10,6 +12,12 @@ interface Props {
 
 export const SidebarFooterStatus: React.FC<Props> = ({ breadth, isCollapsed }) => {
   const isBullish = breadth >= 50;
+  const mode = useAppModeStore((s) => s.mode);
+  const isMarketOpen = useLiveStore((s) => s.isMarketOpen);
+  const ws = useLiveStore((s) => s.ws);
+
+  const isLiveStreaming = mode === "LIVE" && isMarketOpen && ws?.readyState === WebSocket.OPEN;
+  const statusLabel = mode === "REPLAY" ? "REPLAY" : isMarketOpen ? "LIVE" : "STANDBY";
 
   if (isCollapsed) {
     return (
@@ -21,8 +29,10 @@ export const SidebarFooterStatus: React.FC<Props> = ({ breadth, isCollapsed }) =
           <Activity className="w-3.5 h-3.5 text-foreground" />
         </div>
         <div
-          className="h-2 w-2 rounded-full bg-foreground animate-pulse"
-          title="Zerodha Kite: LIVE Connected"
+          className={`h-2 w-2 rounded-full ${
+            isLiveStreaming ? "bg-emerald-500 animate-pulse" : "bg-foreground/40"
+          }`}
+          title={`Zerodha Kite: ${statusLabel}`}
         />
       </div>
     );
@@ -45,10 +55,20 @@ export const SidebarFooterStatus: React.FC<Props> = ({ breadth, isCollapsed }) =
 
       <div className="flex items-center justify-between px-2.5 py-1 text-[10px] text-foreground/50">
         <div className="flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-foreground" />
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              isLiveStreaming ? "bg-emerald-500 animate-pulse" : "bg-foreground/30"
+            }`}
+          />
           <span>Zerodha Kite</span>
         </div>
-        <span className="font-bold text-foreground">LIVE</span>
+        <span
+          className={`font-bold ${
+            isLiveStreaming ? "text-emerald-400" : "text-foreground/40"
+          }`}
+        >
+          {statusLabel}
+        </span>
       </div>
     </div>
   );

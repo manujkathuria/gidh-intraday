@@ -4,7 +4,11 @@ import { useMarketData } from "@/stores/useMarketData";
 import { formatMinutesToTime } from "@/stores/replayStore";
 import { fetchReplayCandles, Candle } from "@/lib/api";
 import { StockSummaryItem } from "../types";
-import { ChartInterval, aggregateCandles } from "../components/candleAggregator";
+import {
+  ChartInterval,
+  aggregateCandles,
+  mergeLiveCandleIntoHTF,
+} from "../components/candleAggregator";
 
 export function useChartStudio() {
   const searchParams = useSearchParams();
@@ -27,12 +31,6 @@ export function useChartStudio() {
   );
   const [interval, setInterval] = useState<ChartInterval>("5m");
 
-  // In REPLAY mode, restrict to intraday intervals only (1m, 5m, 15m)
-  useEffect(() => {
-    if (mode === "REPLAY" && (interval === "1h" || interval === "1d")) {
-      setInterval("5m");
-    }
-  }, [mode, interval]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [rawCandles, setRawCandles] = useState<Candle[]>([]);
   const [loadingCandles, setLoadingCandles] = useState<boolean>(false);
@@ -74,10 +72,14 @@ export function useChartStudio() {
 
   useEffect(() => {
     if (!selectedDate || !activeSymbol) return;
-    if (mode === "LIVE") return;
+
+    // For Intraday intervals (1m, 5m, 15m) in LIVE mode, liveStore provides real-time WebSocket stream
+    if (mode === "LIVE" && (interval === "1m" || interval === "5m" || interval === "15m")) {
+      return;
+    }
 
     let isSubscribed = true;
-    const toTimeStr = formatMinutesToTime(currentTimeMinutes);
+    const toTimeStr = mode === "LIVE" ? "15:30:00" : formatMinutesToTime(currentTimeMinutes);
 
     setLoadingCandles(true);
     // For 1m, 5m, 15m: fetch today's 1m stream; for 1h / 1d fetch backend interval
@@ -100,13 +102,17 @@ export function useChartStudio() {
     };
   }, [mode, selectedDate, activeSymbol, currentTimeMinutes, interval]);
 
-  // Aggregate in-memory for 5m & 15m; use raw for 1m, 1h, 1d
-  const sourceCandles =
-    mode === "LIVE" ? candles : rawCandles;
-
   const chartCandles = useMemo(() => {
+    if (interval === "1h" || interval === "1d") {
+      if (mode === "LIVE") {
+        return mergeLiveCandleIntoHTF(rawCandles, candles, interval);
+      }
+      return rawCandles;
+    }
+
+    const sourceCandles = mode === "LIVE" ? candles : rawCandles;
     return aggregateCandles(sourceCandles, interval);
-  }, [sourceCandles, interval]);
+  }, [mode, interval, rawCandles, candles]);
 
   const stockInfo = useMemo(() => {
     return snapshot?.stocks?.find((s) => s.symbol === activeSymbol);

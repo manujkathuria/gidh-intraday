@@ -29,20 +29,54 @@ export const HeroStatsMatrix: React.FC<Props> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
       {/* 1. Total Real-Time P&L */}
-      <div className="bg-surface border border-surface-border rounded-xl p-4 flex flex-col justify-between shadow-sm">
+      <div
+        className={`bg-surface border rounded-xl p-4 flex flex-col justify-between shadow-sm transition-colors ${
+          totalPnLINR > 0
+            ? "border-emerald-500/25 bg-emerald-500/[0.02]"
+            : totalPnLINR < 0
+            ? "border-rose-500/25 bg-rose-500/[0.02]"
+            : "border-surface-border"
+        }`}
+      >
         <div className="flex items-center justify-between">
           <span className="font-bold text-foreground/50 uppercase tracking-wider text-[11px]">
             Total Live P&L
           </span>
-          <span className="p-1.5 rounded-md bg-surface-muted text-foreground/70 border border-surface-border">
+          <span
+            className={`p-1.5 rounded-md border ${
+              totalPnLINR > 0
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                : totalPnLINR < 0
+                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                : "bg-surface-muted text-foreground/70 border-surface-border"
+            }`}
+          >
             {totalPnLINR >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
           </span>
         </div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl font-black text-foreground">
+          <span
+            className={`text-2xl font-black tabular-nums ${
+              totalPnLINR > 0
+                ? "text-emerald-600 dark:text-emerald-400"
+                : totalPnLINR < 0
+                ? "text-rose-600 dark:text-rose-400"
+                : "text-foreground"
+            }`}
+          >
             {totalPnLINR >= 0 ? "+" : ""}₹{totalPnLINR.toFixed(2)}
           </span>
-          <span className="text-foreground/50">({pnlPct.toFixed(2)}%)</span>
+          <span
+            className={`text-xs font-bold tabular-nums ${
+              totalPnLINR > 0
+                ? "text-emerald-600/75 dark:text-emerald-400/75"
+                : totalPnLINR < 0
+                ? "text-rose-600/75 dark:text-rose-400/75"
+                : "text-foreground/50"
+            }`}
+          >
+            ({pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(2)}%)
+          </span>
         </div>
         <div className="mt-2 pt-2 border-t border-surface-border flex justify-between text-[11px] text-foreground/50">
           <span>Real-Time MTM</span>
