@@ -77,14 +77,18 @@ func (m *Manager) PlaceOrder(ctx context.Context, intent OrderIntent) (*ActivePo
 		qty = 1
 	}
 
-	side := SideLong
-	if intent.Side == SideShort || intent.Side == "SELL" || intent.Side == "SHORT" {
-		side = SideShort
-	}
+	var side PositionSide
+	var txnType string
 
-	txnType := "BUY"
-	if side == SideShort {
+	switch intent.Side {
+	case SideLong, "BUY":
+		side = SideLong
+		txnType = "BUY"
+	case SideShort, "SELL":
+		side = SideShort
 		txnType = "SELL"
+	default:
+		return nil, fmt.Errorf("invalid order side '%s': must be LONG/BUY or SHORT/SELL", intent.Side)
 	}
 
 	brokerOrderID := fmt.Sprintf("PAPER-%d", time.Now().UnixNano())

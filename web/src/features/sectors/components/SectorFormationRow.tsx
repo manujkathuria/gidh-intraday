@@ -100,7 +100,7 @@ export const SectorFormationRow: React.FC<Props> = ({ sector, isExpanded, onTogg
           <td colSpan={7} className="p-3">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 text-xs">
               {stocks.map((st: ReplayStock) => {
-                const move = st.move_pct || 0;
+                const move = typeof st.move_pct === "number" ? st.move_pct : parseFloat(st.move_pct as any) || 0;
                 return (
                   <Link
                     key={st.symbol}
@@ -120,12 +120,12 @@ export const SectorFormationRow: React.FC<Props> = ({ sector, isExpanded, onTogg
 
                     <div className="flex items-center gap-1.5 text-[11px] shrink-0">
                       <span
-                        className={`font-bold tabular-nums ${
+                        className={`font-bold tabular-nums px-1.5 py-0.5 rounded text-[11px] ${
                           move > 0
-                            ? "text-emerald-600 dark:text-emerald-400"
+                            ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
                             : move < 0
-                            ? "text-rose-600 dark:text-rose-400"
-                            : "text-foreground/60"
+                            ? "text-rose-600 dark:text-rose-400 bg-rose-500/10"
+                            : "text-foreground/60 bg-surface-muted"
                         }`}
                       >
                         {move >= 0 ? "+" : ""}

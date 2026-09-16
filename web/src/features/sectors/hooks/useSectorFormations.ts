@@ -10,7 +10,7 @@ export function useSectorFormations() {
   }, [init]);
 
   const [preset, setPreset] = useState<SectorPreset>("ALL");
-  const [sortField, setSortField] = useState<SectorSortField>("avg_move_pct");
+  const [sortField, setSortField] = useState<SectorSortField>("avg_rvol");
   const [sortAsc, setSortAsc] = useState(false);
   const [search, setSearch] = useState("");
   const [expandedSector, setExpandedSector] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export function useSectorFormations() {
     } else if (newPreset === "LAGGARDS") {
       setSortField("avg_move_pct");
       setSortAsc(true); // Biggest negative average drop first
-    } else if (newPreset === "SURGES") {
+    } else if (newPreset === "SURGES" || newPreset === "ALL") {
       setSortField("avg_rvol");
       setSortAsc(false); // Highest relative volume first
     }
@@ -46,12 +46,14 @@ export function useSectorFormations() {
   const enrichedSectors: SectorItemWithStocks[] = useMemo(() => {
     const allStocks = snapshot?.stocks || [];
     return sectors.map((sec) => {
+      const secName = (sec.sector || "").trim().toUpperCase();
       const secStocks = allStocks
-        .filter((s) => s.sector === sec.sector)
-        .sort((a, b) => (b.move_pct || 0) - (a.move_pct || 0));
+        .filter((s) => (s.sector || "").trim().toUpperCase() === secName)
+        .sort((a, b) => (Number(b.move_pct) || 0) - (Number(a.move_pct) || 0));
 
-      const advances = secStocks.filter((s) => (s.move_pct || 0) > 0).length;
-      const declines = secStocks.filter((s) => (s.move_pct || 0) < 0).length;
+      const advances = secStocks.filter((s) => (Number(s.move_pct) || 0) > 0).length;
+      const declines = secStocks.filter((s) => (Number(s.move_pct) || 0) < 0).length;
+
 
       return {
         ...sec,
@@ -84,14 +86,20 @@ export function useSectorFormations() {
         let valB = b[sortField] ?? 0;
 
         if (typeof valA === "string") {
-          return sortAsc
-            ? (valA as string).localeCompare(valB as string)
-            : (valB as string).localeCompare(valA as string);
+          const comp = (valA as string).localeCompare(valB as string);
+          return sortAsc ? comp : -comp;
         }
 
-        return sortAsc
-          ? (valA as number) - (valB as number)
-          : (valB as number) - (valA as number);
+        const numA = Number(valA) || 0;
+        const numB = Number(valB) || 0;
+        const diff = sortAsc ? numA - numB : numB - numA;
+
+        if (Math.abs(diff) > 0.0001) {
+          return diff;
+        }
+
+        // Secondary tie-breaker by sector name for stable UI ordering
+        return a.sector.localeCompare(b.sector);
       });
   }, [enrichedSectors, preset, search, sortField, sortAsc]);
 

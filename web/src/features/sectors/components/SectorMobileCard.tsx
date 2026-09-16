@@ -99,28 +99,28 @@ export const SectorMobileCard: React.FC<Props> = ({
         <div className="p-3 bg-surface-muted/30 border-t border-surface-border">
           <div className="grid grid-cols-2 gap-2 text-xs">
             {stocks.map((st) => {
-              const move = st.move_pct || 0;
+              const move = typeof st.move_pct === "number" ? st.move_pct : parseFloat(st.move_pct as any) || 0;
               return (
                 <Link
                   key={st.symbol}
                   href={`/chart?symbol=${encodeURIComponent(st.symbol)}`}
                   className="bg-surface hover:bg-surface-hover border border-surface-border hover:border-foreground/40 rounded p-2 flex items-center justify-between transition-colors group cursor-pointer"
                 >
-                  <span className="font-bold text-foreground group-hover:text-foreground text-xs">
+                  <span className="font-bold text-foreground group-hover:text-foreground text-xs truncate">
                     {st.symbol}
                   </span>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <span
-                      className={`text-[11px] font-bold tabular-nums ${
+                      className={`text-[11px] font-bold tabular-nums px-1.5 py-0.5 rounded ${
                         move > 0
-                          ? "text-emerald-600 dark:text-emerald-400"
+                          ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
                           : move < 0
-                          ? "text-rose-600 dark:text-rose-400"
-                          : "text-foreground/60"
+                          ? "text-rose-600 dark:text-rose-400 bg-rose-500/10"
+                          : "text-foreground/60 bg-surface-muted"
                       }`}
                     >
                       {move >= 0 ? "+" : ""}
-                      {move.toFixed(1)}%
+                      {move.toFixed(2)}%
                     </span>
                     <LineChart className="w-3.5 h-3.5 text-foreground/30 group-hover:text-foreground transition-colors" />
                   </div>

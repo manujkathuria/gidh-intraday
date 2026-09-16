@@ -206,13 +206,16 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   },
 
   setSelectedSymbol: async (symbol: string) => {
-    set({ selectedSymbol: symbol });
-    const { ws, sessionDate, isMarketOpen } = get();
+    set({ selectedSymbol: symbol, candles: [] });
+    const { ws, sessionDate } = get();
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ action: "SELECT_SYMBOL", symbol }));
-    } else if (!isMarketOpen && sessionDate) {
+    }
+    if (sessionDate) {
       const candles = await fetchReplayCandles(sessionDate, symbol, "15:30:00");
-      set({ candles: candles || [] });
+      if (get().selectedSymbol === symbol && candles && candles.length > 0) {
+        set({ candles });
+      }
     }
   },
 

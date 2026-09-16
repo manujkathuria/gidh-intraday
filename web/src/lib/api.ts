@@ -170,7 +170,7 @@ export interface ActivePosition {
   symbol: string;
   instrument_token: number;
   exchange: string;
-  side: "LONG" | "SHORT";
+  side: "LONG" | "SHORT" | "BUY" | "SELL" | string;
   quantity: number;
   entry_price: number;
   current_ltp: number;
@@ -187,7 +187,7 @@ export interface ActivePosition {
 
 export interface OrderIntent {
   symbol: string;
-  side: "LONG" | "SHORT";
+  side: "LONG" | "SHORT" | "BUY" | "SELL";
   margin_inr?: number;
   tactic?: string;
   invalidation?: string;

@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { XCircle, LineChart } from "lucide-react";
+import { XCircle, LineChart, AlertTriangle } from "lucide-react";
 import { ActivePosition } from "@/lib/api";
 
 interface Props {
@@ -16,10 +16,10 @@ export const ActivePositionCard: React.FC<Props> = ({
   slotIndex,
   onSquareOff,
 }) => {
+  const [showConfirm, setShowConfirm] = useState(false);
   const isLong = pos.side === "LONG" || pos.side === "BUY";
   const isProfit = pos.pnl_inr > 0;
   const isLoss = pos.pnl_inr < 0;
-
 
   let stopBadge = "SL -1.50% (HARD)";
   let stopBadgeStyle = "bg-surface-muted text-foreground/80 border-surface-border";
@@ -44,6 +44,43 @@ export const ActivePositionCard: React.FC<Props> = ({
           : "border-surface-border"
       }`}
     >
+      {/* Confirmation Overlay Modal */}
+      {showConfirm && (
+        <div className="absolute inset-0 bg-background/95 backdrop-blur-xs z-20 p-4 flex flex-col justify-between rounded-xl border border-rose-500/30 animate-in fade-in zoom-in-95 duration-150">
+          <div className="flex flex-col items-center text-center gap-2 pt-1">
+            <div className="p-2 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black uppercase text-foreground">
+                Confirm Square Off
+              </h4>
+              <p className="text-[11px] text-foreground/60 mt-0.5">
+                Close <span className="font-bold text-foreground">{pos.symbol}</span> ({pos.quantity} Qty) at market?
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 w-full">
+            <button
+              onClick={() => {
+                setShowConfirm(false);
+                onSquareOff(pos.symbol);
+              }}
+              className="w-full bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-black text-xs py-2 rounded-lg shadow-sm transition"
+            >
+              Yes, Square Off Now
+            </button>
+            <button
+              onClick={() => setShowConfirm(false)}
+              className="w-full bg-surface-muted hover:bg-surface-hover text-foreground/70 font-bold text-xs py-1.5 rounded-lg border border-surface-border transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Slot Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -62,13 +99,9 @@ export const ActivePositionCard: React.FC<Props> = ({
         </div>
 
         <button
-          onClick={() => {
-            if (confirm(`Square off ${pos.symbol} at market immediately?`)) {
-              onSquareOff(pos.symbol);
-            }
-          }}
-          title="Square off position unconditionally"
-          className="p-1 rounded text-foreground/40 hover:text-rose-500 hover:bg-rose-500/10 transition"
+          onClick={() => setShowConfirm(true)}
+          title="Square off position"
+          className="p-1 rounded text-foreground/40 hover:text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
         >
           <XCircle className="w-5 h-5" />
         </button>
@@ -149,8 +182,8 @@ export const ActivePositionCard: React.FC<Props> = ({
         </Link>
 
         <button
-          onClick={() => onSquareOff(pos.symbol)}
-          className="text-[10px] font-bold px-2 py-0.5 rounded border border-surface-border text-foreground hover:bg-surface-hover transition"
+          onClick={() => setShowConfirm(true)}
+          className="text-[10px] font-bold px-2 py-0.5 rounded border border-surface-border text-foreground hover:bg-rose-500/10 hover:text-rose-600 hover:border-rose-500/30 transition cursor-pointer"
         >
           Square Off
         </button>

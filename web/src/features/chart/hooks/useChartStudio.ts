@@ -58,11 +58,16 @@ export function useChartStudio() {
   }, []);
 
   useEffect(() => {
-    if (urlSymbol && urlSymbol !== activeSymbol) {
-      setActiveSymbol(urlSymbol);
-      setSelectedSymbol(urlSymbol);
+    const target = urlSymbol || selectedSymbol;
+    if (target) {
+      if (target !== activeSymbol) {
+        setActiveSymbol(target);
+      }
+      if (target !== selectedSymbol) {
+        setSelectedSymbol(target);
+      }
     }
-  }, [urlSymbol, activeSymbol, setSelectedSymbol]);
+  }, [urlSymbol, selectedSymbol, activeSymbol, setSelectedSymbol]);
 
   const handleSelectSymbol = (sym: string) => {
     setActiveSymbol(sym);
@@ -72,11 +77,6 @@ export function useChartStudio() {
 
   useEffect(() => {
     if (!selectedDate || !activeSymbol) return;
-
-    // For Intraday intervals (1m, 5m, 15m) in LIVE mode, liveStore provides real-time WebSocket stream
-    if (mode === "LIVE" && (interval === "1m" || interval === "5m" || interval === "15m")) {
-      return;
-    }
 
     let isSubscribed = true;
     const toTimeStr = mode === "LIVE" ? "15:30:00" : formatMinutesToTime(currentTimeMinutes);
@@ -88,7 +88,7 @@ export function useChartStudio() {
     fetchReplayCandles(selectedDate, activeSymbol, toTimeStr, fetchInt)
       .then((data) => {
         if (isSubscribed) {
-          setRawCandles(data);
+          setRawCandles(data || []);
           setLoadingCandles(false);
         }
       })
@@ -110,9 +110,12 @@ export function useChartStudio() {
       return rawCandles;
     }
 
-    const sourceCandles = mode === "LIVE" ? candles : rawCandles;
+    const sourceCandles =
+      mode === "LIVE" && candles.length > 0 && selectedSymbol === activeSymbol
+        ? candles
+        : rawCandles;
     return aggregateCandles(sourceCandles, interval);
-  }, [mode, interval, rawCandles, candles]);
+  }, [mode, interval, rawCandles, candles, selectedSymbol, activeSymbol]);
 
   const stockInfo = useMemo(() => {
     return snapshot?.stocks?.find((s) => s.symbol === activeSymbol);
