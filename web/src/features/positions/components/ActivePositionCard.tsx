@@ -16,9 +16,10 @@ export const ActivePositionCard: React.FC<Props> = ({
   slotIndex,
   onSquareOff,
 }) => {
-  const isLong = pos.side === "LONG";
+  const isLong = pos.side === "LONG" || pos.side === "BUY";
   const isProfit = pos.pnl_inr > 0;
   const isLoss = pos.pnl_inr < 0;
+
 
   let stopBadge = "SL -1.50% (HARD)";
   let stopBadgeStyle = "bg-surface-muted text-foreground/80 border-surface-border";

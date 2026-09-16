@@ -1,8 +1,21 @@
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== "undefined" && window.location.port === "8080"
-    ? ""
-    : "http://127.0.0.1:8080");
+export const getApiBase = (): string => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== "undefined") {
+    // If running in browser on localhost (and not proxied through port 8080 directly)
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      if (window.location.port === "8080") {
+        return "";
+      }
+      return "http://127.0.0.1:8080";
+    }
+    // Remote host (domain or VM IP) served behind Nginx reverse proxy
+    return "";
+  }
+  return "";
+};
+
 
 
 export interface SessionInfo {
@@ -74,7 +87,7 @@ export interface Candle {
 
 export async function fetchSessions(): Promise<string[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/market/sessions`);
+    const res = await fetch(`${getApiBase()}/v1/market/sessions`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data: SessionInfo[] = await res.json();
     const dates = data
@@ -93,7 +106,7 @@ export async function fetchReplaySnapshot(
 ): Promise<ReplaySnapshot | null> {
   try {
     const res = await fetch(
-      `${API_BASE}/v1/replay/snapshot?session_date=${sessionDate}&time=${timeStr}&_t=${Date.now()}`,
+      `${getApiBase()}/v1/replay/snapshot?session_date=${sessionDate}&time=${timeStr}&_t=${Date.now()}`,
       { cache: "no-store" }
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -112,7 +125,7 @@ export async function fetchReplayCandles(
 ): Promise<Candle[]> {
   try {
     const res = await fetch(
-      `${API_BASE}/v1/replay/candles?session_date=${sessionDate}&symbol=${symbol}&to_time=${toTimeStr}&interval=${interval}&_t=${Date.now()}`,
+      `${getApiBase()}/v1/replay/candles?session_date=${sessionDate}&symbol=${symbol}&to_time=${toTimeStr}&interval=${interval}&_t=${Date.now()}`,
       { cache: "no-store" }
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -187,7 +200,7 @@ export interface LivePositionsResponse {
 
 export async function fetchLivePositions(): Promise<ActivePosition[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/live/orders`);
+    const res = await fetch(`${getApiBase()}/v1/live/orders`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data: LivePositionsResponse = await res.json();
     return data.active_positions || [];
@@ -199,7 +212,7 @@ export async function fetchLivePositions(): Promise<ActivePosition[]> {
 
 export async function createLiveOrder(intent: OrderIntent): Promise<ActivePosition | null> {
   try {
-    const res = await fetch(`${API_BASE}/v1/live/orders`, {
+    const res = await fetch(`${getApiBase()}/v1/live/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(intent),
@@ -220,7 +233,7 @@ export async function squareOffLivePosition(
   reason = "MANUAL_SQUARE_OFF"
 ): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/v1/live/orders/square-off`, {
+    const res = await fetch(`${getApiBase()}/v1/live/orders/square-off`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symbol, reason }),
@@ -234,7 +247,7 @@ export async function squareOffLivePosition(
 
 export async function fetchQuantBrainRules(): Promise<any[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/quant/brain-rules`);
+    const res = await fetch(`${getApiBase()}/v1/quant/brain-rules`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (err) {
@@ -245,7 +258,7 @@ export async function fetchQuantBrainRules(): Promise<any[]> {
 
 export async function fetchQuantOperatingSchedule(): Promise<any[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/quant/operating-schedule`);
+    const res = await fetch(`${getApiBase()}/v1/quant/operating-schedule`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (err) {

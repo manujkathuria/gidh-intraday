@@ -51,22 +51,42 @@ func (m *Manager) SyncWithZerodha(ctx context.Context) error {
 					Quantity:        qty,
 					EntryPrice:      np.AveragePrice,
 					CurrentLTP:      np.LastPrice,
-					PnLINR:          np.PnL,
 					StopFloorPct:    -1.50,
 					Tactic:          "LIVE_ADOPTED",
 					BrokerOrderID:   "ZERODHA_SYNC",
 					OpenedAt:        time.Now(),
 					UpdatedAt:       time.Now(),
 				}
-				_ = m.redisStore.SaveActivePosition(ctx, pos)
 				log.Printf("[ORDER MANAGER] Adopted open Zerodha MIS position: %s %s @ %.2f (Qty: %d)", side, np.Tradingsymbol, np.AveragePrice, qty)
-			} else {
-				pos.Quantity = qty
-				pos.EntryPrice = np.AveragePrice
-				pos.CurrentLTP = np.LastPrice
-				pos.PnLINR = np.PnL
-				_ = m.redisStore.SaveActivePosition(ctx, pos)
 			}
+
+			pos.Side = side
+			pos.Quantity = qty
+			if np.AveragePrice > 0 {
+				pos.EntryPrice = np.AveragePrice
+			}
+			if np.LastPrice > 0 {
+				pos.CurrentLTP = np.LastPrice
+			}
+
+			var priceDiff float64
+			if side == SideLong {
+				priceDiff = pos.CurrentLTP - pos.EntryPrice
+			} else {
+				priceDiff = pos.EntryPrice - pos.CurrentLTP
+			}
+
+			if pos.EntryPrice > 0 {
+				pos.PnLPct = (priceDiff / pos.EntryPrice) * 100.0
+			}
+			pos.PnLINR = priceDiff * float64(pos.Quantity)
+
+			if pos.PnLPct > pos.MFEPct {
+				pos.MFEPct = pos.PnLPct
+			}
+
+			_ = m.redisStore.SaveActivePosition(ctx, pos)
+
 
 			if m.tracker != nil && pos.InstrumentToken > 0 {
 				m.tracker.SubscribePosition(pos.Symbol, pos.InstrumentToken)

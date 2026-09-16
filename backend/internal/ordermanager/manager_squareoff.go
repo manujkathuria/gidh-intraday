@@ -23,7 +23,7 @@ func (m *Manager) SquareOffPosition(ctx context.Context, symbol, reason string) 
 
 	if !m.isPaperTrading && m.kiteClient != nil {
 		exitTxnType := "SELL"
-		if pos.Side == SideShort {
+		if pos.IsShort() {
 			exitTxnType = "BUY"
 		}
 		exitOrderID, err := m.kiteClient.PlaceMISMarketOrder(ctx, pos.Exchange, pos.Symbol, exitTxnType, pos.Quantity, "GIDH_EXIT")

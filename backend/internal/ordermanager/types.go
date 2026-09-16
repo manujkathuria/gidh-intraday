@@ -9,6 +9,32 @@ const (
 	SideShort PositionSide = "SHORT"
 )
 
+func (p *ActivePosition) IsLong() bool {
+	if p == nil {
+		return false
+	}
+	return p.Side == SideLong || p.Side == "BUY" || p.Side == "LONG"
+}
+
+func (p *ActivePosition) IsShort() bool {
+	if p == nil {
+		return false
+	}
+	return p.Side == SideShort || p.Side == "SELL" || p.Side == "SHORT"
+}
+
+func (p *ActivePosition) NormalizeSide() {
+	if p == nil {
+		return
+	}
+	if p.IsShort() {
+		p.Side = SideShort
+	} else {
+		p.Side = SideLong
+	}
+}
+
+
 type ActivePosition struct {
 	Symbol          string       `json:"symbol"`
 	InstrumentToken uint32       `json:"instrument_token"`

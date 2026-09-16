@@ -27,17 +27,21 @@ func (m *Manager) handleTick(symbol string, tick kitemodels.Tick) {
 		return
 	}
 
+	pos.NormalizeSide()
 	pos.CurrentLTP = ltp
 
 	var priceDiff float64
-	if pos.Side == SideLong {
+	if pos.IsLong() {
 		priceDiff = ltp - pos.EntryPrice
 	} else {
 		priceDiff = pos.EntryPrice - ltp
 	}
 
-	pos.PnLPct = (priceDiff / pos.EntryPrice) * 100.0
+	if pos.EntryPrice > 0 {
+		pos.PnLPct = (priceDiff / pos.EntryPrice) * 100.0
+	}
 	pos.PnLINR = priceDiff * float64(pos.Quantity)
+
 
 	if pos.PnLPct > pos.MFEPct {
 		pos.MFEPct = pos.PnLPct

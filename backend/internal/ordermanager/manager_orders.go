@@ -77,8 +77,13 @@ func (m *Manager) PlaceOrder(ctx context.Context, intent OrderIntent) (*ActivePo
 		qty = 1
 	}
 
+	side := SideLong
+	if intent.Side == SideShort || intent.Side == "SELL" || intent.Side == "SHORT" {
+		side = SideShort
+	}
+
 	txnType := "BUY"
-	if intent.Side == SideShort {
+	if side == SideShort {
 		txnType = "SELL"
 	}
 
@@ -96,7 +101,7 @@ func (m *Manager) PlaceOrder(ctx context.Context, intent OrderIntent) (*ActivePo
 		Symbol:          targetInst.Symbol,
 		InstrumentToken: uint32(targetInst.CashToken),
 		Exchange:        targetInst.Exchange,
-		Side:            intent.Side,
+		Side:            side,
 		Quantity:        qty,
 		EntryPrice:      entryPrice,
 		CurrentLTP:      entryPrice,
