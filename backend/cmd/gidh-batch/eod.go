@@ -55,25 +55,35 @@ func runEODPipeline(args []string) {
 
 	// 3. Candle Completeness & Optional Kite Backfill Repair
 	fmt.Printf("[2/5] Inspecting 1m candle completeness for %s...\n", *sessionDate)
-	var missingCount int
+	var cashMissingCount, futureMissingCount int
 	err = db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*)
-		FROM market.instruments i
-		LEFT JOIN (
-			SELECT instrument_id, COUNT(*) as cnt
+		WITH cash_counts AS (
+			SELECT instrument_id, COUNT(*) AS cnt
 			FROM market.cash_candles_1m
 			WHERE (ts AT TIME ZONE 'Asia/Kolkata')::date = $1::date
 			GROUP BY instrument_id
-		) c ON c.instrument_id = i.id
-		WHERE i.is_active AND (c.cnt IS NULL OR c.cnt < 350);
-	`, *sessionDate).Scan(&missingCount)
+		), future_counts AS (
+			SELECT future_contract_id, COUNT(*) AS cnt
+			FROM market.future_candles_1m
+			WHERE (ts AT TIME ZONE 'Asia/Kolkata')::date = $1::date
+			GROUP BY future_contract_id
+		)
+		SELECT
+			COUNT(*) FILTER (WHERE cash_counts.cnt IS NULL OR cash_counts.cnt < 350) AS cash_missing,
+			COUNT(*) FILTER (WHERE future_counts.cnt IS NULL OR future_counts.cnt < 350) AS future_missing
+		FROM market.instruments i
+		LEFT JOIN market.future_contracts f ON f.instrument_id = i.id AND f.is_active
+		LEFT JOIN cash_counts ON cash_counts.instrument_id = i.id
+		LEFT JOIN future_counts ON future_counts.future_contract_id = f.id
+		WHERE i.is_active;
+	`, *sessionDate).Scan(&cashMissingCount, &futureMissingCount)
 
 	if err != nil {
 		log.Printf("[EOD WARN] Candle completeness check failed: %v", err)
 	}
 
-	if missingCount > 0 || *forceRepair {
-		fmt.Printf("      Found %d instruments with incomplete 1m candles. Repairing from Zerodha Kite...\n", missingCount)
+	if cashMissingCount > 0 || futureMissingCount > 0 || *forceRepair {
+		fmt.Printf("      Found incomplete 1m candles: cash=%d instruments, futures=%d instruments. Repairing from Zerodha Kite...\n", cashMissingCount, futureMissingCount)
 		repairErr := repairSession(db)(ctx, *sessionDate)
 		if repairErr != nil {
 			log.Printf("[EOD WARN] Kite repair encountered errors: %v", repairErr)
