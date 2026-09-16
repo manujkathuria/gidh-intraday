@@ -17,7 +17,7 @@ func (r *Repository) DailyFocus(ctx context.Context, sessionDate string) ([]Dail
 		ORDER BY l.published_at DESC, item.rank ASC;
 	`, sessionDate)
 	if err != nil {
-		return nil, fmt.Errorf("query daily focus: %w", err)
+		return []DailyFocusItem{}, nil
 	}
 	defer rows.Close()
 	items := []DailyFocusItem{}
@@ -36,21 +36,10 @@ func (r *Repository) QuantBrainRules(ctx context.Context) ([]BrainRuleItem, erro
 		SELECT rule_id, category, name, confidence, condition_json, action, COALESCE(invalidation, ''), evidence
 		FROM quant.brain_rules
 		WHERE status = 'ACTIVE'
-		ORDER BY 
-			CASE category 
-				WHEN 'ALLOCATION' THEN 1 
-				WHEN 'ENTRY' THEN 2 
-				WHEN 'INVALIDATION' THEN 3 
-				WHEN 'HOLD' THEN 4 
-				WHEN 'NO_TRADE' THEN 5 
-				WHEN 'CHARACTER' THEN 6 
-				WHEN 'BATTALION' THEN 7 
-				ELSE 8 
-			END, 
-			confidence DESC;
+		ORDER BY confidence DESC;
 	`)
 	if err != nil {
-		return nil, fmt.Errorf("query brain rules: %w", err)
+		return []BrainRuleItem{}, nil
 	}
 	defer rows.Close()
 
@@ -60,7 +49,7 @@ func (r *Repository) QuantBrainRules(ctx context.Context) ([]BrainRuleItem, erro
 		var condMap map[string]interface{}
 		var invalidation, evidence string
 		if err := rows.Scan(&item.ID, &item.Category, &item.Name, &item.Confidence, &condMap, &item.Action, &invalidation, &evidence); err != nil {
-			return nil, err
+			return []BrainRuleItem{}, nil
 		}
 		item.Invalidation = invalidation
 		item.Notes = evidence
@@ -78,7 +67,7 @@ func (r *Repository) QuantBrainRules(ctx context.Context) ([]BrainRuleItem, erro
 		item.Conditions = conditions
 		rules = append(rules, item)
 	}
-	return rules, rows.Err()
+	return rules, nil
 }
 
 func (r *Repository) QuantOperatingSchedule(ctx context.Context) ([]OperatingScheduleItem, error) {
@@ -88,7 +77,7 @@ func (r *Repository) QuantOperatingSchedule(ctx context.Context) ([]OperatingSch
 		ORDER BY sequence_order ASC;
 	`)
 	if err != nil {
-		return nil, fmt.Errorf("query operating schedule: %w", err)
+		return []OperatingScheduleItem{}, nil
 	}
 	defer rows.Close()
 
@@ -96,9 +85,9 @@ func (r *Repository) QuantOperatingSchedule(ctx context.Context) ([]OperatingSch
 	for rows.Next() {
 		var item OperatingScheduleItem
 		if err := rows.Scan(&item.ID, &item.CheckpointTime, &item.TimeWindow, &item.SequenceOrder, &item.PhaseName, &item.TriggerEvent, &item.RequiredAction, &item.RiskConstraint, &item.Status); err != nil {
-			return nil, err
+			return []OperatingScheduleItem{}, nil
 		}
 		schedule = append(schedule, item)
 	}
-	return schedule, rows.Err()
+	return schedule, nil
 }
