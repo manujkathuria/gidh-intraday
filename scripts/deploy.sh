@@ -25,8 +25,9 @@ log_err()  { echo -e "${COLOR_RED}[DEPLOY ERROR]${COLOR_RESET} $1"; }
 GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "latest")
 TAG="prod-${GIT_COMMIT}"
 
+TARGET_UPPER=$(echo "$TARGET" | tr '[:lower:]' '[:upper:]')
 log_info "Target Host   : ${VM_USER}@${VM_HOST}:${VM_PATH}"
-log_info "Deploy Target : [${TARGET^^}]"
+log_info "Deploy Target : [${TARGET_UPPER}]"
 log_info "Release Tag   : ${TAG}"
 
 # 1. Pre-flight SSH check
@@ -108,5 +109,5 @@ ssh "${VM_USER}@${VM_HOST}" bash << EOF
 EOF
 
 log_ok "======================================================="
-log_ok " [${TARGET^^}] DEPLOYMENT SUCCESSFUL -> ${TAG} ON ${VM_HOST}"
+log_ok " [${TARGET_UPPER}] DEPLOYMENT SUCCESSFUL -> ${TAG} ON ${VM_HOST}"
 log_ok "======================================================="
