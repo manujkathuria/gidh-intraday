@@ -3,290 +3,297 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { 
-  Search, 
-  Layers, 
-  TrendingUp, 
-  TrendingDown, 
-  ShieldAlert, 
-  Zap, 
-  ArrowUpDown, 
-  LineChart,
-  Filter
-} from "lucide-react";
-import { SessionCalendarPopover } from "@/features/header/components/SessionCalendarPopover";
-import { MacroFilterPopover } from "@/features/macro/components/MacroFilterPopover";
-import { MacroMobileCard } from "@/features/macro/components/MacroMobileCard";
-import { MacroPresetDropdown } from "@/features/macro/components/MacroPresetDropdown";
+import { Search, ArrowUpDown, LineChart, SlidersHorizontal, RotateCcw, RefreshCw } from "lucide-react";
+import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
+import { useMarketStore } from "@/stores/marketStore";
 import { fetchFuturesInflow, FuturesInflowItem as FuturesItem } from "@/lib/api";
 
-type MacroPreset = "ALL" | "LONGS" | "SHORTS" | "UNWINDING" | "COVERING";
-type SortField = "symbol" | "fut_close" | "price_1d_pct" | "oi_1d_pct" | "fresh_inflow_1d_cr" | "fresh_inflow_3d_cr" | "total_notional_cr";
+type SortField = 
+  | "symbol" 
+  | "fut_close" 
+  | "price_1d_pct" 
+  | "fresh_inflow_1d_cr" 
+  | "fresh_inflow_3d_cr" 
+  | "oi_1d_pct" 
+  | "total_notional_cr";
 
 export default function FuturesMacroPage() {
   const router = useRouter();
+  const { selectedDate, init } = useMarketStore();
 
-  // Local independent date state (Does NOT affect Live or Replay mode)
-  const [macroDate, setMacroDate] = useState<string>("2026-08-25");
-  const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [data, setData] = useState<FuturesItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Radar-Style Filter State
-  const [preset, setPreset] = useState<MacroPreset>("ALL");
+  useEffect(() => {
+    init();
+  }, [init]);
+
+  // Search & Sorting
   const [search, setSearch] = useState<string>("");
   const [sortField, setSortField] = useState<SortField>("fresh_inflow_1d_cr");
   const [sortAsc, setSortAsc] = useState<boolean>(false);
 
-  // Dynamic Threshold controls
-  const [minInflow, setMinInflow] = useState<number>(50);
-  const [minOiPct, setMinOiPct] = useState<number>(5.0);
-  const [minPricePct, setMinPricePct] = useState<number>(0.75);
+  // Core Quantitative Filters
+  // 1. Price Liquidity Band: ₹300 to ₹7,000
   const [minPrice, setMinPrice] = useState<number>(300);
-  const [maxPrice, setMaxPrice] = useState<number>(5000);
+  const [maxPrice, setMaxPrice] = useState<number>(7000);
 
-  const setPriceRange = (min: number, max: number) => {
-    setMinPrice(min);
-    setMaxPrice(max);
+  // 2. Institutional Inflow Gate: Inflow >= ₹40 Cr OR |OI%| >= 3.5%
+  const [minInflow, setMinInflow] = useState<number>(40);
+  const [minOiPct, setMinOiPct] = useState<number>(3.5);
+  const [gateEnabled, setGateEnabled] = useState<boolean>(true);
+
+  const handleReset = () => {
+    setMinPrice(300);
+    setMaxPrice(7000);
+    setMinInflow(40);
+    setMinOiPct(3.5);
+    setGateEnabled(true);
+    setSearch("");
   };
 
-  // Fetch macro data independently whenever macroDate changes
-  useEffect(() => {
-    let isMounted = true;
-    async function loadData() {
-      setLoading(true);
-      try {
-        const json = await fetchFuturesInflow(macroDate);
-        if (!json) throw new Error("Failed to load macro data");
-        if (isMounted) {
-          setData(json.data || []);
-          if (json.available_dates && json.available_dates.length > 0) {
-            setAvailableDates(json.available_dates);
-            if (!macroDate) {
-              setMacroDate(json.available_dates[0]);
-            }
-          }
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-    loadData();
-    return () => {
-      isMounted = false;
-    };
-  }, [macroDate]);
+  const isCustom = minPrice !== 300 || maxPrice !== 7000 || minInflow !== 40 || minOiPct !== 3.5 || !gateEnabled;
 
-  // Classify each stock into State (with price filtering)
-  const classifiedData = useMemo(() => {
+  const loadData = async (targetDate: string) => {
+    if (!targetDate) return;
+    setLoading(true);
+    try {
+      const json = await fetchFuturesInflow({
+        date: targetDate,
+        minPrice: minPrice,
+        maxPrice: maxPrice,
+        minInflow: gateEnabled ? minInflow : 0,
+        minOiPct: gateEnabled ? minOiPct : 0,
+      });
+      if (json) {
+        setData(json.data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedDate) {
+      loadData(selectedDate);
+    }
+  }, [selectedDate, minPrice, maxPrice, minInflow, minOiPct, gateEnabled]);
+
+  // Filter & Sort Pipeline
+  const filteredData = useMemo(() => {
     return data
       .filter((item) => {
+        // Price Band
         if (item.fut_close < minPrice) return false;
         if (maxPrice < 10000 && item.fut_close > maxPrice) return false;
-        return true;
-      })
-      .map((item) => {
-        const p = item.price_1d_pct || 0;
-        const oi = item.oi_1d_pct || 0;
-        const inflow = item.fresh_inflow_1d_cr || 0;
 
-        let state: MacroPreset = "ALL";
-        if (p >= minPricePct && inflow >= minInflow && oi >= minOiPct) {
-          state = "LONGS";
-        } else if (p <= -minPricePct && (inflow >= minInflow || oi >= minOiPct)) {
-          state = "SHORTS";
-        } else if (p < 0 && oi < 0) {
-          state = "UNWINDING";
-        } else if (p > 0 && oi < 0) {
-          state = "COVERING";
+        // Inflow Gate
+        if (gateEnabled) {
+          const inflowPass = Math.abs(item.fresh_inflow_1d_cr || 0) >= minInflow;
+          const oiPass = Math.abs(item.oi_1d_pct || 0) >= minOiPct;
+          if (!inflowPass && !oiPass) return false;
         }
 
-        return { ...item, state };
+        // Search
+        if (search.trim()) {
+          const q = search.toLowerCase().trim();
+          return item.symbol.toLowerCase().includes(q) || (item.trading_symbol?.toLowerCase() || "").includes(q);
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        let valA: any = a[sortField];
+        let valB: any = b[sortField];
+        if (typeof valA === "string") valA = valA.toLowerCase();
+        if (typeof valB === "string") valB = valB.toLowerCase();
+        if (valA === undefined || valA === null) return 1;
+        if (valB === undefined || valB === null) return -1;
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
       });
-  }, [data, minPrice, maxPrice, minPricePct, minInflow, minOiPct]);
-
-  // Filter & Sort
-  const filteredAndSorted = useMemo(() => {
-    let result = classifiedData;
-
-    // 1. Preset filter
-    if (preset !== "ALL") {
-      result = result.filter((d) => d.state === preset);
-    }
-
-    // 2. Search query
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      result = result.filter((d) => d.symbol.toLowerCase().includes(q));
-    }
-
-    // 3. Sort
-    return [...result].sort((a, b) => {
-      let valA: any = a[sortField];
-      let valB: any = b[sortField];
-      if (typeof valA === "string") valA = valA.toLowerCase();
-      if (typeof valB === "string") valB = valB.toLowerCase();
-      if (valA === undefined || valA === null) return 1;
-      if (valB === undefined || valB === null) return -1;
-      if (valA < valB) return sortAsc ? -1 : 1;
-      if (valA > valB) return sortAsc ? 1 : -1;
-      return 0;
-    });
-  }, [classifiedData, preset, search, sortField, sortAsc]);
+  }, [data, minPrice, maxPrice, gateEnabled, minInflow, minOiPct, search, sortField, sortAsc]);
 
   const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortAsc(!sortAsc);
-    } else {
+    if (sortField === field) setSortAsc(!sortAsc);
+    else {
       setSortField(field);
       setSortAsc(false);
     }
   };
 
   const renderSortIndicator = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 opacity-25" />;
     return <span className="font-bold text-foreground">{sortAsc ? "▲" : "▼"}</span>;
   };
 
-  const presets: { id: MacroPreset; label: string; icon: React.FC<{ className?: string }>; count: number }[] = [
-    { id: "ALL", label: "All", icon: Layers, count: classifiedData.length },
-    { id: "LONGS", label: "Longs", icon: TrendingUp, count: classifiedData.filter((d) => d.state === "LONGS").length },
-    { id: "SHORTS", label: "Shorts", icon: TrendingDown, count: classifiedData.filter((d) => d.state === "SHORTS").length },
-    { id: "UNWINDING", label: "Unwind", icon: ShieldAlert, count: classifiedData.filter((d) => d.state === "UNWINDING").length },
-    { id: "COVERING", label: "Cover", icon: Zap, count: classifiedData.filter((d) => d.state === "COVERING").length },
-  ];
-
   return (
-    <div className="w-full px-5 py-3 flex-1 flex flex-col">
-      <div className="flex flex-col gap-3">
-        {/* 1. Header Toolbar (Mobile: 2 clean tight rows, Desktop: 1 clean row) */}
-        <div className="flex flex-col gap-2 py-1 text-xs select-none">
-        {/* Top Control Row */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1">
-            {/* Independent Macro Session Calendar Popover */}
-            <div className="flex items-center bg-surface border border-surface-border rounded-md px-2 py-1 shrink-0">
-              <SessionCalendarPopover
-                selectedDate={macroDate}
-                onSelectDate={(d) => setMacroDate(d)}
-                validSessions={availableDates}
-              />
-            </div>
+    <div className="w-full px-5 py-3 flex-1 flex flex-col gap-3">
+      {/* Simple, Clean Toolbar */}
+      <div className="flex items-center justify-between gap-3 select-none flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Clean Filter Popover */}
+          <Popover className="relative text-xs">
+            <PopoverButton className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-surface text-foreground/80 hover:text-foreground hover:bg-surface-hover border border-surface-border cursor-pointer transition">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-foreground/50" />
+              <span className="font-semibold">Filters</span>
+              {isCustom && <span className="w-1.5 h-1.5 rounded-full bg-foreground" />}
+            </PopoverButton>
 
-            {/* Mobile Stance Preset Dropdown (< md) */}
-            <div className="md:hidden flex-1">
-              <MacroPresetDropdown
-                preset={preset}
-                setPreset={setPreset}
-                presets={presets}
-              />
-            </div>
-
-            {/* Desktop Segmented Pill Buttons (md+) */}
-            <div className="hidden md:flex items-center bg-surface-muted/60 border border-surface-border rounded-md p-0.5">
-              {presets.map((p) => {
-                const Icon = p.icon;
-                const isActive = preset === p.id;
-                return (
+            <PopoverPanel
+              anchor="bottom start"
+              className="z-50 mt-1.5 w-72 rounded-xl bg-surface border border-surface-border p-3.5 shadow-xl flex flex-col gap-3 text-xs"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-surface-border">
+                <span className="font-bold text-foreground uppercase tracking-wide text-[11px]">Thresholds</span>
+                {isCustom && (
                   <button
-                    key={p.id}
-                    onClick={() => setPreset(p.id)}
-                    className={`px-2.5 py-1 rounded transition text-xs flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                      isActive
-                        ? "bg-surface text-foreground font-extrabold shadow-2xs border border-surface-border"
-                        : "text-foreground/60 hover:text-foreground hover:bg-surface-hover/60 border border-transparent font-medium"
+                    type="button"
+                    onClick={handleReset}
+                    className="text-[10px] text-foreground/50 hover:text-foreground flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Reset
+                  </button>
+                )}
+              </div>
+
+              {/* Price Band */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between font-mono text-[11px]">
+                  <span className="text-foreground/70">Price Band</span>
+                  <span className="font-bold text-foreground">₹{minPrice} – {maxPrice >= 10000 ? "∞" : `₹${maxPrice}`}</span>
+                </div>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { setMinPrice(300); setMaxPrice(7000); }}
+                    className={`flex-1 py-1 rounded text-[10px] font-mono border cursor-pointer ${
+                      minPrice === 300 && maxPrice === 7000
+                        ? "bg-foreground text-background font-bold border-foreground"
+                        : "bg-surface text-foreground/70 border-surface-border"
                     }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? "text-foreground" : "text-foreground/50"}`} />
-                    <span>{p.label}</span>
-                    <span className={`text-[10px] px-1 rounded ${isActive ? "bg-surface-muted text-foreground" : "text-foreground/40"}`}>
-                      {p.count}
-                    </span>
+                    ₹300–₹7k
                   </button>
-                );
-              })}
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => { setMinPrice(0); setMaxPrice(10000); }}
+                    className={`flex-1 py-1 rounded text-[10px] font-mono border cursor-pointer ${
+                      minPrice === 0 && maxPrice >= 10000
+                        ? "bg-foreground text-background font-bold border-foreground"
+                        : "bg-surface text-foreground/70 border-surface-border"
+                    }`}
+                  >
+                    All Prices
+                  </button>
+                </div>
+              </div>
 
-            {/* Dynamic Macro Filter Popover */}
-            <div className="shrink-0">
-              <MacroFilterPopover
-                minInflow={minInflow}
-                setMinInflow={setMinInflow}
-                minOiPct={minOiPct}
-                setMinOiPct={setMinOiPct}
-                minPricePct={minPricePct}
-                setMinPricePct={setMinPricePct}
-                minPrice={minPrice}
-                maxPrice={maxPrice}
-                setPriceRange={setPriceRange}
-              />
-            </div>
+              {/* Inflow Gate */}
+              <div className="flex flex-col gap-1.5 pt-1 border-t border-surface-border/50">
+                <div className="flex justify-between font-mono text-[11px]">
+                  <span className="text-foreground/70">Min 1D Inflow</span>
+                  <span className="font-bold text-foreground">≥ ₹{minInflow} Cr</span>
+                </div>
+                <div className="flex gap-1">
+                  {[0, 25, 40, 60, 100].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setMinInflow(val)}
+                      className={`flex-1 py-1 rounded text-[10px] font-mono border cursor-pointer ${
+                        minInflow === val
+                          ? "bg-foreground text-background font-bold border-foreground"
+                          : "bg-surface text-foreground/60 border-surface-border"
+                      }`}
+                    >
+                      {val === 0 ? "0" : `₹${val}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            {/* Desktop Search Input (md+) */}
-            <div className="hidden md:block relative min-w-[180px]">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-foreground/40 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search symbol..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="block w-full rounded-md bg-surface pl-8.5 pr-3 py-1.5 text-xs text-foreground placeholder:text-foreground/40 border border-surface-border focus:outline-1 focus:-outline-offset-1 focus:outline-foreground focus:border-foreground"
-              />
-            </div>
-          </div>
+              {/* OI Gate */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between font-mono text-[11px]">
+                  <span className="text-foreground/70">Min 1D OI Change</span>
+                  <span className="font-bold text-foreground">≥ {minOiPct}%</span>
+                </div>
+                <div className="flex gap-1">
+                  {[0, 2.5, 3.5, 5.0, 8.0].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setMinOiPct(val)}
+                      className={`flex-1 py-1 rounded text-[10px] font-mono border cursor-pointer ${
+                        minOiPct === val
+                          ? "bg-foreground text-background font-bold border-foreground"
+                          : "bg-surface text-foreground/60 border-surface-border"
+                      }`}
+                    >
+                      {val === 0 ? "0" : `${val}%`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </PopoverPanel>
+          </Popover>
 
-          {/* Desktop Showing Count (md+) */}
-          <div className="hidden md:flex items-center gap-1.5 text-xs text-foreground/50 pr-1 shrink-0">
-            <span>Showing</span>
-            <span className="font-bold text-foreground">{filteredAndSorted.length}</span>
-            <span>/ {classifiedData.length} Stocks</span>
-          </div>
-        </div>
+          {/* Quick Gate Active Toggle */}
+          <button
+            type="button"
+            onClick={() => setGateEnabled(!gateEnabled)}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold border cursor-pointer transition ${
+              gateEnabled
+                ? "bg-foreground text-background border-foreground"
+                : "bg-surface text-foreground/60 border-surface-border hover:text-foreground"
+            }`}
+          >
+            {gateEnabled ? "Gate: Active" : "Gate: Off (Show All)"}
+          </button>
 
-        {/* Mobile Search & Count Bar (< md) */}
-        <div className="md:hidden flex items-center gap-2">
-          <div className="relative flex-1">
+          {/* Explicit Apply / Refresh Button */}
+          <button
+            type="button"
+            onClick={() => loadData(selectedDate)}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-surface text-foreground font-semibold border border-surface-border hover:bg-surface-hover cursor-pointer transition disabled:opacity-50"
+            title="Fetch and apply latest data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-foreground" : "text-foreground/60"}`} />
+            <span>Apply</span>
+          </button>
+
+          {/* Search Box */}
+          <div className="relative min-w-[200px]">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-foreground/40 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search symbol..."
+              placeholder="Filter symbol..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="block w-full rounded-md bg-surface pl-8.5 pr-3 py-1.5 text-xs text-foreground placeholder:text-foreground/40 border border-surface-border focus:outline-1 focus:-outline-offset-1 focus:outline-foreground focus:border-foreground"
+              className="block w-full rounded-md bg-surface pl-8.5 pr-3 py-1.5 text-xs text-foreground placeholder:text-foreground/40 border border-surface-border focus:outline-none focus:border-foreground font-mono"
             />
           </div>
-          <div className="text-[11px] text-foreground/50 shrink-0 font-mono px-1">
-            <span className="font-bold text-foreground">{filteredAndSorted.length}</span>/{classifiedData.length}
-          </div>
+        </div>
+
+        {/* Count */}
+        <div className="text-xs text-foreground/60 font-mono pr-1">
+          <span className="font-bold text-foreground">{filteredData.length}</span> / {data.length} stocks
         </div>
       </div>
 
-      {/* 2. Mobile View: Touch-Friendly Stock Cards (< md) */}
-      <div className="md:hidden bg-surface border border-surface-border rounded-lg overflow-hidden flex flex-col divide-y divide-surface-border">
-        {loading ? (
-          <div className="py-12 text-center text-foreground/40 text-xs font-mono">
-            Scanning futures money inflow...
-          </div>
-        ) : filteredAndSorted.length === 0 ? (
-          <div className="py-12 text-center text-foreground/40 text-xs">
-            No stocks match this filter.
-          </div>
-        ) : (
-          filteredAndSorted.map((row, idx) => (
-            <MacroMobileCard key={row.symbol} row={row} index={idx} />
-          ))
-        )}
-      </div>
-
-      {/* 3. iPad / Desktop View: High-Density Table (hidden on mobile, visible md+) */}
-      <div className="hidden md:block bg-surface border border-surface-border rounded-lg overflow-hidden transition-colors">
-        <div className="overflow-x-auto max-h-[calc(100vh-140px)] custom-scrollbar">
+      {/* Clean High-Density Table */}
+      <div className="bg-surface border border-surface-border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto max-h-[calc(100vh-120px)] custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs">
-            <thead className="bg-surface text-foreground/60 uppercase text-[10px] tracking-wider border-b border-surface-border select-none sticky top-0 z-10 shadow-xs">
+            <thead className="bg-surface text-foreground/60 uppercase text-[10px] tracking-wider border-b border-surface-border select-none sticky top-0 z-10">
               <tr>
-                <th className="py-2.5 px-3.5 text-center w-10 font-bold bg-surface hidden sm:table-cell">#</th>
+                <th className="py-2.5 px-3.5 text-center w-10 font-bold bg-surface">#</th>
 
                 <th
                   onClick={() => handleSort("symbol")}
@@ -313,18 +320,8 @@ export default function FuturesMacroPage() {
                   className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface"
                 >
                   <div className="flex items-center justify-end gap-1.5">
-                    <span>Price 1D %</span>
+                    <span>1D Move %</span>
                     {renderSortIndicator("price_1d_pct")}
-                  </div>
-                </th>
-
-                <th
-                  onClick={() => handleSort("oi_1d_pct")}
-                  className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface"
-                >
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span>OI 1D %</span>
-                    {renderSortIndicator("oi_1d_pct")}
                   </div>
                 </th>
 
@@ -333,88 +330,79 @@ export default function FuturesMacroPage() {
                   className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface"
                 >
                   <div className="flex items-center justify-end gap-1.5">
-                    <span>1D Net Inflow</span>
+                    <span>1D Inflow (₹ Cr)</span>
                     {renderSortIndicator("fresh_inflow_1d_cr")}
                   </div>
                 </th>
 
                 <th
                   onClick={() => handleSort("fresh_inflow_3d_cr")}
-                  className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface hidden md:table-cell"
+                  className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface hidden sm:table-cell"
                 >
                   <div className="flex items-center justify-end gap-1.5">
-                    <span>3D Net Inflow</span>
+                    <span>3D Inflow (₹ Cr)</span>
                     {renderSortIndicator("fresh_inflow_3d_cr")}
                   </div>
                 </th>
 
                 <th
-                  onClick={() => handleSort("total_notional_cr")}
-                  className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface hidden lg:table-cell"
+                  onClick={() => handleSort("oi_1d_pct")}
+                  className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface"
                 >
                   <div className="flex items-center justify-end gap-1.5">
-                    <span>Total Notional</span>
-                    {renderSortIndicator("total_notional_cr")}
+                    <span>1D OI %</span>
+                    {renderSortIndicator("oi_1d_pct")}
                   </div>
                 </th>
 
-                <th className="py-2.5 px-3.5 text-center font-bold bg-surface w-24">
-                  Institutional Stance
+                <th
+                  onClick={() => handleSort("total_notional_cr")}
+                  className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface hidden md:table-cell"
+                >
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span>Total Notional (₹ Cr)</span>
+                    {renderSortIndicator("total_notional_cr")}
+                  </div>
                 </th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-foreground/40 text-xs font-mono">
-                    Scanning futures money inflow...
+                  <td colSpan={8} className="py-12 text-center text-foreground/40 text-xs font-mono">
+                    Loading macro data...
                   </td>
                 </tr>
-              ) : filteredAndSorted.length === 0 ? (
+              ) : filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-foreground/40 text-xs">
-                    No stocks match this filter.
+                  <td colSpan={8} className="py-12 text-center text-foreground/40 text-xs font-mono">
+                    No stocks match current filter.
                   </td>
                 </tr>
               ) : (
-                filteredAndSorted.map((row, idx) => {
+                filteredData.map((row, idx) => {
                   const p = row.price_1d_pct || 0;
                   const oi = row.oi_1d_pct || 0;
-                  const inflow = row.fresh_inflow_1d_cr || 0;
+                  const inflow1d = row.fresh_inflow_1d_cr || 0;
+                  const inflow3d = row.fresh_inflow_3d_cr || 0;
 
                   return (
                     <tr
                       key={row.symbol}
                       onClick={() => router.push(`/chart?symbol=${encodeURIComponent(row.symbol)}`)}
-                      className="border-b border-surface-border transition-colors cursor-pointer group hover:bg-surface-hover/60 text-xs"
+                      className="border-b border-surface-border transition-colors cursor-pointer group hover:bg-surface-hover/60 text-xs font-mono"
                     >
-                      {/* # Index */}
-                      <td className="py-2 px-3.5 text-center text-foreground/30 text-[11px] hidden sm:table-cell">
+                      <td className="py-2 px-3.5 text-center text-foreground/30 text-[11px]">
                         {idx + 1}
                       </td>
 
-                      {/* Symbol */}
                       <td className="py-2 px-3.5 font-bold text-foreground">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                row.state === "LONGS"
-                                    ? "bg-emerald-500"
-                                  : row.state === "SHORTS"
-                                  ? "bg-rose-500"
-                                  : row.state === "UNWINDING"
-                                  ? "bg-amber-500"
-                                  : "bg-surface-border"
-                              }`}
-                            />
-                            <span className="text-xs tracking-wider">{row.symbol}</span>
-                          </div>
-
+                          <span className="tracking-wide font-sans">{row.symbol}</span>
                           <Link
                             href={`/chart?symbol=${encodeURIComponent(row.symbol)}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="p-1 rounded hover:bg-foreground hover:text-background text-foreground/40 transition opacity-0 group-hover:opacity-100 hover:opacity-100"
+                            className="p-1 rounded hover:bg-foreground hover:text-background text-foreground/40 transition opacity-0 group-hover:opacity-100"
                             title={`Open ${row.symbol} Chart`}
                           >
                             <LineChart className="w-3.5 h-3.5" />
@@ -422,13 +410,11 @@ export default function FuturesMacroPage() {
                         </div>
                       </td>
 
-                      {/* Price */}
-                      <td className="py-2 px-3.5 text-right font-mono text-foreground">
+                      <td className="py-2 px-3.5 text-right font-semibold text-foreground">
                         ₹{row.fut_close.toFixed(2)}
                       </td>
 
-                      {/* Price Move % (Subdued Green/Red Tint) */}
-                      <td className="py-2 px-3.5 text-right font-mono font-bold">
+                      <td className="py-2 px-3.5 text-right font-bold">
                         <span
                           className={
                             p > 0
@@ -438,57 +424,34 @@ export default function FuturesMacroPage() {
                               : "text-foreground/60"
                           }
                         >
-                          {p >= 0 ? "+" : ""}
-                          {p.toFixed(2)}%
+                          {p >= 0 ? "+" : ""}{p.toFixed(2)}%
                         </span>
                       </td>
 
-                      {/* OI % */}
-                      <td className="py-2 px-3.5 text-right font-mono text-foreground/70">
-                        {oi >= 0 ? "+" : ""}
-                        {oi.toFixed(1)}%
-                      </td>
-
-                      {/* 1D Rupee Inflow */}
-                      <td className="py-2 px-3.5 text-right font-mono font-bold text-foreground">
-                        <span className={inflow > 0 ? "text-foreground" : "text-foreground/40"}>
-                          {inflow >= 0 ? "+" : ""}₹{inflow.toFixed(1)} Cr
+                      <td className="py-2 px-3.5 text-right font-bold">
+                        <span
+                          className={
+                            inflow1d > 0
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : inflow1d < 0
+                              ? "text-rose-600 dark:text-rose-400"
+                              : "text-foreground/40"
+                          }
+                        >
+                          {inflow1d >= 0 ? "+" : ""}₹{inflow1d.toFixed(1)} Cr
                         </span>
                       </td>
 
-                      {/* 3D Rupee Inflow */}
-                      <td className="py-2 px-3.5 text-right font-mono text-foreground/50 hidden md:table-cell">
-                        {row.fresh_inflow_3d_cr ? `₹${row.fresh_inflow_3d_cr.toFixed(0)} Cr` : "-"}
+                      <td className="py-2 px-3.5 text-right text-foreground/70 hidden sm:table-cell">
+                        {inflow3d !== 0 ? `₹${inflow3d.toFixed(1)} Cr` : "-"}
                       </td>
 
-                      {/* Total Notional */}
-                      <td className="py-2 px-3.5 text-right font-mono text-foreground/50 hidden lg:table-cell">
+                      <td className="py-2 px-3.5 text-right text-foreground/70">
+                        {oi >= 0 ? "+" : ""}{oi.toFixed(1)}%
+                      </td>
+
+                      <td className="py-2 px-3.5 text-right text-foreground/50 hidden md:table-cell">
                         ₹{row.total_notional_cr ? row.total_notional_cr.toFixed(0) : "0"} Cr
-                      </td>
-
-                      {/* Action / Stance Badge (Radar Style) */}
-                      <td className="py-2 px-3.5 text-center">
-                        {row.state === "LONGS" ? (
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded bg-foreground text-background shadow-xs tracking-wider">
-                            LONG
-                          </span>
-                        ) : row.state === "SHORTS" ? (
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded border border-foreground/40 text-foreground tracking-wider">
-                            SHORT
-                          </span>
-                        ) : row.state === "UNWINDING" ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-muted text-amber-500/90 border border-surface-border tracking-wider">
-                            UNWIND
-                          </span>
-                        ) : row.state === "COVERING" ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-muted text-blue-500/90 border border-surface-border tracking-wider">
-                            COVER
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-muted text-foreground/40 border border-surface-border tracking-wider">
-                            WAIT
-                          </span>
-                        )}
                       </td>
                     </tr>
                   );
@@ -499,6 +462,5 @@ export default function FuturesMacroPage() {
         </div>
       </div>
     </div>
-  </div>
   );
 }

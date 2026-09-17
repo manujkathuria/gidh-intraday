@@ -42,7 +42,6 @@ export const ChartStudio: React.FC = () => {
         onSelectSymbol={handleSelectSymbol}
         interval={interval}
         onChangeInterval={setInterval}
-        mode={mode}
       />
 
       {/* 2. Edge-to-Edge Candlestick Studio (Fits exact remaining height, NO scroll) */}

@@ -1,13 +1,58 @@
 import { useState, useMemo, useEffect } from "react";
-import { useMarketData } from "@/stores/useMarketData";
+import { useMarketStore } from "@/stores/marketStore";
+import { getStreamWsUrl } from "@/lib/api";
 import { SectorSortField, SectorItemWithStocks, SectorPreset } from "../types";
 
 export function useSectorFormations() {
-  const { sectors, snapshot, init } = useMarketData();
+  const { sectors, snapshot, init, setWsConnected, applyLiveSnapshot } = useMarketStore();
 
   useEffect(() => {
     init();
   }, [init]);
+
+  // Connect on-demand /v1/stream/sectors WebSocket stream
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    let isMounted = true;
+
+    try {
+      const url = getStreamWsUrl("/v1/stream/sectors");
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        if (isMounted) setWsConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && (data.sectors || data.stocks || data.weather)) {
+            applyLiveSnapshot(data);
+          }
+        } catch (e) {
+          // ignore non-json
+        }
+      };
+
+      ws.onclose = () => {
+        if (isMounted) setWsConnected(false);
+      };
+
+      ws.onerror = () => {
+        if (isMounted) setWsConnected(false);
+      };
+    } catch (e) {
+      console.warn("[Sectors WS] connection error:", e);
+    }
+
+    return () => {
+      isMounted = false;
+      if (ws) {
+        ws.close();
+      }
+      setWsConnected(false);
+    };
+  }, [setWsConnected, applyLiveSnapshot]);
 
   const [preset, setPreset] = useState<SectorPreset>("ALL");
   const [sortField, setSortField] = useState<SectorSortField>("avg_rvol");
@@ -19,13 +64,13 @@ export function useSectorFormations() {
     setPreset(newPreset);
     if (newPreset === "LEADERS") {
       setSortField("avg_move_pct");
-      setSortAsc(false); // Highest positive average move first
+      setSortAsc(false);
     } else if (newPreset === "LAGGARDS") {
       setSortField("avg_move_pct");
-      setSortAsc(true); // Biggest negative average drop first
+      setSortAsc(true);
     } else if (newPreset === "SURGES" || newPreset === "ALL") {
       setSortField("avg_rvol");
-      setSortAsc(false); // Highest relative volume first
+      setSortAsc(false);
     }
   };
 
@@ -42,7 +87,6 @@ export function useSectorFormations() {
     setExpandedSector(expandedSector === sector ? null : sector);
   };
 
-  // Group and enrich stocks into sectors with top driver/drag
   const enrichedSectors: SectorItemWithStocks[] = useMemo(() => {
     const allStocks = snapshot?.stocks || [];
     return sectors.map((sec) => {
@@ -53,7 +97,6 @@ export function useSectorFormations() {
 
       const advances = secStocks.filter((s) => (Number(s.move_pct) || 0) > 0).length;
       const declines = secStocks.filter((s) => (Number(s.move_pct) || 0) < 0).length;
-
 
       return {
         ...sec,
@@ -69,7 +112,6 @@ export function useSectorFormations() {
   const sortedSectors = useMemo(() => {
     return enrichedSectors
       .filter((s) => {
-        // Presets filtering: Pure change % without VWAP gating
         if (preset === "LEADERS" && (s.avg_move_pct || 0) <= 0) return false;
         if (preset === "LAGGARDS" && (s.avg_move_pct || 0) >= 0) return false;
         if (preset === "SURGES" && (s.avg_rvol || 0) < 1.8) return false;
@@ -98,7 +140,6 @@ export function useSectorFormations() {
           return diff;
         }
 
-        // Secondary tie-breaker by sector name for stable UI ordering
         return a.sector.localeCompare(b.sector);
       });
   }, [enrichedSectors, preset, search, sortField, sortAsc]);

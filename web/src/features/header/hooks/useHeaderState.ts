@@ -1,69 +1,23 @@
-import { useState, useEffect, useRef } from "react";
-import { useAppModeStore } from "@/stores/appModeStore";
-import { useMarketData } from "@/stores/useMarketData";
-import { useReplayStore } from "@/stores/replayStore";
-import { useLiveStore } from "@/stores/liveStore";
+import { useState, useEffect } from "react";
+import { useMarketStore } from "@/stores/marketStore";
 import { useLiveOrderStore } from "@/stores/liveOrderStore";
 
 export function useHeaderState() {
-  const { mode, setMode: setAppMode } = useAppModeStore();
-  const { snapshot, currentTimeMinutes } = useMarketData();
-  const liveStore = useLiveStore();
-  const replayStore = useReplayStore();
-
   const {
     sessions,
     selectedDate,
     setSelectedDate,
-    setCurrentTimeMinutes,
-    isPlaying,
-    togglePlay,
-    playbackSpeed,
-    setPlaybackSpeed,
-    stepForward,
-    stepBackward,
-  } = replayStore;
-
-  const setMode = (newMode: "LIVE" | "REPLAY") => {
-    setAppMode(newMode);
-    if (newMode === "LIVE") {
-      liveStore.initLive();
-    } else {
-      liveStore.stopLiveSync();
-      replayStore.init();
-    }
-  };
+    snapshot,
+  } = useMarketStore();
 
   const { activePositions, initLiveOrders } = useLiveOrderStore();
-
-  const [localTime, setLocalTime] = useState<number>(currentTimeMinutes);
-  const isDraggingRef = useRef<boolean>(false);
   const [isDark, setIsDark] = useState<boolean>(true);
-  const [liveClock, setLiveClock] = useState<string>("");
 
   const activeCount = Object.keys(activePositions).length;
 
   useEffect(() => {
     initLiveOrders();
   }, [initLiveOrders]);
-
-  useEffect(() => {
-    const updateClock = () => {
-      const now = new Date();
-      setLiveClock(
-        now.toLocaleTimeString("en-IN", {
-          timeZone: "Asia/Kolkata",
-          hour12: false,
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })
-      );
-    };
-    updateClock();
-    const interval = setInterval(updateClock, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("gidh-theme");
@@ -94,44 +48,13 @@ export function useHeaderState() {
     }
   };
 
-  useEffect(() => {
-    if (!isDraggingRef.current) {
-      setLocalTime(currentTimeMinutes);
-    }
-  }, [currentTimeMinutes]);
-
-  const handleSliderChange = (val: number) => {
-    isDraggingRef.current = true;
-    setLocalTime(val);
-  };
-
-  const handleSliderCommit = () => {
-    isDraggingRef.current = false;
-    setCurrentTimeMinutes(localTime);
-  };
-
   return {
-    mode,
-    setMode,
     sessions,
     selectedDate,
     setSelectedDate,
-    currentTimeMinutes,
-    setCurrentTimeMinutes,
-    localTime,
-    setLocalTime,
-    handleSliderChange,
-    handleSliderCommit,
-    isPlaying,
-    togglePlay,
-    playbackSpeed,
-    setPlaybackSpeed,
-    stepForward,
-    stepBackward,
     snapshot,
     activeCount,
     isDark,
     toggleTheme,
-    liveClock,
   };
 }

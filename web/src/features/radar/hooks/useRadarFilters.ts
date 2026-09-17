@@ -1,14 +1,66 @@
 import { useState, useMemo, useEffect } from "react";
-import { useMarketData } from "@/stores/useMarketData";
+import { useMarketStore } from "@/stores/marketStore";
+import { getStreamWsUrl } from "@/lib/api";
 import { SortField, RadarPreset, SectorOption } from "../types";
 
 export function useRadarFilters() {
-  const { snapshot, selectedSymbol, setSelectedSymbol, sectors, init } =
-    useMarketData();
+  const {
+    snapshot,
+    selectedSymbol,
+    setSelectedSymbol,
+    sectors,
+    init,
+    setWsConnected,
+    applyLiveSnapshot,
+  } = useMarketStore();
 
   useEffect(() => {
     init();
   }, [init]);
+
+  // Page-specific on-demand WebSocket stream (1Hz throttled)
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    let isMounted = true;
+
+    try {
+      const url = getStreamWsUrl("/v1/stream/radar");
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        if (isMounted) setWsConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && (data.stocks || data.weather || data.sectors)) {
+            applyLiveSnapshot(data);
+          }
+        } catch (e) {
+          // ignore non-json messages (e.g. heartbeat/status)
+        }
+      };
+
+      ws.onclose = () => {
+        if (isMounted) setWsConnected(false);
+      };
+
+      ws.onerror = () => {
+        if (isMounted) setWsConnected(false);
+      };
+    } catch (e) {
+      console.warn("[Radar WS] connection failed:", e);
+    }
+
+    return () => {
+      isMounted = false;
+      if (ws) {
+        ws.close();
+      }
+      setWsConnected(false);
+    };
+  }, [setWsConnected, applyLiveSnapshot]);
 
   const [preset, setPreset] = useState<RadarPreset>("ALL");
   const [selectedSector, setSelectedSector] = useState("ALL");

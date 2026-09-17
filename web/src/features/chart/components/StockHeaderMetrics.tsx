@@ -18,7 +18,6 @@ interface Props {
   onSelectSymbol?: (sym: string) => void;
   interval?: ChartInterval;
   onChangeInterval?: (interval: ChartInterval) => void;
-  mode?: "LIVE" | "REPLAY";
 }
 
 export const StockHeaderMetrics: React.FC<Props> = ({
@@ -30,7 +29,6 @@ export const StockHeaderMetrics: React.FC<Props> = ({
   onSelectSymbol,
   interval = "5m",
   onChangeInterval,
-  mode = "LIVE",
 }) => {
   const price = stockInfo?.price || lastClosePrice;
   const movePct = stockInfo?.move_pct || 0;
@@ -47,7 +45,6 @@ export const StockHeaderMetrics: React.FC<Props> = ({
             <ChartIntervalSelector
               interval={interval}
               onChangeInterval={onChangeInterval}
-              mode={mode}
             />
           </div>
         )}

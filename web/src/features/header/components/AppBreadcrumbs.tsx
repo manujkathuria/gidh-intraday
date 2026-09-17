@@ -1,9 +1,8 @@
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { ChevronRight, PanelLeft, Menu, Clock, Play, Pause } from "lucide-react";
-import { formatMinutesToTime } from "@/stores/replayStore";
-import { useMarketData } from "@/stores/useMarketData";
+import { ChevronRight, PanelLeft } from "lucide-react";
+import { useMarketStore } from "@/stores/marketStore";
 import { StockSearchCombobox } from "@/features/chart/components/StockSearchCombobox";
 import { StockSummaryItem } from "@/features/chart/types";
 import { ThemeToggle } from "./ThemeToggle";
@@ -13,39 +12,29 @@ import { UserAuthButton } from "./UserAuthButton";
 interface Props {
   isCollapsed: boolean;
   onToggleSidebar: () => void;
-  mode: "LIVE" | "REPLAY";
   breadth?: number;
-  liveClock: string;
-  localTime: number;
   isDark: boolean;
   toggleTheme: () => void;
   selectedDate?: string;
   setSelectedDate?: (date: string) => void;
   sessions?: string[];
-  isPlaying?: boolean;
-  togglePlay?: () => void;
 }
 
 export const AppBreadcrumbs: React.FC<Props> = ({
   isCollapsed,
   onToggleSidebar,
-  mode,
   breadth = 0,
-  liveClock,
-  localTime,
   isDark,
   toggleTheme,
   selectedDate,
   setSelectedDate,
   sessions = [],
-  isPlaying = false,
-  togglePlay,
 }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
   const symbolParam = searchParams.get("symbol");
-  const { snapshot, selectedSymbol, setSelectedSymbol } = useMarketData();
+  const { snapshot, selectedSymbol, setSelectedSymbol } = useMarketStore();
 
   const allSymbols: StockSummaryItem[] = useMemo(() => {
     if (!snapshot?.stocks) return [];
@@ -71,8 +60,6 @@ export const AppBreadcrumbs: React.FC<Props> = ({
   };
 
   const currentRouteName = routeNames[pathname] || "Radar";
-  const timeFormatted = formatMinutesToTime(localTime);
-
   const activeSector = snapshot?.stocks?.find((s) => s.symbol === activeSymbol)?.sector;
   const isBullish = breadth >= 50;
 
@@ -80,7 +67,6 @@ export const AppBreadcrumbs: React.FC<Props> = ({
     <div className="flex items-center justify-between select-none shrink-0 text-xs py-0 w-full">
       {/* Left: Mobile Menu Button + Breadcrumbs with Stock Search Combobox & Sector */}
       <div className="flex items-center gap-1.5 min-w-0">
-        {/* Mobile Sidebar Toggle (< md) */}
         <button
           onClick={onToggleSidebar}
           className="md:hidden p-1 -ml-1 rounded text-foreground/70 hover:text-foreground hover:bg-surface-hover transition cursor-pointer flex items-center justify-center shrink-0"
@@ -125,9 +111,8 @@ export const AppBreadcrumbs: React.FC<Props> = ({
         ) : null}
       </div>
 
-      {/* Right: VWAP Breadth + Replay Calendar/Play + Clock + Theme Toggle + Auth */}
+      {/* Right: VWAP Breadth + Session Calendar + Theme Toggle + Auth */}
       <div className="flex items-center gap-1.5 text-foreground/80">
-        {/* Compact VWAP Market Breadth Badge */}
         <div
           className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-muted border border-surface-border text-[11px] font-medium"
           title={`Market Breadth (Universe > VWAP): ${breadth.toFixed(0)}% (${isBullish ? "BULLISH" : "BEARISH"})`}
@@ -138,45 +123,20 @@ export const AppBreadcrumbs: React.FC<Props> = ({
           </span>
         </div>
 
-        {mode === "REPLAY" && setSelectedDate && (
-          <>
-            {/* Tailwind Headless UI Calendar Popover */}
-            <SessionCalendarPopover
-              selectedDate={selectedDate || ""}
-              onSelectDate={setSelectedDate}
-              validSessions={sessions}
-            />
-
-            {/* Play/Pause Button */}
-            {togglePlay && (
-              <button
-                onClick={togglePlay}
-                className="px-1.5 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 transition cursor-pointer hover:bg-surface-hover hover:text-foreground text-foreground/75"
-              >
-                {isPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
-                <span>{isPlaying ? "PAUSE" : "PLAY"}</span>
-              </button>
-            )}
-          </>
+        {setSelectedDate && (
+          <SessionCalendarPopover
+            selectedDate={selectedDate || ""}
+            onSelectDate={setSelectedDate}
+            validSessions={sessions}
+          />
         )}
 
-        {/* Clock */}
-        <span className="font-bold tracking-wider text-xs md:text-sm tabular-nums text-foreground/90 select-none px-1">
-          {mode === "LIVE" ? liveClock || "09:15:00" : timeFormatted}
-        </span>
-
-        {/* Theme Toggle */}
         <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
 
         <div className="h-2.5 w-px bg-surface-border mx-0.5" />
 
-        {/* User Auth / Profile */}
         <UserAuthButton />
       </div>
     </div>
   );
 };
-
-
-
-

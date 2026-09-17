@@ -10,7 +10,6 @@ import (
 
 	"gidh-intraday/backend/internal/config"
 	"gidh-intraday/backend/internal/features/daily"
-	"gidh-intraday/backend/internal/readapi"
 	"gidh-intraday/backend/internal/store"
 
 	"github.com/redis/go-redis/v9"
@@ -123,13 +122,11 @@ func runEODPipeline(args []string) {
 		if err := rdb.Ping(ctx).Err(); err != nil {
 			fmt.Printf("      [WARN] Redis unavailable at %s (%v). Skipping replay cache pre-warm.\n", redisAddr, err)
 		} else {
-			reader := readapi.NewRepository(db)
-			if err := reader.WarmSessionDay(ctx, *sessionDate); err != nil {
+			if err := store.WarmSessionDay(ctx, db, rdb, *sessionDate); err != nil {
 				fmt.Printf("      [WARN] WarmSessionDay error: %v\n", err)
 			} else {
-				// Wait briefly for warming to finish
-				time.Sleep(1 * time.Second)
-				fmt.Printf("      Replay pre-warm complete: 375 snapshots cached in Redis (Elapsed: %v)\n", time.Since(warmStart))
+				time.Sleep(500 * time.Millisecond)
+				fmt.Printf("      Replay pre-warm complete: snapshots cached in Redis (Elapsed: %v)\n", time.Since(warmStart))
 			}
 		}
 	} else {

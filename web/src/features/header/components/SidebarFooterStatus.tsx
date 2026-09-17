@@ -1,29 +1,27 @@
 "use client";
 
 import React from "react";
-import { useLiveStore } from "@/stores/liveStore";
-import { useAppModeStore } from "@/stores/appModeStore";
+import { useMarketStore } from "@/stores/marketStore";
 
 interface Props {
   isCollapsed: boolean;
 }
 
 export const SidebarFooterStatus: React.FC<Props> = ({ isCollapsed }) => {
-  const mode = useAppModeStore((s) => s.mode);
-  const isMarketOpen = useLiveStore((s) => s.isMarketOpen);
-  const ws = useLiveStore((s) => s.ws);
-
-  const isLiveStreaming = mode === "LIVE" && isMarketOpen && ws?.readyState === WebSocket.OPEN;
-  const statusLabel = mode === "REPLAY" ? "REPLAY" : isMarketOpen ? "LIVE" : "STANDBY";
+  const { wsConnected, isLive } = useMarketStore();
+  const isStreaming = wsConnected && isLive;
+  const statusLabel = isStreaming ? "LIVE" : "SYNCED";
 
   if (isCollapsed) {
     return (
       <div className="flex flex-col items-center">
         <div
           className={`h-2.5 w-2.5 rounded-full ${
-            isLiveStreaming ? "bg-emerald-500 animate-pulse shadow-xs shadow-emerald-500/50" : "bg-foreground/30"
+            isStreaming
+              ? "bg-emerald-500 animate-pulse shadow-xs shadow-emerald-500/50"
+              : "bg-foreground/30"
           }`}
-          title={`Zerodha Kite: ${statusLabel}`}
+          title={`Gidh Engine: ${statusLabel}`}
         />
       </div>
     );
@@ -35,14 +33,14 @@ export const SidebarFooterStatus: React.FC<Props> = ({ isCollapsed }) => {
         <div className="flex items-center gap-1.5">
           <span
             className={`h-1.5 w-1.5 rounded-full ${
-              isLiveStreaming ? "bg-emerald-500 animate-pulse" : "bg-foreground/30"
+              isStreaming ? "bg-emerald-500 animate-pulse" : "bg-foreground/30"
             }`}
           />
-          <span className="font-medium text-foreground/70">Zerodha Kite</span>
+          <span className="font-medium text-foreground/70">Edge Engine</span>
         </div>
         <span
           className={`font-bold text-[10px] tracking-wider uppercase ${
-            isLiveStreaming ? "text-emerald-400" : "text-foreground/40"
+            isStreaming ? "text-emerald-400" : "text-foreground/40"
           }`}
         >
           {statusLabel}
@@ -51,4 +49,3 @@ export const SidebarFooterStatus: React.FC<Props> = ({ isCollapsed }) => {
     </div>
   );
 };
-

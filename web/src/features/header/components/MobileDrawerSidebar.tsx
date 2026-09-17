@@ -3,25 +3,19 @@
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
 import { NavigationItems } from "./NavigationItems";
-import { SidebarModeSwitcher } from "./SidebarModeSwitcher";
 import { SidebarFooterStatus } from "./SidebarFooterStatus";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   activeCount: number;
-  mode: "LIVE" | "REPLAY";
-  setMode: (mode: "LIVE" | "REPLAY") => void;
 }
 
 export const MobileDrawerSidebar: React.FC<Props> = ({
   isOpen,
   onClose,
   activeCount,
-  mode,
-  setMode,
 }) => {
-  // Lock body scroll when mobile drawer is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -60,21 +54,15 @@ export const MobileDrawerSidebar: React.FC<Props> = ({
             </button>
           </div>
 
-          {/* Navigation Items (auto-close on click handled in links) */}
+          {/* Navigation Items */}
           <div onClick={onClose}>
             <NavigationItems activeCount={activeCount} isCollapsed={false} />
           </div>
-
         </div>
 
-        {/* Bottom Group: Zerodha Kite Status & Live / Replay Mode Switcher */}
+        {/* Bottom Group */}
         <div className="flex flex-col gap-2 pt-2 border-t border-surface-border">
           <SidebarFooterStatus isCollapsed={false} />
-          <SidebarModeSwitcher
-            mode={mode}
-            setMode={setMode}
-            isCollapsed={false}
-          />
         </div>
       </aside>
     </div>

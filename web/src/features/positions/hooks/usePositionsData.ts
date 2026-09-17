@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useLiveOrderStore } from "@/stores/liveOrderStore";
-import { useMarketData } from "@/stores/useMarketData";
+import { useMarketStore } from "@/stores/marketStore";
 import { ActivePosition, OrderIntent } from "@/lib/api";
 
 export function usePositionsData() {
@@ -13,7 +13,7 @@ export function usePositionsData() {
     squareOff,
   } = useLiveOrderStore();
 
-  const { snapshot, init } = useMarketData();
+  const { snapshot, init } = useMarketStore();
 
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState("");

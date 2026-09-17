@@ -35,6 +35,7 @@ __pycache__/
 
 # Logs & scratch
 *.log
+logs/
 *.pid
 .pids/
 .DS_Store

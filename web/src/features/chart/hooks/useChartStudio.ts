@@ -1,14 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useMarketData } from "@/stores/useMarketData";
-import { formatMinutesToTime } from "@/stores/replayStore";
-import { fetchReplayCandles, Candle } from "@/lib/api";
+import { useMarketStore } from "@/stores/marketStore";
+import { fetchMultiIntervalCandles, Candle, getStreamWsUrl } from "@/lib/api";
 import { StockSummaryItem } from "../types";
-import {
-  ChartInterval,
-  aggregateCandles,
-  mergeLiveCandleIntoHTF,
-} from "../components/candleAggregator";
+import { ChartInterval } from "../components/candleAggregator";
 
 export function useChartStudio() {
   const searchParams = useSearchParams();
@@ -16,23 +11,20 @@ export function useChartStudio() {
   const urlSymbol = searchParams.get("symbol");
 
   const {
-    mode,
-    sessionDate: selectedDate,
-    currentTimeMinutes,
+    sessions,
+    selectedDate,
     snapshot,
-    candles,
     selectedSymbol,
     setSelectedSymbol,
     init,
-  } = useMarketData();
+  } = useMarketStore();
 
   const [activeSymbol, setActiveSymbol] = useState<string>(
     urlSymbol || selectedSymbol || "RELIANCE"
   );
   const [interval, setInterval] = useState<ChartInterval>("5m");
-
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [rawCandles, setRawCandles] = useState<Candle[]>([]);
+  const [chartCandles, setChartCandles] = useState<Candle[]>([]);
   const [loadingCandles, setLoadingCandles] = useState<boolean>(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
@@ -79,16 +71,12 @@ export function useChartStudio() {
     if (!selectedDate || !activeSymbol) return;
 
     let isSubscribed = true;
-    const toTimeStr = mode === "LIVE" ? "15:30:00" : formatMinutesToTime(currentTimeMinutes);
-
     setLoadingCandles(true);
-    // For 1m, 5m, 15m: fetch today's 1m stream; for 1h / 1d fetch backend interval
-    const fetchInt = interval === "1h" || interval === "1d" ? interval : "1m";
 
-    fetchReplayCandles(selectedDate, activeSymbol, toTimeStr, fetchInt)
+    fetchMultiIntervalCandles(activeSymbol, selectedDate, interval)
       .then((data) => {
         if (isSubscribed) {
-          setRawCandles(data || []);
+          setChartCandles(data || []);
           setLoadingCandles(false);
         }
       })
@@ -100,22 +88,58 @@ export function useChartStudio() {
     return () => {
       isSubscribed = false;
     };
-  }, [mode, selectedDate, activeSymbol, currentTimeMinutes, interval]);
+  }, [selectedDate, activeSymbol, interval]);
 
-  const chartCandles = useMemo(() => {
-    if (interval === "1h" || interval === "1d") {
-      if (mode === "LIVE") {
-        return mergeLiveCandleIntoHTF(rawCandles, candles, interval);
-      }
-      return rawCandles;
+  // Connect on-demand 1Hz Chart WebSocket stream
+  useEffect(() => {
+    if (!activeSymbol) return;
+
+    // If user is reviewing an older historical date, do NOT stream live ticks into historical chart
+    const latestDate = sessions[0];
+    if (selectedDate && latestDate && selectedDate !== latestDate) {
+      return;
     }
 
-    const sourceCandles =
-      mode === "LIVE" && candles.length > 0 && selectedSymbol === activeSymbol
-        ? candles
-        : rawCandles;
-    return aggregateCandles(sourceCandles, interval);
-  }, [mode, interval, rawCandles, candles, selectedSymbol, activeSymbol]);
+    let ws: WebSocket | null = null;
+    let isMounted = true;
+
+    try {
+      const url = getStreamWsUrl(`/v1/stream/chart?symbol=${encodeURIComponent(activeSymbol)}`);
+      ws = new WebSocket(url);
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.candle) {
+            const liveCandle: Candle = data.candle;
+            setChartCandles((prev) => {
+              if (prev.length === 0) return [liveCandle];
+              const last = prev[prev.length - 1];
+              if (last.time === liveCandle.time) {
+                // Update latest bar in place
+                return [...prev.slice(0, -1), liveCandle];
+              } else if (liveCandle.time > last.time) {
+                // Append newly formed bar
+                return [...prev, liveCandle];
+              }
+              return prev;
+            });
+          }
+        } catch (e) {
+          // ignore non-json
+        }
+      };
+    } catch (e) {
+      console.warn("[Chart WS] connection failed:", e);
+    }
+
+    return () => {
+      isMounted = false;
+      if (ws) {
+        ws.close();
+      }
+    };
+  }, [activeSymbol, selectedDate, sessions]);
 
   const stockInfo = useMemo(() => {
     return snapshot?.stocks?.find((s) => s.symbol === activeSymbol);
@@ -154,10 +178,10 @@ export function useChartStudio() {
     loadingCandles,
     theme,
     selectedDate,
-    currentTimeMinutes,
+    currentTimeMinutes: 930,
     stockInfo,
     allSymbols,
     filteredSymbols,
-    mode,
+    mode: "COMPLETED",
   };
 }

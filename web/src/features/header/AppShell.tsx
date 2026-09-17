@@ -5,9 +5,7 @@ import { PanelLeft } from "lucide-react";
 import { NavigationItems } from "./components/NavigationItems";
 import { SidebarFooterStatus } from "./components/SidebarFooterStatus";
 import { MobileDrawerSidebar } from "./components/MobileDrawerSidebar";
-import { BottomCockpitFooter } from "./components/BottomCockpitFooter";
 import { useHeaderState } from "./hooks/useHeaderState";
-import { SidebarModeSwitcher } from "./components/SidebarModeSwitcher";
 import { AppBreadcrumbs } from "./components/AppBreadcrumbs";
 
 interface Props {
@@ -18,28 +16,13 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const {
-    mode,
-    setMode,
     sessions,
     selectedDate,
     setSelectedDate,
-    currentTimeMinutes,
-    setCurrentTimeMinutes,
-    localTime,
-    setLocalTime,
-    handleSliderChange,
-    handleSliderCommit,
-    isPlaying,
-    togglePlay,
-    playbackSpeed,
-    setPlaybackSpeed,
-    stepForward,
-    stepBackward,
     snapshot,
     activeCount,
     isDark,
     toggleTheme,
-    liveClock,
   } = useHeaderState();
 
   const breadth = snapshot?.weather?.pct_above_vwap ?? 0;
@@ -59,8 +42,6 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         isOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
         activeCount={activeCount}
-        mode={mode}
-        setMode={setMode}
       />
 
       {/* 2. Desktop / iPad Rail (Hidden on mobile, visible md+) */}
@@ -95,14 +76,9 @@ export const AppShell: React.FC<Props> = ({ children }) => {
           <NavigationItems activeCount={activeCount} isCollapsed={isCollapsed} />
         </div>
 
-        {/* Bottom Section: Zerodha Kite Status & Live / Replay Mode Switcher */}
+        {/* Bottom Section: Edge Engine Status */}
         <div className="flex flex-col gap-1.5 pt-2 border-t border-surface-border">
           <SidebarFooterStatus isCollapsed={isCollapsed} />
-          <SidebarModeSwitcher
-            mode={mode}
-            setMode={setMode}
-            isCollapsed={isCollapsed}
-          />
         </div>
       </aside>
 
@@ -113,43 +89,16 @@ export const AppShell: React.FC<Props> = ({ children }) => {
           <AppBreadcrumbs
             isCollapsed={isCollapsed}
             onToggleSidebar={handleToggleSidebar}
-            mode={mode}
             breadth={breadth}
-            liveClock={liveClock}
-            localTime={localTime}
             isDark={isDark}
             toggleTheme={toggleTheme}
             selectedDate={selectedDate}
             setSelectedDate={setSelectedDate}
             sessions={sessions}
-            isPlaying={isPlaying}
-            togglePlay={togglePlay}
           />
           {children}
         </main>
-
-
-        {/* Unified Bottom Cockpit Footer (Controls, Scrubber, Mode, Menu) */}
-        <BottomCockpitFooter
-          isCollapsed={isCollapsed}
-          toggleSidebar={handleToggleSidebar}
-          mode={mode}
-          setMode={setMode}
-          localTime={localTime}
-          setLocalTime={setLocalTime}
-          setCurrentTimeMinutes={setCurrentTimeMinutes}
-          isPlaying={isPlaying}
-          togglePlay={togglePlay}
-          stepBackward={stepBackward}
-          stepForward={stepForward}
-          playbackSpeed={playbackSpeed}
-          setPlaybackSpeed={setPlaybackSpeed}
-          handleSliderChange={handleSliderChange}
-          handleSliderCommit={handleSliderCommit}
-        />
-
       </div>
     </div>
   );
 };
-
