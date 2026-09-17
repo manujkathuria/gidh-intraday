@@ -5,120 +5,69 @@ Directs all Brains via the BaseBrain Contract.
 
 import sys
 import os
+import json
+import argparse
+from dataclasses import asdict
 
 WORKSPACE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, WORKSPACE_ROOT)
 
-import argparse
 from quant.brains.macro_brain.dispatcher import MacroSelectorBrain
+from quant.brains.micro_brain.dispatcher import MicroBrain
 
 def main():
     parser = argparse.ArgumentParser(description="🦅 GIDH QUANT COCKPIT — Master Brains Interface")
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
-    # 1. Macro Brain Subcommand
+    # 1. Macro Brain
     p_macro = subparsers.add_parser("macro", help="Run Brain 1: Market Macro & Sector Selector Sensory Feed")
     p_macro.add_argument("date", nargs="?", default="2026-09-01", help="Session Date (YYYY-MM-DD)")
 
-    # 2. Memory Subcommand
+    # 2. Micro Brain
+    p_micro = subparsers.add_parser("micro", help="Run Brain 2: Micro Execution & Squeeze Sensory Feed")
+    p_micro.add_argument("date", nargs="?", default="2026-09-01", help="Session Date (YYYY-MM-DD)")
+    p_micro.add_argument("--time", default="09:31:00", help="As-of time (default: 09:31:00)")
+
+    # 3. Memory Subcommand
     p_mem = subparsers.add_parser("memory", help="Inspect rolling cognitive memory for a brain")
-    p_mem.add_argument("--brain", default="macro_selector", help="Brain identifier (default: macro_selector)")
+    p_mem.add_argument("--brain", default="macro_selector", help="Brain identifier")
 
     args = parser.parse_args()
-
     if not args.command:
         parser.print_help()
         sys.exit(0)
 
     if args.command == "macro":
         brain = MacroSelectorBrain()
-        session_date = args.date
-        print("\n" + "=" * 115)
-        print(f"       🧠 GIDH BRAIN: [{brain.brain_id.upper()}] SENSORY PACKET (SESSION: {session_date})")
-        print("=" * 115)
+        pkt = brain.build_sensory_packet(args.date)
+        print(f"\n🧠 [MACRO_SELECTOR] SENSORY PACKET — {args.date}")
+        print(f"Net 1D Inflow: ₹{pkt.universe_net_inflow_1d_cr:+.1f} Cr | Breadth: {pkt.universe_advances}A / {pkt.universe_declines}D")
+        print("\n🌊 Top Inflow Candidates:")
+        for r in pkt.top_capital_inflow_candidates[:6]:
+            print(f"  • {r['symbol']:<12} Price: ₹{r['prior_close']:<8.2f} 1D Inflow: ₹{r['inflow_1d_cr']:>+6.1f} Cr Fuel: {r['fuel_pct']:.1f}%")
+        print("\n🌊 Top Outflow Candidates:")
+        for r in pkt.top_capital_outflow_candidates[:6]:
+            print(f"  • {r['symbol']:<12} Price: ₹{r['prior_close']:<8.2f} 1D Inflow: ₹{r['inflow_1d_cr']:>+6.1f} Cr Fuel: {r['fuel_pct']:.1f}%")
 
-        try:
-            packet = brain.build_sensory_packet(session_date)
-        except Exception as e:
-            print(f"❌ {e}")
-            sys.exit(1)
-
-        mem = brain.get_rolling_memory()
-        print(f"🧬 Market Regime: {mem.get('market_regime', 'Calibrating...')}")
-        if mem.get('learned_rules'):
-            print("📜 Learned Rules:")
-            for rule in mem['learned_rules'][:3]:
-                print(f"  • {rule}")
-        print()
-
-        # 1. Broad Market Breadth
-        print("🏛️ UNIVERSE MARKET BREADTH & NET INSTITUTIONAL FLOWS:")
-        print(f"  • Total Net 1D Inflow: ₹{packet.universe_net_inflow_1d_cr:>+8.1f} Cr | Net 3D Inflow: ₹{packet.universe_net_inflow_3d_cr:>+8.1f} Cr")
-        print(f"  • Breadth: {packet.universe_advances} Advances vs {packet.universe_declines} Declines | Above SMA20: {packet.pct_above_sma20}% | Above SMA50: {packet.pct_above_sma50}%\n")
-
-        # 2. Sector Capital Waves
-        print("🌊 SECTOR CAPITAL ROTATION WAVES (Ranked by Net 1D Institutional Inflow):")
-        print(f"{'Sector':<24} {'Stocks':<7} {'1D Inflow':<14} {'3D Inflow':<14} {'Breadth':<9} {'Top Bull':<12} {'Top Bear'}")
-        print("-" * 115)
-        for s in packet.sector_capital_waves:
-            print(f"{s['sector']:<24} {s['stock_count']:<7} ₹{s['net_inflow_1d_cr']:>+7.1f} Cr    ₹{s['net_inflow_3d_cr']:>+7.1f} Cr    {s['breadth_pct']:>5.1f}%    {s['top_bull_symbol']:<12} {s['top_bear_symbol']}")
-
-        # 3. Top Stock Candidates
-        print("\n★ TOP CAPITAL INFLOW CANDIDATES (BULLISH ALPHA):")
-        print(f"{'Symbol':<12} {'Sector':<20} {'Price':<10} {'1D Inflow':<14} {'3D Inflow':<14} {'Fuel %':<10} {'CPR %'}")
-        print("-" * 115)
-        for r in packet.top_capital_inflow_candidates[:6]:
-            print(f"{r['symbol']:<12} {r.get('sector', ''):<20} ₹{r['prior_close']:<9.2f} ₹{r['inflow_1d_cr']:>+7.1f} Cr    ₹{r['inflow_3d_cr']:>+7.1f} Cr    {r['fuel_pct']:>5.1f}%     {r['cpr_width_pct']:>5.3f}%")
-
-        print("\n★ TOP CAPITAL OUTFLOW CANDIDATES (BEARISH DISTRIBUTION):")
-        print(f"{'Symbol':<12} {'Sector':<20} {'Price':<10} {'1D Inflow':<14} {'3D Inflow':<14} {'Fuel %':<10} {'CPR %'}")
-        print("-" * 115)
-        for r in packet.top_capital_outflow_candidates[:6]:
-            print(f"{r['symbol']:<12} {r.get('sector', ''):<20} ₹{r['prior_close']:<9.2f} ₹{r['inflow_1d_cr']:>+7.1f} Cr    ₹{r['inflow_3d_cr']:>+7.1f} Cr    {r['fuel_pct']:>5.1f}%     {r['cpr_width_pct']:>5.3f}%")
-
-        print("\n★ COMPRESSED COILING SPRINGS (Fuel >= 35%, CPR <= 0.35%):")
-        print(f"{'Symbol':<12} {'Sector':<20} {'Price':<10} {'1D Inflow':<14} {'3D Inflow':<14} {'Fuel %':<10} {'CPR %'}")
-        print("-" * 115)
-        for r in packet.top_compressed_coiling_springs[:6]:
-            print(f"{r['symbol']:<12} {r.get('sector', ''):<20} ₹{r['prior_close']:<9.2f} ₹{r['inflow_1d_cr']:>+7.1f} Cr    ₹{r['inflow_3d_cr']:>+7.1f} Cr    {r['fuel_pct']:>5.1f}%     {r['cpr_width_pct']:>5.3f}%")
-
-        print("\n★ BLACKLISTED LOW-FUEL EXHAUSTION TRAPS (Fuel < 25%):")
-        print(f"{'Symbol':<12} {'Sector':<20} {'Price':<10} {'1D Inflow':<14} {'Fuel %':<10} {'1D Move %'}")
-        print("-" * 115)
-        for r in packet.low_fuel_exhaustion_candidates[:5]:
-            print(f"{r['symbol']:<12} {r.get('sector', ''):<20} ₹{r['prior_close']:<9.2f} ₹{r['inflow_1d_cr']:>+7.1f} Cr    {r['fuel_pct']:>5.1f}%     {r['fut_price_1d_pct']:>+5.2f}%")
-
-        print("=" * 115 + "\n")
+    elif args.command == "micro":
+        brain = MicroBrain()
+        pkt = brain.build_sensory_packet(args.date, as_of_time=args.time)
+        print(f"\n🧠 [MICRO_BRAIN] OPENING SENSORY PACKET — {args.date} @ {args.time}")
+        print(f"Candidates from Macro: {len(pkt.candidates)}")
+        print("-" * 110)
+        print(f"{'Symbol':<12} {'Bias':<6} {'CMP':<10} {'Gap%':<8} {'CPR Pos':<12} {'VWAP':<10} {'VWAP σ':<8} {'RVOL':<7} {'OR15 H/L':<20} {'Fuel%'}")
+        print("-" * 110)
+        for c in pkt.candidates:
+            or_str = f"₹{c.orb.or15_high:.1f} / {c.orb.or15_low:.1f}"
+            print(f"{c.symbol:<12} {c.macro_bias:<6} ₹{c.cmp:<9.2f} {c.opening.opening_gap_pct:>+5.2f}%  {c.opening.open_cpr_position:<12} ₹{c.vwap.session_vwap:<9.2f} {c.vwap.vwap_distance_sigma:>+5.2f}σ {c.opening.rvol_3m:>5.1f}x  {or_str:<20} {c.fuel_oi.adr_fuel_used_pct:>5.1f}%")
+        print("-" * 110)
 
     elif args.command == "memory":
-        brain = MacroSelectorBrain()
+        brain = MacroSelectorBrain() if args.brain == "macro_selector" else MicroBrain()
         mem = brain.get_rolling_memory()
-        print("\n" + "=" * 90)
-        print(f"       🧠 GIDH COGNITIVE ROLLING MEMORY: [{args.brain.upper()}]")
-        print("=" * 90)
-        print(f"📅 Last Calibrated Session: {mem.get('last_session_date', 'N/A')}")
-        print(f"🏛️ Current Macro Regime   : {mem.get('market_regime', 'N/A')}\n")
-
-        if mem.get("active_campaigns"):
-            print("🎯 ACTIVE MULTI-DAY INSTITUTIONAL CAMPAIGNS:")
-            for sym, camp in mem["active_campaigns"].items():
-                print(f"  • [{sym}]: {camp}")
-            print()
-
-        if mem.get("learned_rules"):
-            print("📜 LEARNED TRADING RULES & PATTERNS:")
-            for r in mem["learned_rules"]:
-                print(f"  • {r}")
-            print()
-
-        if mem.get("traps_to_avoid"):
-            print("⚠️ CURRENT BLACKLIST & TRAPS TO AVOID:")
-            for t in mem["traps_to_avoid"]:
-                print(f"  • {t}")
-            print()
-
-        print("=" * 90 + "\n")
+        print(f"\n🧠 ROLLING MEMORY: [{args.brain.upper()}]")
+        print(json.dumps(mem, indent=2, default=str))
 
 if __name__ == "__main__":
     main()

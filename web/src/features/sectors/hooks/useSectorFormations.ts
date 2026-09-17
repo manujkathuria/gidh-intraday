@@ -10,46 +10,25 @@ export function useSectorFormations() {
     init();
   }, [init]);
 
-  // Connect on-demand /v1/stream/sectors WebSocket stream
   useEffect(() => {
     let ws: WebSocket | null = null;
     let isMounted = true;
-
     try {
-      const url = getStreamWsUrl("/v1/stream/sectors");
-      ws = new WebSocket(url);
-
-      ws.onopen = () => {
-        if (isMounted) setWsConnected(true);
-      };
-
-      ws.onmessage = (event) => {
+      ws = new WebSocket(getStreamWsUrl("/v1/stream/sectors"));
+      ws.onopen = () => { if (isMounted) setWsConnected(true); };
+      ws.onmessage = (e) => {
         try {
-          const data = JSON.parse(event.data);
-          if (data && (data.sectors || data.stocks || data.weather)) {
-            applyLiveSnapshot(data);
-          }
-        } catch (e) {
-          // ignore non-json
-        }
+          const d = JSON.parse(e.data);
+          if (d?.sectors || d?.stocks || d?.weather) applyLiveSnapshot(d);
+        } catch {}
       };
-
-      ws.onclose = () => {
-        if (isMounted) setWsConnected(false);
-      };
-
-      ws.onerror = () => {
-        if (isMounted) setWsConnected(false);
-      };
-    } catch (e) {
-      console.warn("[Sectors WS] connection error:", e);
-    }
+      ws.onclose = () => { if (isMounted) setWsConnected(false); };
+      ws.onerror = () => { if (isMounted) setWsConnected(false); };
+    } catch {}
 
     return () => {
       isMounted = false;
-      if (ws) {
-        ws.close();
-      }
+      if (ws) ws.close();
       setWsConnected(false);
     };
   }, [setWsConnected, applyLiveSnapshot]);
@@ -62,44 +41,47 @@ export function useSectorFormations() {
 
   const handleSelectPreset = (newPreset: SectorPreset) => {
     setPreset(newPreset);
-    if (newPreset === "LEADERS") {
-      setSortField("avg_move_pct");
-      setSortAsc(false);
-    } else if (newPreset === "LAGGARDS") {
-      setSortField("avg_move_pct");
-      setSortAsc(true);
-    } else if (newPreset === "SURGES" || newPreset === "ALL") {
-      setSortField("avg_rvol");
-      setSortAsc(false);
-    }
+    if (newPreset === "LEADERS") { setSortField("avg_move_pct"); setSortAsc(false); }
+    else if (newPreset === "LAGGARDS") { setSortField("avg_move_pct"); setSortAsc(true); }
+    else if (newPreset === "SURGES" || newPreset === "ALL") { setSortField("avg_rvol"); setSortAsc(false); }
   };
 
   const handleSort = (field: SectorSortField) => {
-    if (sortField === field) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortField(field);
-      setSortAsc(false);
-    }
+    if (sortField === field) setSortAsc(!sortAsc);
+    else { setSortField(field); setSortAsc(false); }
   };
 
-  const toggleExpand = (sector: string) => {
-    setExpandedSector(expandedSector === sector ? null : sector);
+  const toggleExpand = (sec: string) => {
+    setExpandedSector(expandedSector === sec ? null : sec);
   };
 
+  // Group snapshot stocks by their canonical instrument sector
   const enrichedSectors: SectorItemWithStocks[] = useMemo(() => {
     const allStocks = snapshot?.stocks || [];
-    return sectors.map((sec) => {
-      const secName = (sec.sector || "").trim().toUpperCase();
-      const secStocks = allStocks
-        .filter((s) => (s.sector || "").trim().toUpperCase() === secName)
-        .sort((a, b) => (Number(b.move_pct) || 0) - (Number(a.move_pct) || 0));
+    if (allStocks.length === 0) return [];
 
+    const map = new Map<string, typeof allStocks>();
+    for (const s of allStocks) {
+      const sec = (s.sector || "OTHERS").trim().toUpperCase();
+      if (!map.has(sec)) map.set(sec, []);
+      map.get(sec)!.push(s);
+    }
+
+    return Array.from(map.entries()).map(([secName, secStocks]) => {
+      secStocks.sort((a, b) => (Number(b.move_pct) || 0) - (Number(a.move_pct) || 0));
       const advances = secStocks.filter((s) => (Number(s.move_pct) || 0) > 0).length;
       const declines = secStocks.filter((s) => (Number(s.move_pct) || 0) < 0).length;
+      const sumMove = secStocks.reduce((sum, s) => sum + (Number(s.move_pct) || 0), 0);
+      const sumRvol = secStocks.reduce((sum, s) => sum + (Number(s.rvol) || 1.0), 0);
+      const aboveCount = secStocks.filter((s) => s.is_above_vwap).length;
+      const matched = sectors.find((s) => (s.sector || "").trim().toUpperCase() === secName);
 
       return {
-        ...sec,
+        sector: secName,
+        civ_count: secStocks.length,
+        avg_move_pct: matched?.avg_move_pct ?? (sumMove / secStocks.length),
+        avg_rvol: matched?.avg_rvol ?? (sumRvol / secStocks.length),
+        pct_above_vwap: matched?.pct_above_vwap ?? (secStocks.length > 0 ? Math.round((aboveCount / secStocks.length) * 100) : 0),
         stocks: secStocks,
         advances,
         declines,
@@ -115,32 +97,18 @@ export function useSectorFormations() {
         if (preset === "LEADERS" && (s.avg_move_pct || 0) <= 0) return false;
         if (preset === "LAGGARDS" && (s.avg_move_pct || 0) >= 0) return false;
         if (preset === "SURGES" && (s.avg_rvol || 0) < 1.8) return false;
-
         if (!search) return true;
         const q = search.toLowerCase();
-        return (
-          s.sector.toLowerCase().includes(q) ||
-          s.stocks?.some((st) => st.symbol.toLowerCase().includes(q))
-        );
+        return s.sector.toLowerCase().includes(q) || s.stocks?.some((st) => st.symbol.toLowerCase().includes(q));
       })
       .sort((a, b) => {
-        let valA = a[sortField] ?? 0;
-        let valB = b[sortField] ?? 0;
-
+        const valA = a[sortField] ?? 0;
+        const valB = b[sortField] ?? 0;
         if (typeof valA === "string") {
-          const comp = (valA as string).localeCompare(valB as string);
-          return sortAsc ? comp : -comp;
+          return sortAsc ? valA.localeCompare(valB as string) : (valB as string).localeCompare(valA);
         }
-
-        const numA = Number(valA) || 0;
-        const numB = Number(valB) || 0;
-        const diff = sortAsc ? numA - numB : numB - numA;
-
-        if (Math.abs(diff) > 0.0001) {
-          return diff;
-        }
-
-        return a.sector.localeCompare(b.sector);
+        const diff = sortAsc ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+        return Math.abs(diff) > 0.0001 ? diff : a.sector.localeCompare(b.sector);
       });
   }, [enrichedSectors, preset, search, sortField, sortAsc]);
 

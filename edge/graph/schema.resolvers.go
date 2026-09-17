@@ -416,6 +416,7 @@ func (r *queryResolver) ReplaySnapshot(ctx context.Context, sessionDate string, 
 		WITH latest_min AS (
 			SELECT DISTINCT ON (f.instrument_id)
 				i.symbol,
+				COALESCE(i.sector, 'OTHERS') as sector,
 				f.cash_close as price,
 				ROUND(((f.cash_close - df.prior_close) / NULLIF(df.prior_close, 0) * 100)::numeric, 2) as move_pct,
 				ROUND(((f.session_open - df.prior_close) / NULLIF(df.prior_close, 0) * 100)::numeric, 2) as gap_pct,
@@ -433,7 +434,7 @@ func (r *queryResolver) ReplaySnapshot(ctx context.Context, sessionDate string, 
 		)
 		SELECT 
 			symbol,
-			'N/A' as sector,
+			sector,
 			price,
 			move_pct,
 			gap_pct,
@@ -487,7 +488,13 @@ func (r *queryResolver) ReplaySnapshot(ctx context.Context, sessionDate string, 
 			return nil, fmt.Errorf("scan replay stock: %w", err)
 		}
 
-		resolvedSector := sector.Resolve(sym)
+		resolvedSector := sec
+		if resolvedSector == "" || resolvedSector == "N/A" || resolvedSector == "OTHERS" {
+			fallback := sector.Resolve(sym)
+			if fallback != "" && fallback != "OTHERS" {
+				resolvedSector = fallback
+			}
+		}
 
 		s.Symbol = sym
 		s.Sector = resolvedSector

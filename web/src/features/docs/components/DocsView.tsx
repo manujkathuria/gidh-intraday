@@ -101,8 +101,8 @@ export const DocsView: React.FC = () => {
       </aside>
 
       {/* 2. Main Article Viewer */}
-      <main className="flex-1 overflow-y-auto custom-scrollbar p-5 md:p-8 bg-background flex flex-col gap-4">
-        <div className="border-b border-surface-border pb-3 flex flex-col gap-1.5 max-w-4xl">
+      <main className="flex-1 overflow-y-auto custom-scrollbar p-5 md:p-8 bg-background flex flex-col gap-4 w-full">
+        <div className="border-b border-surface-border pb-3 flex flex-col gap-1.5 w-full">
           <div className="flex items-center justify-between text-[10px] text-foreground/45 uppercase tracking-wider">
             <span className="px-1.5 py-0.5 rounded-sm bg-surface-muted border border-surface-border text-foreground/70 font-bold uppercase">
               {activeArticle.category}
@@ -122,7 +122,7 @@ export const DocsView: React.FC = () => {
           </p>
         </div>
 
-        <div className="max-w-4xl w-full">
+        <div className="w-full">
           <DocContentRenderer content={activeArticle.content} />
         </div>
       </main>
