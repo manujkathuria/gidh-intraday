@@ -4,12 +4,35 @@ Every brain (Macro Selector, Micro VWAP, Micro ORB, Risk Governor) MUST adhere t
 """
 
 from abc import ABC, abstractmethod
+from dataclasses import is_dataclass, asdict
+from typing import Generic, TypeVar, Union, Dict, Any, Optional
 import json
+import math
 from quant.base.db import get_db_connection
 
-class BaseBrain(ABC):
+TSensory = TypeVar("TSensory")
+TDecision = TypeVar("TDecision")
+TOutcome = TypeVar("TOutcome")
+TMemory = TypeVar("TMemory")
+
+def sanitize_for_json(data: Any) -> Any:
+    """Recursively replaces dataclasses, NaN, Infinity, and numpy types with clean Python primitives."""
+    if is_dataclass(data) and not isinstance(data, type):
+        data = asdict(data)
+
+    if isinstance(data, dict):
+        return {k: sanitize_for_json(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_for_json(v) for v in data]
+    elif isinstance(data, float):
+        if math.isnan(data) or math.isinf(data):
+            return None
+        return data
+    return data
+
+class BaseBrain(Generic[TSensory, TDecision, TOutcome, TMemory], ABC):
     """
-    Abstract Base Brain Contract.
+    Abstract Base Brain Contract with generic typing.
     Enforces a strict 3-stage cognitive protocol across every trading brain:
       1. `build_sensory_packet(session_date)` -> Ingests raw tools without if/else logic
       2. `record_decision(session_date, decisions, thesis)` -> Persists JSON payload to quant.brain_sessions
@@ -20,29 +43,32 @@ class BaseBrain(ABC):
         self.brain_id = brain_id
 
     @abstractmethod
-    def build_sensory_packet(self, session_date: str, conn=None) -> dict:
+    def build_sensory_packet(self, session_date: str, conn=None) -> TSensory:
         """
         Gathers raw multidimensional sensory measurements from this brain's dedicated tools.
-        Must return pure unadulterated dictionary for AI reasoning.
+        Must return pure unadulterated sensory structure for AI reasoning.
         """
         pass
 
     def record_decision(
         self,
         session_date: str,
-        decisions: dict,
-        sensory_features: dict,
+        decisions: Union[TDecision, dict],
+        sensory_features: Union[TSensory, dict],
         ai_thesis: str,
         conn=None
-    ) -> dict:
+    ) -> Union[TDecision, dict]:
         """
         Universal persistence for pre-session / intraday AI decisions.
-        Saves into `quant.brain_sessions`.
+        Saves into `quant.brain_sessions`. Accepts typed dataclass or dict.
         """
         should_close = False
         if conn is None:
             conn = get_db_connection()
             should_close = True
+
+        clean_decisions = sanitize_for_json(decisions)
+        clean_features = sanitize_for_json(sensory_features)
 
         cur = conn.cursor()
         sql = """
@@ -58,8 +84,8 @@ class BaseBrain(ABC):
         cur.execute(sql, (
             session_date,
             self.brain_id,
-            json.dumps(decisions, default=str),
-            json.dumps(sensory_features, default=str),
+            json.dumps(clean_decisions, default=str),
+            json.dumps(clean_features, default=str),
             ai_thesis
         ))
 
@@ -72,10 +98,10 @@ class BaseBrain(ABC):
     def record_eod_forensics(
         self,
         session_date: str,
-        outcomes_payload: dict,
+        outcomes_payload: Union[TOutcome, dict],
         forensics_summary: str,
         conn=None
-    ) -> dict:
+    ) -> Union[TOutcome, dict]:
         """
         Universal persistence for post-session EOD execution review and forensic learnings.
         Updates `quant.brain_sessions` and syncs rolling `quant.brain_memory`.
@@ -84,6 +110,8 @@ class BaseBrain(ABC):
         if conn is None:
             conn = get_db_connection()
             should_close = True
+
+        clean_outcomes = sanitize_for_json(outcomes_payload)
 
         cur = conn.cursor()
         sql = """
@@ -94,7 +122,7 @@ class BaseBrain(ABC):
         WHERE session_date = %s AND brain_id = %s;
         """
         cur.execute(sql, (
-            json.dumps(outcomes_payload, default=str),
+            json.dumps(clean_outcomes, default=str),
             forensics_summary,
             session_date,
             self.brain_id
@@ -104,7 +132,7 @@ class BaseBrain(ABC):
         self._update_rolling_memory({
             "last_session_date": session_date,
             "last_forensics": forensics_summary,
-            "recent_outcomes": outcomes_payload
+            "recent_outcomes": clean_outcomes
         }, cur=cur)
 
         conn.commit()
@@ -137,6 +165,7 @@ class BaseBrain(ABC):
         current_mem = row[0] if row else {}
         current_mem.update(patch)
 
+        clean_mem = sanitize_for_json(current_mem)
         sql = """
         INSERT INTO quant.brain_memory (brain_id, memory_state, updated_at)
         VALUES (%s, %s, NOW())
@@ -144,4 +173,4 @@ class BaseBrain(ABC):
             memory_state = EXCLUDED.memory_state,
             updated_at = NOW();
         """
-        cur.execute(sql, (self.brain_id, json.dumps(current_mem, default=str)))
+        cur.execute(sql, (self.brain_id, json.dumps(clean_mem, default=str)))

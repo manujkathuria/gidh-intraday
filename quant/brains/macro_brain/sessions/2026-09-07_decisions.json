@@ -1,0 +1,108 @@
+{
+  "macro_regime_label": "DEFENSIVE_LIQUIDATION_PHARMA_HAVEN",
+  "leading_sector": "PHARMA_HEALTHCARE",
+  "lagging_sector": "IT",
+  "ai_thesis": "Severe universe liquidation of -₹3,398.9 Cr with 79.7% declining breadth. Only Pharma (+₹68.7 Cr) and Telecom (+₹23.7 Cr) act as defensive havens. Focusing longs strictly on high-fuel defensive pharma/telecom coils (LAURUSLABS, GLENMARK, INDUSTOWER), shorting heavy liquidation leaders in Energy/Banking/IT (RELIANCE, HDFCBANK, TCS), and blacklisting 0% fuel traps (COALINDIA, CDSL, INFY).",
+  "focus_bulls": [
+    {
+      "symbol": "LAURUSLABS",
+      "sector": "PHARMA_HEALTHCARE",
+      "prior_close": 1840.0,
+      "fuel_pct": 58.8,
+      "cpr_width_pct": 0.487,
+      "inflow_1d_cr": 45.2,
+      "inflow_3d_cr": 16.7,
+      "conviction_score": 9.2,
+      "thesis": "Defensive rotation leader in Pharma with strong institutional inflow (+45.2 Cr) and ample 58.8% expansion fuel."
+    },
+    {
+      "symbol": "GLENMARK",
+      "sector": "PHARMA_HEALTHCARE",
+      "prior_close": 2437.2,
+      "fuel_pct": 63.1,
+      "cpr_width_pct": 0.068,
+      "inflow_1d_cr": 25.6,
+      "inflow_3d_cr": -3.3,
+      "conviction_score": 9.0,
+      "thesis": "Ultra-narrow 0.068% CPR compression coil in defensive Pharma haven with high 63.1% fuel."
+    },
+    {
+      "symbol": "INDUSTOWER",
+      "sector": "TELECOM_MEDIA",
+      "prior_close": 376.8,
+      "fuel_pct": 53.9,
+      "cpr_width_pct": 0.088,
+      "inflow_1d_cr": 11.5,
+      "inflow_3d_cr": 1.0,
+      "conviction_score": 8.5,
+      "thesis": "Defensive Telecom coil with 53.9% fuel and tight 0.088% CPR pivot."
+    }
+  ],
+  "focus_bears": [
+    {
+      "symbol": "RELIANCE",
+      "sector": "ENERGY_POWER",
+      "prior_close": 1322.0,
+      "fuel_pct": 34.4,
+      "cpr_width_pct": 0.174,
+      "inflow_1d_cr": -281.2,
+      "inflow_3d_cr": -93.8,
+      "conviction_score": 9.5,
+      "thesis": "Massive -281.2 Cr institutional liquidation dump with narrow 0.174% CPR and 34.4% downward expansion fuel."
+    },
+    {
+      "symbol": "HDFCBANK",
+      "sector": "BANKING",
+      "prior_close": 712.1,
+      "fuel_pct": 53.0,
+      "cpr_width_pct": 0.030,
+      "inflow_1d_cr": -168.0,
+      "inflow_3d_cr": 246.8,
+      "conviction_score": 9.2,
+      "thesis": "Violent institutional distribution reversal (-168 Cr) with razor-thin 0.030% CPR breakdown coil and 53.0% downward fuel."
+    },
+    {
+      "symbol": "TCS",
+      "sector": "IT",
+      "prior_close": 2304.0,
+      "fuel_pct": 24.0,
+      "cpr_width_pct": 0.836,
+      "inflow_1d_cr": -135.2,
+      "inflow_3d_cr": -214.6,
+      "conviction_score": 8.8,
+      "thesis": "Ongoing severe multi-day IT hemorrhage (-774 Cr sector outflow, -214 Cr 3D in TCS)."
+    }
+  ],
+  "exhaustion_traps": [
+    {
+      "symbol": "COALINDIA",
+      "sector": "METALS",
+      "prior_close": 415.35,
+      "fuel_pct": 4.6,
+      "cpr_width_pct": 0.012,
+      "inflow_1d_cr": 36.9,
+      "conviction_score": 9.5,
+      "thesis": "Only 4.6% fuel remaining despite headline inflow; extreme gap-and-fade exhaustion risk."
+    },
+    {
+      "symbol": "CDSL",
+      "sector": "FINANCIAL_SERVICES",
+      "prior_close": 1394.6,
+      "fuel_pct": 2.2,
+      "cpr_width_pct": 0.483,
+      "inflow_1d_cr": 28.7,
+      "conviction_score": 9.2,
+      "thesis": "Near zero 2.2% expansion fuel remaining in bleeding Financial Services sector."
+    },
+    {
+      "symbol": "INFY",
+      "sector": "IT",
+      "prior_close": 1130.0,
+      "fuel_pct": 0.0,
+      "cpr_width_pct": 0.356,
+      "inflow_1d_cr": -340.3,
+      "conviction_score": 9.0,
+      "thesis": "0% downward fuel left after -340 Cr blowout; oversold bounce trap risk for late shorts."
+    }
+  ]
+}

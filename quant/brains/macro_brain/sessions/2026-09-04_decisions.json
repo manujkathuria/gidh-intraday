@@ -1,0 +1,118 @@
+{
+  "macro_regime_label": "SELECTIVE_CAPITAL_ROTATION_FINANCIALS_METALS",
+  "leading_sector": "FINANCIAL_SERVICES",
+  "lagging_sector": "PHARMA_HEALTHCARE",
+  "ai_thesis": "Net universe inflow strong at +₹992.6 Cr led by Financials (+₹603.9 Cr) and Metals (+₹311.7 Cr with 100% positive breadth). IT (-₹181.5 Cr) and Pharma (-₹189.3 Cr) suffering severe multi-day distribution. Focusing on high-fuel, compressed leaders (BAJFINANCE, HDFCBANK, JSWSTEEL), shorting structural laggards in IT/Pharma (BHARTIARTL, ETERNAL, TCS), and strictly blacklisting exhausted climax spikes (APLAPOLLO, BSE, PFC, RELIANCE).",
+  "focus_bulls": [
+    {
+      "symbol": "BAJFINANCE",
+      "sector": "FINANCIAL_SERVICES",
+      "prior_close": 1049.0,
+      "fuel_pct": 40.4,
+      "cpr_width_pct": 0.155,
+      "inflow_1d_cr": 55.0,
+      "inflow_3d_cr": 57.4,
+      "conviction_score": 9.2,
+      "thesis": "High 40.4% expansion fuel in leading Financial Services sector (+603 Cr wave) with narrow 0.155% CPR coil."
+    },
+    {
+      "symbol": "HDFCBANK",
+      "sector": "BANKING",
+      "prior_close": 706.65,
+      "fuel_pct": 32.5,
+      "cpr_width_pct": 0.202,
+      "inflow_1d_cr": 153.0,
+      "inflow_3d_cr": 188.1,
+      "conviction_score": 9.0,
+      "thesis": "Sustained multi-day institutional accumulation (+153 Cr 1D, +188 Cr 3D) maintaining solid expansion fuel (32.5%)."
+    },
+    {
+      "symbol": "JSWSTEEL",
+      "sector": "METALS",
+      "prior_close": 1308.0,
+      "fuel_pct": 36.4,
+      "cpr_width_pct": 0.102,
+      "inflow_1d_cr": 86.1,
+      "inflow_3d_cr": 72.9,
+      "conviction_score": 8.8,
+      "thesis": "Top candidate in 100% breadth Metals sector (+311 Cr wave) with 36.4% fuel and ultra-tight 0.102% CPR."
+    }
+  ],
+  "focus_bears": [
+    {
+      "symbol": "BHARTIARTL",
+      "sector": "TELECOM_MEDIA",
+      "prior_close": 1869.0,
+      "fuel_pct": 58.3,
+      "cpr_width_pct": 0.240,
+      "inflow_1d_cr": -60.3,
+      "inflow_3d_cr": -119.6,
+      "conviction_score": 9.1,
+      "thesis": "Persistent heavy institutional distribution (-119.6 Cr 3D) with huge 58.3% downward expansion fuel."
+    },
+    {
+      "symbol": "ETERNAL",
+      "sector": "CONSUMER_RETAIL",
+      "prior_close": 324.8,
+      "fuel_pct": 40.7,
+      "cpr_width_pct": 0.566,
+      "inflow_1d_cr": -56.0,
+      "inflow_3d_cr": -74.3,
+      "conviction_score": 8.6,
+      "thesis": "Strong retail sector selling wave (-56 Cr 1D) with 40.7% downward room."
+    },
+    {
+      "symbol": "TCS",
+      "sector": "IT",
+      "prior_close": 2320.1,
+      "fuel_pct": 55.8,
+      "cpr_width_pct": 0.422,
+      "inflow_1d_cr": -46.0,
+      "inflow_3d_cr": -113.5,
+      "conviction_score": 8.5,
+      "thesis": "IT sector bleeding continues (-719 Cr 3D) with TCS possessing 55.8% downward expansion fuel."
+    }
+  ],
+  "exhaustion_traps": [
+    {
+      "symbol": "APLAPOLLO",
+      "sector": "METALS",
+      "prior_close": 2159.4,
+      "fuel_pct": 0.0,
+      "cpr_width_pct": 0.761,
+      "inflow_1d_cr": 112.1,
+      "conviction_score": 9.8,
+      "thesis": "0% Fuel remaining after +4.43% surge; extreme climax exhaustion trap despite high inflow."
+    },
+    {
+      "symbol": "BSE",
+      "sector": "FINANCIAL_SERVICES",
+      "prior_close": 3306.1,
+      "fuel_pct": 0.0,
+      "cpr_width_pct": 0.986,
+      "inflow_1d_cr": 108.9,
+      "conviction_score": 9.5,
+      "thesis": "0% Fuel remaining and wide CPR after +2.97% run; prime gap-and-fade candidate."
+    },
+    {
+      "symbol": "PFC",
+      "sector": "FINANCIAL_SERVICES",
+      "prior_close": 345.5,
+      "fuel_pct": 11.9,
+      "cpr_width_pct": 0.389,
+      "inflow_1d_cr": 120.4,
+      "conviction_score": 9.2,
+      "thesis": "Only 11.9% fuel left after +3.73% extension; high risk of intraday profit-taking."
+    },
+    {
+      "symbol": "RELIANCE",
+      "sector": "ENERGY_POWER",
+      "prior_close": 1302.5,
+      "fuel_pct": 13.8,
+      "cpr_width_pct": 0.365,
+      "inflow_1d_cr": 258.1,
+      "conviction_score": 8.9,
+      "thesis": "Low 13.8% fuel remaining near multi-week resistance despite huge headline inflow."
+    }
+  ]
+}

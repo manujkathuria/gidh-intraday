@@ -1,71 +1,111 @@
 """
-🏛️ GIDH BRAIN 1 (MACRO SELECTOR): RUNNER & CLI INTERFACE
-Main entry point for Brain 1:
-- Mode 1: `--mode premarket` (Runs Tool 1 + Tool 2 -> Intelligence -> Stores Picks in DB & Memory)
-- Mode 2: `--mode eod` (Runs Tool 3 Review -> EOD Intelligence -> Updates Memory for next day)
-- Mode 3: `--mode session` (Runs complete pre-market to EOD cycle for historical testing)
+🏛️ GIDH BRAIN 1 (MACRO SELECTOR): CLI INTERFACE
+Clean command-line tool for agents and humans to inspect sensory feeds, record decisions, and review EOD forensics.
 """
 
+import os
 import sys
+import json
+import warnings
 import argparse
+
+WORKSPACE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+if WORKSPACE_ROOT not in sys.path:
+    sys.path.insert(0, WORKSPACE_ROOT)
+
+warnings.filterwarnings("ignore", category=UserWarning, module="pandas")
+
 import pandas as pd
-from quant.brains.macro_brain.intelligence import synthesize_premarket_focus, synthesize_eod_forensics
+from quant.brains.macro_brain.dispatcher import MacroSelectorBrain
+from quant.brains.macro_brain.types import MacroCandidate, MacroDecisions, MacroMemoryState
 
 def main():
-    parser = argparse.ArgumentParser(description="🧠 GIDH BRAIN 1: Macro Selector & Evolutionary Memory")
-    parser.add_argument("date", nargs="?", default="2026-09-08", help="Session Date (YYYY-MM-DD)")
-    parser.add_argument("--mode", choices=["premarket", "eod", "session"], default="session", help="Execution mode")
-    parser.add_argument("--outcome-date", help="Outcome date for EOD review (default: auto next session)")
+    parser = argparse.ArgumentParser(description="🧠 GIDH BRAIN 1: Macro Selector Tool")
+    parser.add_argument("date", nargs="?", default="2026-09-04", help="Session Date (YYYY-MM-DD)")
+    parser.add_argument("--mode", choices=["sensory", "record", "review"], default="sensory", help="Action mode")
+    parser.add_argument("--outcome-date", help="Outcome date for EOD review")
+    parser.add_argument("--decision-json", help="Path to JSON file containing decisions payload")
+    parser.add_argument("--forensics", help="Forensic text summary for EOD review")
+    parser.add_argument("--bulls", nargs="+", help="Focus Bull symbols (e.g. ADANIENT PAYTM)")
+    parser.add_argument("--bears", nargs="+", help="Focus Bear symbols (e.g. HDFCBANK TCS)")
+    parser.add_argument("--traps", nargs="+", help="Exhaustion Trap symbols (e.g. LAURUSLABS HAL)")
+    parser.add_argument("--regime", default="MARKET_REGIME", help="Market regime label")
+    parser.add_argument("--leader", help="Leading sector")
+    parser.add_argument("--lagger", help="Lagging sector")
+    parser.add_argument("--thesis", default="", help="AI Reasoning Thesis")
     args = parser.parse_args()
 
+    brain = MacroSelectorBrain()
     session_date = args.date
 
-    # 1. Pre-Market Selection Mode
-    if args.mode in ["premarket", "session"]:
-        print("\n" + "=" * 115)
-        print(f"       🧠 GIDH BRAIN 1: PRE-MARKET MACRO SELECTION (SESSION: {session_date})")
-        print("=" * 115)
+    if args.mode == "sensory":
+        print(f"\nGathering sensory packet for {session_date}...")
+        packet = brain.build_sensory_packet(session_date)
+        print("✅ Sensory packet built successfully.")
+        print(f"Net Inflow 1D: ₹{packet.universe_net_inflow_1d_cr:+.1f} Cr | Net Inflow 3D: ₹{packet.universe_net_inflow_3d_cr:+.1f} Cr")
+        print(f"Breadth: {packet.universe_advances} Adv / {packet.universe_declines} Dec")
+
+    elif args.mode == "record":
+        if args.decision_json:
+            with open(args.decision_json, "r") as f:
+                data = json.load(f)
+        else:
+            data = {
+                "macro_regime_label": args.regime,
+                "leading_sector": args.leader,
+                "lagging_sector": args.lagger,
+                "ai_thesis": args.thesis,
+                "focus_bulls": [{"symbol": s, "prior_close": 0.0, "conviction_score": 9.0, "thesis": "Selected Bull"} for s in (args.bulls or [])],
+                "focus_bears": [{"symbol": s, "prior_close": 0.0, "conviction_score": 9.0, "thesis": "Selected Bear"} for s in (args.bears or [])],
+                "exhaustion_traps": [{"symbol": s, "prior_close": 0.0, "conviction_score": 9.0, "thesis": "Exhaustion Trap"} for s in (args.traps or [])],
+            }
         
-        picks_df, reasoning = synthesize_premarket_focus(session_date)
-        if picks_df.empty:
-            print(f"❌ Failed to generate pre-market picks: {reasoning}")
-            sys.exit(1)
+        packet = brain.build_sensory_packet(session_date)
+        df_tradable = packet.full_tradable_dataframe
 
-        print(f"📝 Reasoning: {reasoning}\n")
+        def hydrate_candidate(item):
+            sym = item.get("symbol")
+            if df_tradable is not None and not df_tradable.empty and sym in df_tradable['symbol'].values:
+                row = df_tradable[df_tradable['symbol'] == sym].iloc[0]
+                if item.get("prior_close", 0.0) == 0.0:
+                    item["prior_close"] = float(row['prior_close'])
+                if item.get("sector") is None:
+                    item["sector"] = str(row['sector'])
+                if item.get("fuel_pct") is None:
+                    item["fuel_pct"] = float(row['fuel_pct'])
+                if item.get("cpr_width_pct") is None:
+                    item["cpr_width_pct"] = float(row['cpr_width_pct'])
+                if item.get("inflow_1d_cr") is None:
+                    item["inflow_1d_cr"] = float(row['inflow_1d_cr'])
+                if item.get("inflow_3d_cr") is None:
+                    item["inflow_3d_cr"] = float(row['inflow_3d_cr'])
+            return item
 
-        longs = picks_df[picks_df['stance'].str.contains('BULL|LONG', case=False, na=False)]
-        shorts = picks_df[picks_df['stance'].str.contains('BEAR|SHORT', case=False, na=False)]
-        traps = picks_df[picks_df['stance'].str.contains('EXHAUSTION|TRAP', case=False, na=False)]
+        bulls = [MacroCandidate(**hydrate_candidate(item)) for item in data.get("focus_bulls", [])]
+        bears = [MacroCandidate(**hydrate_candidate(item)) for item in data.get("focus_bears", [])]
+        traps = [MacroCandidate(**hydrate_candidate(item)) for item in data.get("exhaustion_traps", [])]
+        
+        decisions = MacroDecisions(
+            macro_regime_label=data.get("macro_regime_label"),
+            leading_sector=data.get("leading_sector"),
+            lagging_sector=data.get("lagging_sector"),
+            focus_bulls=bulls,
+            focus_bears=bears,
+            exhaustion_traps=traps
+        )
+        ai_thesis = data.get("ai_thesis", "")
+        
+        brain.record_decision(
+            session_date=session_date,
+            decisions=decisions,
+            sensory_features=packet,
+            ai_thesis=ai_thesis
+        )
+        print(f"✅ Decisions successfully recorded for session {session_date}!")
 
-        if not longs.empty:
-            print("🟢 FOCUS LONGS (Institutional Inflow + Available Range Fuel):")
-            print(f"{'#':<3} {'Symbol':<12} {'Price (₹)':<10} {'1D Inflow':<14} {'3D Inflow':<14} {'Fuel %':<10} {'CPR %':<10} {'Score'}")
-            print("-" * 115)
-            for idx, (_, r) in enumerate(longs.iterrows(), 1):
-                print(f"{idx:<3} {r['symbol']:<12} ₹{r['prior_close']:<9.2f} ₹{r['inflow_1d_cr']:>+7.1f} Cr    ₹{r['inflow_3d_cr']:>+7.1f} Cr    {r['fuel_pct']:>5.1f}%     {r['cpr_width_pct']:>5.3f}%    {r['conviction_score']:>6.1f}")
-
-        if not shorts.empty:
-            print("\n🔴 FOCUS SHORTS (Institutional Outflow + Breakdown Setup):")
-            print(f"{'#':<3} {'Symbol':<12} {'Price (₹)':<10} {'1D Inflow':<14} {'3D Inflow':<14} {'Fuel %':<10} {'CPR %':<10} {'Score'}")
-            print("-" * 115)
-            for idx, (_, r) in enumerate(shorts.iterrows(), 1):
-                print(f"{idx:<3} {r['symbol']:<12} ₹{r['prior_close']:<9.2f} ₹{r['inflow_1d_cr']:>+7.1f} Cr    ₹{r['inflow_3d_cr']:>+7.1f} Cr    {r['fuel_pct']:>5.1f}%     {r['cpr_width_pct']:>5.3f}%    {r['conviction_score']:>6.1f}")
-
-        if not traps.empty:
-            print("\n⚠️ BLACKLISTED EXHAUSTION TRAPS (0-20% Fuel — High Risk Gap-and-Fade):")
-            print(f"{'#':<3} {'Symbol':<12} {'Price (₹)':<10} {'1D Inflow':<14} {'Fuel %':<10} {'1D Move %':<12} {'Warning Score'}")
-            print("-" * 115)
-            for idx, (_, r) in enumerate(traps.iterrows(), 1):
-                print(f"{idx:<3} {r['symbol']:<12} ₹{r['prior_close']:<9.2f} ₹{r['inflow_1d_cr']:>+7.1f} Cr    {r['fuel_pct']:>5.1f}%     {r['fut_price_1d_pct']:>+5.2f}%        {r['conviction_score']:>6.1f}")
-
-        print("\n✅ Picks successfully stored in `quant.macro_daily_picks` and Memory!")
-        print("=" * 115 + "\n")
-
-    # 2. EOD Review Mode
-    if args.mode in ["eod", "session"]:
+    elif args.mode == "review":
         outcome_date = args.outcome_date
-        if outcome_date is None:
-            # Auto-detect next trading date
+        if not outcome_date:
             from quant.base.db import get_db_connection
             conn = get_db_connection()
             cur = conn.cursor()
@@ -73,33 +113,18 @@ def main():
             row = cur.fetchone()
             conn.close()
             if not row:
-                print(f"⚠️ No outcome session found after {session_date}. Skipping EOD review.")
+                print(f"⚠️ No outcome session found after {session_date}.")
                 sys.exit(0)
             outcome_date = row[0]
 
-        print("=" * 115)
-        print(f"       📊 GIDH BRAIN 1: EOD POST-MARKET FORENSIC REVIEW ({session_date} ➔ {outcome_date})")
-        print("=" * 115)
-
-        review_res = synthesize_eod_forensics(session_date, outcome_date)
-        if "error" in review_res:
-            print(f"❌ Review error: {review_res['error']}")
-            sys.exit(1)
-
-        long_s = review_res.get("long_stats", {})
-        short_s = review_res.get("short_stats", {})
-        trap_s = review_res.get("trap_stats", {})
-
-        if long_s:
-            print(f"🟢 Longs Performance:  Win Rate: {long_s.get('win_rate_pct')}% | Avg Net: {long_s.get('avg_eod_net_pct'):+.2f}% | Avg Expansion: +{long_s.get('avg_intraday_expansion_pct')}% | Top Bull: {long_s.get('top_bull')} ({long_s.get('top_bull_return_pct'):+.2f}%)")
-        if short_s:
-            print(f"🔴 Shorts Performance: Win Rate: {short_s.get('win_rate_pct')}% | Avg Net: {short_s.get('avg_eod_net_pct'):+.2f}% | Avg Drop: {short_s.get('avg_intraday_drop_pct'):+.2f}% | Top Bear: {short_s.get('top_bear')} ({short_s.get('top_bear_return_pct'):+.2f}%)")
-        if trap_s:
-            print(f"⚠️ Trap Accuracy:      {trap_s.get('trap_avoidance_accuracy_pct')}% ({trap_s.get('faded_count')}/{trap_s.get('count')} blacklisted traps faded intraday from open)")
-
-        print(f"\n🧬 Memory Forensics Note: {review_res.get('forensics_text')}")
-        print("\n✅ Memory updated for next trading session!")
-        print("=" * 115 + "\n")
+        forensics_text = args.forensics or "Automated EOD Forensic Review"
+        res = brain.review_and_record_forensics(
+            session_date=session_date,
+            outcome_date=outcome_date,
+            ai_forensics_summary=forensics_text
+        )
+        print(f"✅ EOD Review recorded ({session_date} -> {outcome_date})")
+        print(json.dumps(res, indent=2))
 
 if __name__ == "__main__":
     main()

@@ -95,7 +95,7 @@ def score_premarket_performance(picks_df: pd.DataFrame, outcome_date: str, conn=
 
     return {
         "outcome_date": outcome_date,
-        "merged_df": merged,
+        "merged_records": merged.to_dict(orient="records"),
         "long_stats": long_stats,
         "short_stats": short_stats,
         "trap_stats": trap_stats

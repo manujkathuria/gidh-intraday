@@ -61,6 +61,7 @@ def extract_structure_dynamics(session_date: str, conn=None) -> pd.DataFrame:
     SELECT 
         i.id AS instrument_id,
         i.symbol,
+        i.sector,
         df.prior_close,
         df.prior_high,
         df.prior_low,
@@ -94,7 +95,9 @@ def extract_structure_dynamics(session_date: str, conn=None) -> pd.DataFrame:
     LEFT JOIN cash_3d c3 ON df.instrument_id = c3.instrument_id
     WHERE fr.session_date = %s
       AND fr.status = 'SUCCEEDED'
-      AND i.is_active = TRUE;
+      AND i.is_active = TRUE
+      AND df.prior_close >= 300.0
+      AND df.prior_close <= 7000.0;
     """
 
     df = pd.read_sql(sql, conn, params=(session_date, session_date, session_date))
