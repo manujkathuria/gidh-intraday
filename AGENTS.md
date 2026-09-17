@@ -49,3 +49,11 @@ If Gidh Forge is unavailable, use standard tools directly.
   do not need ceremony.
 - Report what changed, why it is the correct ownership point, and what was
   verified.
+
+## Gidh Quant AI War Room Protocol
+
+When the user asks to run Macro or Micro Brain sessions:
+- Follow the operational commands in [WAR_ROOM_OPERATING_MANUAL.md](file:///Users/manujkathuria/workspace/gidh/gidh-intraday/quant/ai-docs/WAR_ROOM_OPERATING_MANUAL.md).
+- Adhere to the autonomous LLM reasoning contracts in [BRAIN_PROTOCOL.md](file:///Users/manujkathuria/workspace/gidh/gidh-intraday/quant/ai-docs/BRAIN_PROTOCOL.md), [Macro Brain PROMPT.md](file:///Users/manujkathuria/workspace/gidh/gidh-intraday/quant/brains/macro_brain/PROMPT.md), and [Micro Brain PROMPT.md](file:///Users/manujkathuria/workspace/gidh/gidh-intraday/quant/brains/micro_brain/PROMPT.md).
+- Enforce the 1.0% Fixed MAE stop loss and 2:1 R:R target standard.
+
