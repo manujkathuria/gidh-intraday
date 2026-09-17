@@ -14,7 +14,8 @@ func (e *UniverseStreamEngine) isMarketHours(nowIST time.Time) bool {
 		return false
 	}
 	minOfDay := nowIST.Hour()*60 + nowIST.Minute()
-	return minOfDay >= 555 && minOfDay <= 930
+	// 550 = 09:10 AM IST (Pre-open settlement & WebSocket warmup), 930 = 15:30 PM IST
+	return minOfDay >= 550 && minOfDay <= 930
 }
 
 func (e *UniverseStreamEngine) Start(ctx context.Context) error {

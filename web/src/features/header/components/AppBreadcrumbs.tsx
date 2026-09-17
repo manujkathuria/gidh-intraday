@@ -12,9 +12,6 @@ import { UserAuthButton } from "./UserAuthButton";
 interface Props {
   isCollapsed: boolean;
   onToggleSidebar: () => void;
-  breadth?: number;
-  isDark: boolean;
-  toggleTheme: () => void;
   selectedDate?: string;
   setSelectedDate?: (date: string) => void;
   sessions?: string[];
@@ -23,9 +20,6 @@ interface Props {
 export const AppBreadcrumbs: React.FC<Props> = ({
   isCollapsed,
   onToggleSidebar,
-  breadth = 0,
-  isDark,
-  toggleTheme,
   selectedDate,
   setSelectedDate,
   sessions = [],
@@ -56,12 +50,12 @@ export const AppBreadcrumbs: React.FC<Props> = ({
     "/sectors": "Sectors",
     "/chart": "Charts",
     "/brain": "Brain",
+    "/docs": "Docs",
     "/positions": "Positions",
   };
 
   const currentRouteName = routeNames[pathname] || "Radar";
   const activeSector = snapshot?.stocks?.find((s) => s.symbol === activeSymbol)?.sector;
-  const isBullish = breadth >= 50;
 
   return (
     <div className="flex items-center justify-between select-none shrink-0 text-xs py-0 w-full">
@@ -111,18 +105,8 @@ export const AppBreadcrumbs: React.FC<Props> = ({
         ) : null}
       </div>
 
-      {/* Right: VWAP Breadth + Session Calendar + Theme Toggle + Auth */}
+      {/* Right: Session Calendar Date Picker */}
       <div className="flex items-center gap-1.5 text-foreground/80">
-        <div
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-muted border border-surface-border text-[11px] font-medium"
-          title={`Market Breadth (Universe > VWAP): ${breadth.toFixed(0)}% (${isBullish ? "BULLISH" : "BEARISH"})`}
-        >
-          <span className="text-[10px] text-foreground/50 uppercase tracking-tight">VWAP</span>
-          <span className={`font-bold tabular-nums ${isBullish ? "text-emerald-500" : "text-rose-500"}`}>
-            {breadth.toFixed(0)}%
-          </span>
-        </div>
-
         {setSelectedDate && (
           <SessionCalendarPopover
             selectedDate={selectedDate || ""}
@@ -130,12 +114,6 @@ export const AppBreadcrumbs: React.FC<Props> = ({
             validSessions={sessions}
           />
         )}
-
-        <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
-
-        <div className="h-2.5 w-px bg-surface-border mx-0.5" />
-
-        <UserAuthButton />
       </div>
     </div>
   );

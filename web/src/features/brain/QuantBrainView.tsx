@@ -6,7 +6,7 @@ import { Brain, Sparkles, Wrench } from "lucide-react";
 export const QuantBrainView: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 select-none">
-      <div className="p-4 rounded-2xl bg-surface border border-surface-border mb-4 relative shadow-sm">
+      <div className="p-4 rounded-2xl bg-surface border border-surface-border mb-4 relative shadow-xs">
         <Brain className="w-10 h-10 text-foreground/80 animate-pulse" />
         <span className="absolute -top-1 -right-1 p-1 rounded-full bg-surface-muted border border-surface-border text-foreground">
           <Wrench className="w-3 h-3 text-foreground/60" />

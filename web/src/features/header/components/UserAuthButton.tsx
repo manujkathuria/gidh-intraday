@@ -52,7 +52,8 @@ export const UserAuthButton: React.FC = () => {
 
       <MenuItems
         transition
-        className="absolute right-0 z-50 mt-1.5 w-48 origin-top-right rounded-lg bg-surface border border-surface-border p-1 shadow-lg backdrop-blur-md focus:outline-none transition duration-100 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
+        anchor={{ to: "top end", gap: "8px" }}
+        className="z-50 w-48 rounded-lg bg-surface border border-surface-border p-1 shadow-xl backdrop-blur-md focus:outline-none transition duration-100 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
       >
         {/* User Info Header */}
         <div className="px-2.5 py-2 border-b border-surface-border flex flex-col gap-0.5">
