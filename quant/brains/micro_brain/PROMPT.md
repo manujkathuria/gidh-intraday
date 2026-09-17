@@ -28,9 +28,13 @@ Macro Brain has already selected the directional candidate pool. Your sole job i
    - Verify `adr_fuel_used_pct < 75%`. If a stock has already burned through its daily range (`adr_fuel_used_pct >= 80%`), reject it.
    - Beware of opening gaps $> +3.5\%$; they carry high gap-exhaustion mean-reversion risk.
 
-4. **Structural Stop Loss & Noise Buffer**:
-   - Invalidation must be anchored to structural boundaries (below OR15 Low / CPR Bottom for Longs; above OR15 High / CPR Top for Shorts).
-   - **Crucial Noise Buffer**: Never set the stop exactly at the OR15 extreme. Always include a minimum **0.25x ATR (or 0.4%–0.5%) buffer** to protect against morning liquidity wicks and stop-hunts.
+4. **1.0% Fixed MAE Stop Loss**:
+   - Long Invalidation: `Entry × 0.99` (rounded to nearest ₹0.05).
+   - Short Invalidation: `Entry × 1.01` (rounded to nearest ₹0.05).
+   - Target 1: Exact 2.0R (`Entry + 2.0%` for Longs, `Entry - 2.0%` for Shorts).
+
+5. **Sector Diversification**:
+   - Maximum 2 candidates from the same sector in the final Top 4.
 
 ---
 

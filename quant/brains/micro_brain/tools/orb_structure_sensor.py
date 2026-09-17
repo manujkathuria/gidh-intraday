@@ -60,14 +60,11 @@ def extract_orb_structure_metrics(symbol: str, session_date: str, as_of_time: st
         # Midpoint of OR15
         or15_mid = round((or15_high + or15_low) / 2.0, 2) if or15_high > 0 and or15_low > 0 else cash_close
 
-        # Structural Stop Loss calculation with ATR noise buffer (min 0.25x ATR or 0.4%)
-        stop_buffer = max(cash_close * 0.004, atr_14 * 0.25)
+        # Exact 1.0% MAE Stop Loss (clamped to ₹0.05 tick grid)
         if macro_bias == "LONG":
-            base_support = or15_low if or15_low > 0 else (cash_close * 0.99)
-            stop_price = round(round((base_support - stop_buffer) * 20) / 20, 2)
+            stop_price = round(round((cash_close * 0.990) * 20) / 20, 2)
         else:
-            base_resistance = or15_high if or15_high > 0 else (cash_close * 1.01)
-            stop_price = round(round((base_resistance + stop_buffer) * 20) / 20, 2)
+            stop_price = round(round((cash_close * 1.010) * 20) / 20, 2)
 
         return OrbStructureMetrics(
             or15_high=round(or15_high, 2),
