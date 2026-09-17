@@ -16,7 +16,7 @@ export const SidebarModeSwitcher: React.FC<Props> = ({
 }) => {
   if (isCollapsed) {
     return (
-      <div className="flex flex-col items-center gap-1 w-full pt-2 border-t border-surface-border">
+      <div className="flex flex-col items-center gap-1 w-full">
         <button
           onClick={() => setMode(mode === "LIVE" ? "REPLAY" : "LIVE")}
           title={
@@ -26,8 +26,8 @@ export const SidebarModeSwitcher: React.FC<Props> = ({
           }
           className={`h-8 w-8 rounded-lg transition flex items-center justify-center cursor-pointer border ${
             mode === "LIVE"
-              ? "bg-foreground text-background font-black border-foreground shadow-xs"
-              : "bg-surface-muted text-foreground/70 border-surface-border hover:bg-surface-hover hover:text-foreground"
+              ? "bg-surface-muted text-foreground font-extrabold border-surface-border shadow-2xs"
+              : "bg-transparent text-foreground/60 border-transparent hover:bg-surface-hover hover:text-foreground"
           }`}
         >
           {mode === "LIVE" ? (
@@ -41,14 +41,14 @@ export const SidebarModeSwitcher: React.FC<Props> = ({
   }
 
   return (
-    <div className="w-full pt-2 border-t border-surface-border select-none">
-      <div className="flex items-center bg-surface-muted border border-surface-border rounded-lg p-0.5 w-full text-xs h-8">
+    <div className="w-full select-none">
+      <div className="flex items-center bg-surface-muted/60 border border-surface-border rounded-lg p-0.5 w-full text-xs h-8">
         <button
           onClick={() => setMode("LIVE")}
-          className={`flex-1 h-full rounded-md flex items-center justify-center gap-1.5 font-bold transition text-xs cursor-pointer ${
+          className={`flex-1 h-full rounded-md flex items-center justify-center gap-1.5 transition text-xs cursor-pointer ${
             mode === "LIVE"
-              ? "bg-foreground text-background shadow-xs font-black"
-              : "text-foreground/50 hover:text-foreground hover:bg-surface-hover/50"
+              ? "bg-surface text-foreground shadow-2xs font-extrabold border border-surface-border"
+              : "text-foreground/50 hover:text-foreground hover:bg-surface-hover/50 font-medium"
           }`}
         >
           <Radio
@@ -61,10 +61,10 @@ export const SidebarModeSwitcher: React.FC<Props> = ({
 
         <button
           onClick={() => setMode("REPLAY")}
-          className={`flex-1 h-full rounded-md flex items-center justify-center gap-1.5 font-bold transition text-xs cursor-pointer ${
+          className={`flex-1 h-full rounded-md flex items-center justify-center gap-1.5 transition text-xs cursor-pointer ${
             mode === "REPLAY"
-              ? "bg-foreground text-background shadow-xs font-black"
-              : "text-foreground/50 hover:text-foreground hover:bg-surface-hover/50"
+              ? "bg-surface text-foreground shadow-2xs font-extrabold border border-surface-border"
+              : "text-foreground/50 hover:text-foreground hover:bg-surface-hover/50 font-medium"
           }`}
         >
           <RotateCcw className="w-3 h-3" />

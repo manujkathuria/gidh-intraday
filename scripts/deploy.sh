@@ -68,9 +68,9 @@ docker save "${IMAGES_TO_SAVE[@]}" | gzip -1 | ssh "${VM_USER}@${VM_HOST}" "gunz
 log_ok "Images loaded into remote Docker daemon."
 
 # 5. Sync configs, scripts, and host binaries
-log_info "4/5 Syncing configs, scripts, and binaries..."
+log_info "4/5 Syncing configs, scripts, binaries, and quant engine..."
 rsync -avz --exclude '.git' --exclude 'node_modules' --exclude '.venv' \
-    docker-compose.prod.yml Makefile scripts bin infra database "${VM_USER}@${VM_HOST}:${VM_PATH}/"
+    docker-compose.prod.yml Makefile scripts bin infra database quant "${VM_USER}@${VM_HOST}:${VM_PATH}/"
 log_ok "Sync completed."
 
 # 6. Restart targeted containers & verify health on VM

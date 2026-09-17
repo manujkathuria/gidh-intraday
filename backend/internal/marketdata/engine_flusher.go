@@ -117,21 +117,32 @@ func (e *UniverseStreamEngine) flushCompletedMinute(ctx context.Context, candleT
 			InstrumentID: s.InstrumentID,
 			Candle:       candle,
 		})
+		vwap, u1, l1, u2, l2 := liveVWAPAndBands(s, cClose)
+		feat := e.calculateFeatures(s, candleTime, cOpen, cHigh, cLow, cClose, cVol, minutesSinceOpen, runID)
+		features = append(features, feat)
+
+		var barRVOL float64
+		if feat.RelativeVolume != nil {
+			barRVOL = *feat.RelativeVolume
+		}
+
 		s.Candles = append(s.Candles, LiveCandle{
-			Time:   candleTime.Unix(),
-			Open:   cOpen,
-			High:   cHigh,
-			Low:    cLow,
-			Close:  cClose,
-			Volume: cVol,
-			VWAP:   liveVWAP(s, cClose),
+			Time:       candleTime.Unix(),
+			Open:       cOpen,
+			High:       cHigh,
+			Low:        cLow,
+			Close:      cClose,
+			Volume:     cVol,
+			VWAP:       vwap,
+			VWAPUpper1: u1,
+			VWAPLower1: l1,
+			VWAPUpper2: u2,
+			VWAPLower2: l2,
+			RVOL:       barRVOL,
 		})
 		if len(s.Candles) > 390 {
 			s.Candles = s.Candles[len(s.Candles)-390:]
 		}
-
-		feat := e.calculateFeatures(s, candleTime, cOpen, cHigh, cLow, cClose, cVol, minutesSinceOpen, runID)
-		features = append(features, feat)
 	}
 	e.mu.Unlock()
 

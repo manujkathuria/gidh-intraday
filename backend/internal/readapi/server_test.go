@@ -39,6 +39,9 @@ func (f *fakeReader) QuantBrainRules(context.Context) ([]BrainRuleItem, error) {
 func (f *fakeReader) QuantOperatingSchedule(context.Context) ([]OperatingScheduleItem, error) {
 	return []OperatingScheduleItem{}, nil
 }
+func (f *fakeReader) FuturesInflow(context.Context, string) (*FuturesInflowResponse, error) {
+	return &FuturesInflowResponse{}, nil
+}
 func (f *fakeReader) WarmSessionDay(context.Context, string) error {
 	return nil
 }

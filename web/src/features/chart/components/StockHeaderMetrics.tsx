@@ -25,6 +25,7 @@ export const StockHeaderMetrics: React.FC<Props> = ({
   activeSymbol,
   stockInfo,
   lastClosePrice,
+  lastVwap = 0,
   allSymbols = [],
   onSelectSymbol,
   interval = "5m",
@@ -35,66 +36,58 @@ export const StockHeaderMetrics: React.FC<Props> = ({
   const movePct = stockInfo?.move_pct || 0;
   const rvol = stockInfo?.rvol || 0;
 
+  const vwapDist = stockInfo?.vwap_dist_pct ?? (price && lastVwap ? ((price - lastVwap) / lastVwap) * 100 : 0);
+
   return (
     <div className="h-10 px-3 bg-surface border border-surface-border rounded-lg flex items-center justify-between gap-3 select-none text-xs shrink-0">
-      {/* Left: Stock Selector + Sector */}
+      {/* Left: Integrated Interval Selector */}
       <div className="flex items-center gap-2 min-w-0">
-        {onSelectSymbol ? (
-          <StockSearchCombobox
-            allSymbols={allSymbols}
-            activeSymbol={activeSymbol}
-            onSelectSymbol={onSelectSymbol}
-          />
-        ) : (
-          <span className="font-black text-sm text-foreground uppercase tracking-tight">
-            {activeSymbol}
+        {onChangeInterval && (
+          <div className="flex items-center">
+            <ChartIntervalSelector
+              interval={interval}
+              onChangeInterval={onChangeInterval}
+              mode={mode}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Right: Unified Streamlined Metrics (LTP, Move %, RVOL, VWAP) */}
+      <div className="flex items-center gap-2.5 text-xs shrink-0 tabular-nums">
+        {/* LTP */}
+        <span className="font-black text-sm text-foreground">
+          ₹{price.toFixed(2)}
+        </span>
+
+        {/* Change % Badge */}
+        <span
+          className={`font-bold text-xs px-2 py-0.5 rounded-md ${
+            movePct > 0
+              ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
+              : movePct < 0
+              ? "text-rose-600 dark:text-rose-400 bg-rose-500/10"
+              : "text-foreground/60 bg-surface-muted"
+          }`}
+        >
+          {movePct >= 0 ? "+" : ""}
+          {movePct.toFixed(2)}%
+        </span>
+
+        {/* RVOL Badge */}
+        {rvol > 0 && (
+          <span className="hidden md:inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md bg-surface-muted border border-surface-border text-foreground/70">
+            <span className="text-foreground/40 font-medium text-[10px]">RVOL</span>
+            <span className="text-foreground font-black">{rvol.toFixed(1)}x</span>
           </span>
         )}
 
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-muted text-foreground/70 font-semibold border border-surface-border">
-          {stockInfo?.sector || "EQUITY"}
-        </span>
-      </div>
-
-      {/* Center: Interval Selector */}
-      {onChangeInterval && (
-        <div className="flex items-center justify-center">
-          <ChartIntervalSelector
-            interval={interval}
-            onChangeInterval={onChangeInterval}
-            mode={mode}
-          />
-        </div>
-      )}
-
-      {/* Right: Inline Ticker Strip (LTP + RVOL only) */}
-      <div className="flex items-center gap-3.5 text-xs overflow-x-auto no-scrollbar">
-        {/* LTP & % Change */}
-        <div className="flex items-center gap-1.5 tabular-nums">
-          <span className="font-black text-foreground text-sm">
-            ₹{price.toFixed(2)}
+        {/* VWAP Distance (Clean subtle tag) */}
+        {vwapDist !== 0 && (
+          <span className="hidden lg:inline-flex items-center text-xs font-semibold text-foreground/50">
+            {vwapDist >= 0 ? "+" : ""}{vwapDist.toFixed(1)}% VWAP
           </span>
-          <span
-            className={`font-bold text-xs ${
-              movePct > 0
-                ? "text-emerald-600 dark:text-emerald-400"
-                : movePct < 0
-                ? "text-rose-600 dark:text-rose-400"
-                : "text-foreground/60"
-            }`}
-          >
-            {movePct >= 0 ? "+" : ""}
-            {movePct.toFixed(2)}%
-          </span>
-        </div>
-
-        <span className="text-foreground/20 hidden md:inline">•</span>
-
-        {/* RVOL */}
-        <div className="hidden md:flex items-center gap-1 tabular-nums">
-          <span className="text-foreground/40 text-[10px] font-bold tracking-wider">RVOL</span>
-          <span className="font-bold text-foreground">{rvol.toFixed(2)}x</span>
-        </div>
+        )}
       </div>
     </div>
   );

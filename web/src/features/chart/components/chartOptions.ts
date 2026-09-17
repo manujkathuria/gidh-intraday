@@ -87,6 +87,8 @@ export const CANDLE_COLORS = {
     wickUpColor: "#10B981",
     wickDownColor: "#EF4444",
     vwapColor: "#A855F7",
+    sigma1Color: "#60A5FA", // Sky blue for +-1 sigma
+    sigma2Color: "#F472B6", // Pink/Rose for +-2 sigma outer boundary
   },
   light: {
     upColor: "#059669",
@@ -96,5 +98,8 @@ export const CANDLE_COLORS = {
     wickUpColor: "#059669",
     wickDownColor: "#DC2626",
     vwapColor: "#7E22CE",
+    sigma1Color: "#2563EB",
+    sigma2Color: "#DB2777",
   },
 };
+

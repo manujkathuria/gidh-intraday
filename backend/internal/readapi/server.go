@@ -43,6 +43,7 @@ func NewServerWithOrders(
 	mux.HandleFunc("GET /v1/ai/daily-focus", s.dailyFocus)
 	mux.HandleFunc("GET /v1/quant/brain-rules", s.quantBrainRules)
 	mux.HandleFunc("GET /v1/quant/operating-schedule", s.quantOperatingSchedule)
+	mux.HandleFunc("GET /v1/market/macro/futures-inflow", s.futuresInflow)
 	mux.HandleFunc("GET /v1/replay/snapshot", s.replaySnapshot)
 	mux.HandleFunc("GET /v1/replay/candles", s.replayCandles)
 	mux.HandleFunc("GET /v1/replay/ws", s.replayWebSocket)

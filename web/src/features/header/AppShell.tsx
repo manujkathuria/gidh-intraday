@@ -7,7 +7,6 @@ import { SidebarFooterStatus } from "./components/SidebarFooterStatus";
 import { MobileDrawerSidebar } from "./components/MobileDrawerSidebar";
 import { BottomCockpitFooter } from "./components/BottomCockpitFooter";
 import { useHeaderState } from "./hooks/useHeaderState";
-
 import { SidebarModeSwitcher } from "./components/SidebarModeSwitcher";
 import { AppBreadcrumbs } from "./components/AppBreadcrumbs";
 
@@ -60,7 +59,6 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         isOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
         activeCount={activeCount}
-        breadth={breadth}
         mode={mode}
         setMode={setMode}
       />
@@ -97,20 +95,16 @@ export const AppShell: React.FC<Props> = ({ children }) => {
           <NavigationItems activeCount={activeCount} isCollapsed={isCollapsed} />
         </div>
 
-        {/* Bottom Section: Mode Switcher + VWAP / Engine Status */}
-        <div className="flex flex-col gap-2.5">
-          {/* Mode Switcher (LIVE / REPLAY) - Placed at bottom above VWAP */}
+        {/* Bottom Section: Zerodha Kite Status & Live / Replay Mode Switcher */}
+        <div className="flex flex-col gap-1.5 pt-2 border-t border-surface-border">
+          <SidebarFooterStatus isCollapsed={isCollapsed} />
           <SidebarModeSwitcher
             mode={mode}
             setMode={setMode}
             isCollapsed={isCollapsed}
           />
-
-          {/* Footer Status */}
-          <SidebarFooterStatus breadth={breadth} isCollapsed={isCollapsed} />
         </div>
       </aside>
-
 
       {/* 3. Main Workspace Viewport */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
@@ -120,6 +114,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
             isCollapsed={isCollapsed}
             onToggleSidebar={handleToggleSidebar}
             mode={mode}
+            breadth={breadth}
             liveClock={liveClock}
             localTime={localTime}
             isDark={isDark}

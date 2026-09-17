@@ -100,9 +100,17 @@ func (r *Repository) replayMinuteCandles(ctx context.Context, sessionDate, symbo
 	WITH session_bars AS (
 		SELECT 
 			c.ts, c.open, c.high, c.low, c.close, c.volume,
-			SUM(c.close * c.volume) OVER (ORDER BY c.ts) / NULLIF(SUM(c.volume) OVER (ORDER BY c.ts), 0) as vwap
+			SUM(c.close * c.volume) OVER (ORDER BY c.ts) / NULLIF(SUM(c.volume) OVER (ORDER BY c.ts), 0) as calc_vwap,
+			SQRT(GREATEST(0, (SUM(c.close * c.close * c.volume) OVER (ORDER BY c.ts) / NULLIF(SUM(c.volume) OVER (ORDER BY c.ts), 0)) - POWER(SUM(c.close * c.volume) OVER (ORDER BY c.ts) / NULLIF(SUM(c.volume) OVER (ORDER BY c.ts), 0), 2))) as calc_sigma,
+			f.session_vwap,
+			f.vwap_upper_1,
+			f.vwap_lower_1,
+			f.vwap_upper_2,
+			f.vwap_lower_2,
+			COALESCE(f.relative_volume, 0) as rvol
 		FROM market.cash_candles_1m c
 		JOIN market.instruments i ON c.instrument_id = i.id
+		LEFT JOIN market.intraday_features_1m f ON f.instrument_id = c.instrument_id AND f.ts = c.ts
 		WHERE (c.ts AT TIME ZONE 'Asia/Kolkata')::date = $1::date
 		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time >= '09:15:00'
 		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time <= $3::time
@@ -111,7 +119,13 @@ func (r *Repository) replayMinuteCandles(ctx context.Context, sessionDate, symbo
 	)
 	SELECT 
 		EXTRACT(EPOCH FROM ts)::bigint as time_sec,
-		open, high, low, close, volume, COALESCE(vwap, close)
+		open, high, low, close, volume,
+		COALESCE(session_vwap, calc_vwap, close) as vwap,
+		COALESCE(vwap_upper_1, calc_vwap + calc_sigma, close) as vwap_upper_1,
+		COALESCE(vwap_lower_1, calc_vwap - calc_sigma, close) as vwap_lower_1,
+		COALESCE(vwap_upper_2, calc_vwap + 2 * calc_sigma, close) as vwap_upper_2,
+		COALESCE(vwap_lower_2, calc_vwap - 2 * calc_sigma, close) as vwap_lower_2,
+		rvol
 	FROM session_bars;
 	`
 	rows, err := r.db.Pool.Query(ctx, query, sessionDate, symbol, toTime)
@@ -123,10 +137,15 @@ func (r *Repository) replayMinuteCandles(ctx context.Context, sessionDate, symbo
 	candles := []ReplayCandle{}
 	for rows.Next() {
 		var c ReplayCandle
-		if err := rows.Scan(&c.Time, &c.Open, &c.High, &c.Low, &c.Close, &c.Volume, &c.VWAP); err != nil {
+		if err := rows.Scan(
+			&c.Time, &c.Open, &c.High, &c.Low, &c.Close, &c.Volume,
+			&c.VWAP, &c.VWAPUpper1, &c.VWAPLower1, &c.VWAPUpper2, &c.VWAPLower2,
+			&c.RVOL,
+		); err != nil {
 			return nil, err
 		}
 		candles = append(candles, c)
 	}
 	return candles, nil
 }
+

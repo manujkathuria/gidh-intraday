@@ -20,10 +20,10 @@ export const CategoryTabs: React.FC<Props> = ({
         <button
           key={cat.key}
           onClick={() => onSelectCategory(cat.key)}
-          className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap font-bold transition border ${
+          className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap font-bold transition border cursor-pointer ${
             selectedCategory === cat.key
-              ? "bg-foreground text-background border-foreground shadow-sm"
-              : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
+              ? "bg-surface-muted text-foreground font-extrabold border-surface-border shadow-2xs"
+              : "bg-transparent border-transparent text-foreground/60 hover:text-foreground hover:bg-surface-hover"
           }`}
         >
           {cat.label}

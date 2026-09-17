@@ -101,22 +101,21 @@ export const useLiveStore = create<LiveState>((set, get) => ({
         lastSyncTime: timeStr,
       });
 
-      if (!isMarketOpen) {
-        // Off-market hours: Load static snapshot via REST
-        const snap = await fetchReplaySnapshot(todayDate, "15:30:00");
-        const candles = await fetchReplayCandles(todayDate, get().selectedSymbol, "15:30:00");
+      // Pre-hydrate snapshot immediately from REST so page data never flashes empty
+      const snap = await fetchReplaySnapshot(todayDate, isMarketOpen ? timeStr : "15:30:00");
+      if (snap) {
         set({
           snapshot: snap,
-          traps: snap?.traps || [],
-          sectors: snap?.sectors || [],
-          candles: candles || [],
+          traps: snap.traps || [],
+          sectors: snap.sectors || [],
           loading: false,
           error: null,
         });
-        return;
       }
 
-      get().startLiveSync();
+      if (isMarketOpen) {
+        get().startLiveSync();
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to initialize live store";
       set({ error: message, loading: false });
@@ -151,25 +150,31 @@ export const useLiveStore = create<LiveState>((set, get) => ({
         try {
           const data = JSON.parse(event.data);
           if (data.type === "MARKET_SNAPSHOT" && data.snapshot) {
-            const timeParts = (data.time || data.snapshot.as_of_time || "09:15:00").split(":");
+            const snap = data.snapshot;
+            const timeParts = (data.time || snap.as_of_time || "09:15:00").split(":");
             const mins = parseInt(timeParts[0], 10) * 60 + parseInt(timeParts[1], 10);
             const { isMarketOpen: openNow } = getISTMinutes();
 
-            set({
-              sessionDate: data.session_date || data.snapshot.session_date || get().sessionDate,
+            // If snapshot has valid stocks or sectors, update; otherwise preserve prior state
+            const hasStocks = Array.isArray(snap.stocks) && snap.stocks.length > 0;
+            const hasSectors = Array.isArray(snap.sectors) && snap.sectors.length > 0;
+
+            set((state) => ({
+              sessionDate: data.session_date || snap.session_date || state.sessionDate,
               currentTimeMinutes: mins,
-              lastSyncTime: data.time || data.snapshot.as_of_time || get().lastSyncTime,
+              lastSyncTime: data.time || snap.as_of_time || state.lastSyncTime,
               isMarketOpen: openNow,
-              snapshot: data.snapshot,
-              traps: data.snapshot.traps || [],
-              sectors: data.snapshot.sectors || [],
+              snapshot: hasStocks ? snap : state.snapshot,
+              traps: snap.traps?.length ? snap.traps : state.traps,
+              sectors: hasSectors ? snap.sectors : state.sectors,
               loading: false,
               error: null,
-            });
+            }));
           } else if (data.type === "SYMBOL_CANDLES" && Array.isArray(data.candles)) {
             set({ candles: data.candles, loading: false, error: null });
           } else if (data.type === "ERROR") {
-            set({ error: data.error || "Live market stream error", loading: false });
+            // Log error without clearing existing snapshot data
+            console.warn("[LIVE MARKET WS] Server message:", data.error);
           }
         } catch (err) {
           console.error("[LIVE MARKET WS] Message parse error:", err);

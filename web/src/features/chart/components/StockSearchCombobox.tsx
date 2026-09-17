@@ -17,12 +17,14 @@ interface Props {
   allSymbols: StockSummaryItem[];
   activeSymbol: string;
   onSelectSymbol: (symbol: string) => void;
+  className?: string;
 }
 
 export const StockSearchCombobox: React.FC<Props> = ({
   allSymbols,
   activeSymbol,
   onSelectSymbol,
+  className,
 }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -58,12 +60,15 @@ export const StockSearchCombobox: React.FC<Props> = ({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-foreground/80 hover:text-foreground hover:bg-surface-hover transition-colors text-left cursor-pointer group"
+        className={
+          className ||
+          "flex items-center gap-1.5 px-2 py-0.5 rounded-md text-foreground hover:bg-surface-hover transition-colors text-left cursor-pointer group"
+        }
       >
-        <span className="text-sm font-black tracking-tight uppercase">
+        <span className="text-xs font-black tracking-tight uppercase">
           {activeSymbol}
         </span>
-        <kbd className="hidden sm:inline-block font-sans px-1.5 py-0.5 text-[9px] rounded text-foreground/40 group-hover:text-foreground/70 bg-surface-muted/50 border border-surface-border">
+        <kbd className="hidden sm:inline-block font-sans px-1 py-0.2 text-[9px] rounded text-foreground/40 group-hover:text-foreground/80 bg-surface-muted/60 border border-surface-border leading-none">
           ⌘K
         </kbd>
       </button>

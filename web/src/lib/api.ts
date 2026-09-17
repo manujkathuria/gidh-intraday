@@ -83,6 +83,11 @@ export interface Candle {
   close: number;
   volume: number;
   vwap: number;
+  vwap_upper_1?: number;
+  vwap_lower_1?: number;
+  vwap_upper_2?: number;
+  vwap_lower_2?: number;
+  rvol?: number;
 }
 
 export async function fetchSessions(): Promise<string[]> {
@@ -156,6 +161,11 @@ export async function fetchReplayCandles(
         close: Number(c.close),
         volume: Number(c.volume),
         vwap: Number(c.vwap || c.close),
+        vwap_upper_1: c.vwap_upper_1 ? Number(c.vwap_upper_1) : undefined,
+        vwap_lower_1: c.vwap_lower_1 ? Number(c.vwap_lower_1) : undefined,
+        vwap_upper_2: c.vwap_upper_2 ? Number(c.vwap_upper_2) : undefined,
+        vwap_lower_2: c.vwap_lower_2 ? Number(c.vwap_lower_2) : undefined,
+        rvol: c.rvol !== undefined && c.rvol !== null ? Number(c.rvol) : undefined,
       });
     }
 
@@ -256,17 +266,39 @@ export async function fetchQuantBrainRules(): Promise<any[]> {
   }
 }
 
-export async function fetchQuantOperatingSchedule(): Promise<any[]> {
+export interface FuturesInflowItem {
+  symbol: string;
+  trading_symbol: string;
+  session_date: string;
+  fut_close: number;
+  prev_close: number;
+  fut_oi: number;
+  prev_oi: number;
+  total_notional_cr: number;
+  price_1d_pct: number;
+  oi_1d_pct: number;
+  fresh_inflow_1d_cr: number;
+  oi_3d_pct: number;
+  fresh_inflow_3d_cr: number;
+}
+
+export interface FuturesInflowResponse {
+  session_date: string;
+  available_dates: string[];
+  total_count: number;
+  data: FuturesInflowItem[];
+}
+
+export async function fetchFuturesInflow(sessionDate?: string): Promise<FuturesInflowResponse | null> {
   try {
-    const res = await fetch(`${getApiBase()}/v1/quant/operating-schedule`);
+    const url = sessionDate 
+      ? `${getApiBase()}/v1/market/macro/futures-inflow?date=${sessionDate}`
+      : `${getApiBase()}/v1/market/macro/futures-inflow`;
+    const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (err) {
-    console.error("Failed to fetch quant operating schedule:", err);
-    return [];
+    console.error("Failed to fetch futures macro data:", err);
+    return null;
   }
 }
-
-
-
-

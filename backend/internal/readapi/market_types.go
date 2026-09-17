@@ -111,6 +111,29 @@ type OperatingScheduleItem struct {
 	Status         string `json:"status"`
 }
 
+type FuturesInflowItem struct {
+	Symbol          string  `json:"symbol"`
+	TradingSymbol   string  `json:"trading_symbol"`
+	SessionDate     string  `json:"session_date"`
+	FutClose        float64 `json:"fut_close"`
+	PrevClose       float64 `json:"prev_close"`
+	FutOI           int64   `json:"fut_oi"`
+	PrevOI          int64   `json:"prev_oi"`
+	TotalNotionalCr float64 `json:"total_notional_cr"`
+	Price1DPct      float64 `json:"price_1d_pct"`
+	OI1DPct         float64 `json:"oi_1d_pct"`
+	FreshInflow1DCr float64 `json:"fresh_inflow_1d_cr"`
+	OI3DPct         float64 `json:"oi_3d_pct"`
+	FreshInflow3DCr float64 `json:"fresh_inflow_3d_cr"`
+}
+
+type FuturesInflowResponse struct {
+	SessionDate    string              `json:"session_date"`
+	AvailableDates []string            `json:"available_dates"`
+	TotalCount     int                 `json:"total_count"`
+	Data           []FuturesInflowItem `json:"data"`
+}
+
 type MarketReader interface {
 	Ping(context.Context) error
 	Universe(context.Context) ([]UniverseItem, error)
@@ -122,5 +145,6 @@ type MarketReader interface {
 	QuantOperatingSchedule(context.Context) ([]OperatingScheduleItem, error)
 	ReplaySnapshot(ctx context.Context, sessionDate, asOfTime string) (*ReplaySnapshotResponse, error)
 	ReplayCandles(ctx context.Context, sessionDate, symbol, toTime, interval string) ([]ReplayCandle, error)
+	FuturesInflow(ctx context.Context, sessionDate string) (*FuturesInflowResponse, error)
 	WarmSessionDay(ctx context.Context, sessionDate string) error
 }

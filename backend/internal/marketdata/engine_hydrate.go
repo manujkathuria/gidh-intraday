@@ -110,14 +110,19 @@ func (e *UniverseStreamEngine) hydrateCandles(todayCandles map[int64][]store.Mar
 				}
 			}
 			state.LastClose = c.Close
+			vwap, u1, l1, u2, l2 := liveVWAPAndBands(state, c.Close)
 			state.Candles = append(state.Candles, LiveCandle{
-				Time:   c.Timestamp.Unix(),
-				Open:   c.Open,
-				High:   c.High,
-				Low:    c.Low,
-				Close:  c.Close,
-				Volume: c.Volume,
-				VWAP:   liveVWAP(state, c.Close),
+				Time:       c.Timestamp.Unix(),
+				Open:       c.Open,
+				High:       c.High,
+				Low:        c.Low,
+				Close:      c.Close,
+				Volume:     c.Volume,
+				VWAP:       vwap,
+				VWAPUpper1: u1,
+				VWAPLower1: l1,
+				VWAPUpper2: u2,
+				VWAPLower2: l2,
 			})
 			hydratedBars++
 		}

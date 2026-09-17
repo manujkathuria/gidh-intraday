@@ -103,6 +103,19 @@ func (s *Server) quantOperatingSchedule(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, schedule)
 }
 
+func (s *Server) futuresInflow(w http.ResponseWriter, r *http.Request) {
+	date := strings.TrimSpace(r.URL.Query().Get("date"))
+	if date == "" {
+		date = strings.TrimSpace(r.URL.Query().Get("session_date"))
+	}
+	res, err := s.reader.FuturesInflow(r.Context(), date)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "query_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, res)
+}
+
 func (s *Server) replaySnapshot(w http.ResponseWriter, r *http.Request) {
 	date, ok := sessionDate(w, r)
 	if !ok {

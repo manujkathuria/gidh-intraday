@@ -3,14 +3,13 @@
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
 import { NavigationItems } from "./NavigationItems";
-import { SidebarFooterStatus } from "./SidebarFooterStatus";
 import { SidebarModeSwitcher } from "./SidebarModeSwitcher";
+import { SidebarFooterStatus } from "./SidebarFooterStatus";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   activeCount: number;
-  breadth: number;
   mode: "LIVE" | "REPLAY";
   setMode: (mode: "LIVE" | "REPLAY") => void;
 }
@@ -19,7 +18,6 @@ export const MobileDrawerSidebar: React.FC<Props> = ({
   isOpen,
   onClose,
   activeCount,
-  breadth,
   mode,
   setMode,
 }) => {
@@ -69,17 +67,14 @@ export const MobileDrawerSidebar: React.FC<Props> = ({
 
         </div>
 
-        {/* Bottom Group: Mode Switcher + VWAP & Engine Status */}
-        <div className="flex flex-col gap-3">
-          {/* Mode Switcher */}
+        {/* Bottom Group: Zerodha Kite Status & Live / Replay Mode Switcher */}
+        <div className="flex flex-col gap-2 pt-2 border-t border-surface-border">
+          <SidebarFooterStatus isCollapsed={false} />
           <SidebarModeSwitcher
             mode={mode}
             setMode={setMode}
             isCollapsed={false}
           />
-
-          {/* Footer Breadth & Engine Status */}
-          <SidebarFooterStatus breadth={breadth} isCollapsed={false} />
         </div>
       </aside>
     </div>

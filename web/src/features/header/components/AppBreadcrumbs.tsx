@@ -1,10 +1,11 @@
-"use client";
-
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronRight, PanelLeft, Clock, Play, Pause } from "lucide-react";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { ChevronRight, PanelLeft, Menu, Clock, Play, Pause } from "lucide-react";
 import { formatMinutesToTime } from "@/stores/replayStore";
+import { useMarketData } from "@/stores/useMarketData";
+import { StockSearchCombobox } from "@/features/chart/components/StockSearchCombobox";
+import { StockSummaryItem } from "@/features/chart/types";
 import { ThemeToggle } from "./ThemeToggle";
 import { SessionCalendarPopover } from "./SessionCalendarPopover";
 import { UserAuthButton } from "./UserAuthButton";
@@ -13,6 +14,7 @@ interface Props {
   isCollapsed: boolean;
   onToggleSidebar: () => void;
   mode: "LIVE" | "REPLAY";
+  breadth?: number;
   liveClock: string;
   localTime: number;
   isDark: boolean;
@@ -28,6 +30,7 @@ export const AppBreadcrumbs: React.FC<Props> = ({
   isCollapsed,
   onToggleSidebar,
   mode,
+  breadth = 0,
   liveClock,
   localTime,
   isDark,
@@ -40,42 +43,101 @@ export const AppBreadcrumbs: React.FC<Props> = ({
 }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const symbolParam = searchParams.get("symbol");
+  const { snapshot, selectedSymbol, setSelectedSymbol } = useMarketData();
+
+  const allSymbols: StockSummaryItem[] = useMemo(() => {
+    if (!snapshot?.stocks) return [];
+    return snapshot.stocks.map((s) => ({
+      symbol: s.symbol,
+      sector: s.sector,
+      move_pct: s.move_pct,
+      price: s.price,
+      rvol: s.rvol,
+      clv: s.clv,
+    }));
+  }, [snapshot]);
+
+  const activeSymbol = symbolParam || selectedSymbol || "RELIANCE";
 
   const routeNames: Record<string, string> = {
     "/": "Radar",
+    "/macro": "Macro",
     "/sectors": "Sectors",
     "/chart": "Charts",
-    "/brain": "Quant Brain",
+    "/brain": "Brain",
     "/positions": "Positions",
   };
 
   const currentRouteName = routeNames[pathname] || "Radar";
   const timeFormatted = formatMinutesToTime(localTime);
 
+  const activeSector = snapshot?.stocks?.find((s) => s.symbol === activeSymbol)?.sector;
+  const isBullish = breadth >= 50;
+
   return (
     <div className="flex items-center justify-between select-none shrink-0 text-xs py-0 w-full">
-      {/* Left: Breadcrumbs */}
-      <div className="flex items-center gap-1.5">
+      {/* Left: Mobile Menu Button + Breadcrumbs with Stock Search Combobox & Sector */}
+      <div className="flex items-center gap-1.5 min-w-0">
+        {/* Mobile Sidebar Toggle (< md) */}
+        <button
+          onClick={onToggleSidebar}
+          className="md:hidden p-1 -ml-1 rounded text-foreground/70 hover:text-foreground hover:bg-surface-hover transition cursor-pointer flex items-center justify-center shrink-0"
+          aria-label="Toggle Sidebar"
+          title="Toggle Sidebar"
+        >
+          <PanelLeft className="w-4 h-4" />
+        </button>
+
         <Link
           href={pathname}
-          className="font-bold text-foreground text-xs hover:opacity-80 transition tracking-wide leading-none"
+          className="font-bold text-foreground text-xs hover:opacity-80 transition tracking-wide leading-none shrink-0"
         >
           {currentRouteName}
         </Link>
 
-        {symbolParam && (
-          <div className="flex items-center gap-2 text-foreground/40 leading-none">
+        {pathname === "/chart" ? (
+          <div className="flex items-center gap-1.5 text-foreground/40 leading-none">
             <ChevronRight className="w-3.5 h-3.5 text-foreground/30 shrink-0" />
-            <span className="font-bold text-foreground text-sm">
+            <StockSearchCombobox
+              allSymbols={allSymbols}
+              activeSymbol={activeSymbol}
+              onSelectSymbol={(sym) => {
+                setSelectedSymbol(sym);
+                router.replace(`/chart?symbol=${encodeURIComponent(sym)}`);
+              }}
+              className="flex items-center gap-1.5 px-2 py-1 -my-1 rounded-md text-foreground font-black text-xs hover:bg-surface-hover border border-surface-border/60 hover:border-surface-border transition-colors cursor-pointer group shadow-2xs"
+            />
+            {activeSector && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-muted text-foreground/60 font-semibold border border-surface-border uppercase tracking-wide">
+                {activeSector}
+              </span>
+            )}
+          </div>
+        ) : symbolParam ? (
+          <div className="flex items-center gap-1.5 text-foreground/40 leading-none">
+            <ChevronRight className="w-3.5 h-3.5 text-foreground/30 shrink-0" />
+            <span className="font-bold text-foreground text-xs">
               {symbolParam}
             </span>
           </div>
-        )}
+        ) : null}
       </div>
 
-      {/* Right: Replay Date Calendar + Play/Pause + Clock + Theme Toggle */}
+      {/* Right: VWAP Breadth + Replay Calendar/Play + Clock + Theme Toggle + Auth */}
       <div className="flex items-center gap-1.5 text-foreground/80">
+        {/* Compact VWAP Market Breadth Badge */}
+        <div
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-muted border border-surface-border text-[11px] font-medium"
+          title={`Market Breadth (Universe > VWAP): ${breadth.toFixed(0)}% (${isBullish ? "BULLISH" : "BEARISH"})`}
+        >
+          <span className="text-[10px] text-foreground/50 uppercase tracking-tight">VWAP</span>
+          <span className={`font-bold tabular-nums ${isBullish ? "text-emerald-500" : "text-rose-500"}`}>
+            {breadth.toFixed(0)}%
+          </span>
+        </div>
+
         {mode === "REPLAY" && setSelectedDate && (
           <>
             {/* Tailwind Headless UI Calendar Popover */}

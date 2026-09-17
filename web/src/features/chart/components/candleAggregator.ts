@@ -40,8 +40,9 @@ function buildAggregatedBar(bars: Candle[], time: number): Candle {
   let high = -Infinity;
   let low = Infinity;
   let totalVol = 0;
-  let lastClose = bars[bars.length - 1].close;
-  let lastVwap = bars[bars.length - 1].vwap;
+  const lastBar = bars[bars.length - 1];
+  const lastClose = lastBar.close;
+  const lastVwap = lastBar.vwap;
 
   for (const b of bars) {
     if (b.high > high) high = b.high;
@@ -57,6 +58,11 @@ function buildAggregatedBar(bars: Candle[], time: number): Candle {
     close: lastClose,
     volume: totalVol,
     vwap: lastVwap,
+    vwap_upper_1: lastBar.vwap_upper_1,
+    vwap_lower_1: lastBar.vwap_lower_1,
+    vwap_upper_2: lastBar.vwap_upper_2,
+    vwap_lower_2: lastBar.vwap_lower_2,
+    rvol: lastBar.rvol,
   };
 }
 

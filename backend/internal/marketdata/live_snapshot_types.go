@@ -39,11 +39,18 @@ type LiveSnapshot struct {
 }
 
 type LiveCandle struct {
-	Time   int64   `json:"time"`
-	Open   float64 `json:"open"`
-	High   float64 `json:"high"`
-	Low    float64 `json:"low"`
-	Close  float64 `json:"close"`
-	Volume int64   `json:"volume"`
-	VWAP   float64 `json:"vwap"`
+	Time       int64   `json:"time"`
+	Open       float64 `json:"open"`
+	High       float64 `json:"high"`
+	Low        float64 `json:"low"`
+	Close      float64 `json:"close"`
+	Volume     int64   `json:"volume"`
+	VWAP       float64 `json:"vwap"`
+	VWAPUpper1 float64 `json:"vwap_upper_1,omitempty"`
+	VWAPLower1 float64 `json:"vwap_lower_1,omitempty"`
+	VWAPUpper2 float64 `json:"vwap_upper_2,omitempty"`
+	VWAPLower2 float64 `json:"vwap_lower_2,omitempty"`
+	RVOL       float64 `json:"rvol,omitempty"`
 }
+
+
