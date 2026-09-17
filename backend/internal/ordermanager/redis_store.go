@@ -61,32 +61,38 @@ func (s *RedisOrderStore) RemoveActivePosition(ctx context.Context, symbol strin
 	return s.client.HDel(ctx, KeyLivePositions, symbol).Err()
 }
 
-func (s *RedisOrderStore) SaveOrder(ctx context.Context, ord *OrderRecord) error {
-	if s.client == nil || ord == nil {
+func (s *RedisOrderStore) SaveVirtualBracketOrder(ctx context.Context, vbo *VirtualBracketOrder) error {
+	if s.client == nil || vbo == nil {
 		return nil
 	}
-	ord.UpdatedAt = time.Now()
-	data, err := json.Marshal(ord)
+	data, err := json.Marshal(vbo)
 	if err != nil {
 		return err
 	}
-	return s.client.HSet(ctx, KeyLiveOrders, ord.OrderID, data).Err()
+	return s.client.HSet(ctx, KeyLiveOrders, vbo.ID, data).Err()
 }
 
-func (s *RedisOrderStore) GetActiveOrders(ctx context.Context) (map[string]*OrderRecord, error) {
+func (s *RedisOrderStore) GetVirtualBracketOrders(ctx context.Context) (map[string]*VirtualBracketOrder, error) {
 	if s.client == nil {
-		return make(map[string]*OrderRecord), nil
+		return make(map[string]*VirtualBracketOrder), nil
 	}
 	dataMap, err := s.client.HGetAll(ctx, KeyLiveOrders).Result()
 	if err != nil {
 		return nil, err
 	}
-	res := make(map[string]*OrderRecord)
+	res := make(map[string]*VirtualBracketOrder)
 	for id, val := range dataMap {
-		var ord OrderRecord
-		if err := json.Unmarshal([]byte(val), &ord); err == nil {
-			res[id] = &ord
+		var vbo VirtualBracketOrder
+		if err := json.Unmarshal([]byte(val), &vbo); err == nil {
+			res[id] = &vbo
 		}
 	}
 	return res, nil
+}
+
+func (s *RedisOrderStore) RemoveVirtualBracketOrder(ctx context.Context, id string) error {
+	if s.client == nil {
+		return nil
+	}
+	return s.client.HDel(ctx, KeyLiveOrders, id).Err()
 }

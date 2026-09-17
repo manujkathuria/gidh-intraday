@@ -109,10 +109,7 @@ func (m *Manager) PlaceOrder(ctx context.Context, intent OrderIntent) (*ActivePo
 		Quantity:        qty,
 		EntryPrice:      entryPrice,
 		CurrentLTP:      entryPrice,
-		PnLINR:          0.0,
-		PnLPct:          0.0,
-		MFEPct:          0.0,
-		StopFloorPct:    -1.50,
+		StopFloorPct:    -1.00,
 		Tactic:          intent.Tactic,
 		Invalidation:    intent.Invalidation,
 		BrokerOrderID:   brokerOrderID,
@@ -129,9 +126,78 @@ func (m *Manager) PlaceOrder(ctx context.Context, intent OrderIntent) (*ActivePo
 		m.tracker.SubscribePosition(pos.Symbol, pos.InstrumentToken)
 	}
 
-	_ = m.redisStore.PublishLiveEvent(ctx, "POSITION_OPENED", pos)
-	log.Printf("[ORDER MANAGER] Entered %s %s @ %.2f (Qty: %d, Exposure: ₹%.2f) | Tactic: %s",
-		pos.Side, pos.Symbol, pos.EntryPrice, pos.Quantity, float64(pos.Quantity)*pos.EntryPrice, pos.Tactic)
+	_ = m.redisStore.PublishLiveEvent(ctx, "ORDER_FILLED", pos)
+	log.Printf("[ORDER MANAGER] Successfully opened %s position for %s (Qty: %d @ %.2f) | OrderID: %s",
+		pos.Side, pos.Symbol, pos.Quantity, pos.EntryPrice, pos.BrokerOrderID)
 
 	return pos, nil
+}
+
+// PlaceVirtualBracketOrder registers an internal virtual bracket with passive entry, 1.0% MAE stop, and 2.0R target
+func (m *Manager) PlaceVirtualBracketOrder(ctx context.Context, intent OrderIntent) (*VirtualBracketOrder, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	instruments, err := m.instrumentRepo.GetActiveInstruments(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch instruments: %w", err)
+	}
+
+	var targetInst *store.ActiveInstrument
+	for _, inst := range instruments {
+		if inst.Symbol == intent.Symbol {
+			targetInst = &inst
+			break
+		}
+	}
+	if targetInst == nil {
+		return nil, fmt.Errorf("symbol %s not found in active universe", intent.Symbol)
+	}
+
+	margin := intent.MarginINR
+	if margin <= 0 {
+		margin = m.marginPerSlot
+	}
+	grossExposure := margin * m.leverageMIS
+
+	entryPrice := intent.TargetEntryPrice
+	if entryPrice <= 0 {
+		entryPrice = 1000.0
+	}
+
+	qty := int(math.Floor(grossExposure / entryPrice))
+	if qty <= 0 {
+		qty = 1
+	}
+
+	vbo := &VirtualBracketOrder{
+		ID:               fmt.Sprintf("VBO-%s-%d", intent.Symbol, time.Now().Unix()),
+		Symbol:           targetInst.Symbol,
+		Exchange:         targetInst.Exchange,
+		InstrumentToken:  uint32(targetInst.CashToken),
+		Side:             intent.Side,
+		Status:           StatusPendingEntry,
+		TargetEntryPrice: intent.TargetEntryPrice,
+		StopLossPrice:    intent.StopLossPrice,
+		TargetPrice:      intent.TargetPrice,
+		Quantity:         qty,
+		MarginINR:        margin,
+		CurrentLTP:       entryPrice,
+		CreatedAt:        time.Now(),
+	}
+
+	if err := m.redisStore.SaveVirtualBracketOrder(ctx, vbo); err != nil {
+		return nil, fmt.Errorf("failed to save virtual bracket to redis: %w", err)
+	}
+	_ = m.redisStore.AddWSToken(ctx, vbo.InstrumentToken)
+
+	if m.tracker != nil && vbo.InstrumentToken > 0 {
+		m.tracker.SubscribePosition(vbo.Symbol, vbo.InstrumentToken)
+	}
+
+	_ = m.redisStore.PublishLiveEvent(ctx, "VBO_REGISTERED", vbo)
+	log.Printf("[VIRTUAL ENGINE] Registered %s %s | Limit: %.2f | Stop(1%%): %.2f | Target(2R): %.2f | Qty: %d",
+		vbo.Side, vbo.Symbol, vbo.TargetEntryPrice, vbo.StopLossPrice, vbo.TargetPrice, vbo.Quantity)
+
+	return vbo, nil
 }

@@ -83,12 +83,51 @@ type RiskState struct {
 	CircuitBroken     bool    `json:"circuit_broken"`
 }
 
+type VirtualOrderStatus string
+
+const (
+	StatusPendingEntry VirtualOrderStatus = "PENDING_ENTRY"
+	StatusActive       VirtualOrderStatus = "ACTIVE"
+	StatusClosedTarget VirtualOrderStatus = "CLOSED_TARGET"
+	StatusClosedStop   VirtualOrderStatus = "CLOSED_STOP"
+	StatusClosedEOD    VirtualOrderStatus = "CLOSED_EOD"
+	StatusCancelled    VirtualOrderStatus = "CANCELLED"
+)
+
+type VirtualBracketOrder struct {
+	ID               string             `json:"id"`
+	Symbol           string             `json:"symbol"`
+	Exchange         string             `json:"exchange"`
+	InstrumentToken  uint32             `json:"instrument_token"`
+	Side             PositionSide       `json:"side"` // LONG / SHORT
+	Status           VirtualOrderStatus `json:"status"`
+	TargetEntryPrice float64            `json:"target_entry_price"`
+	StopLossPrice    float64            `json:"stop_loss_price"` // 1.0% MAE
+	TargetPrice      float64            `json:"target_price"`    // 2.0R
+	ActualEntryPrice float64            `json:"actual_entry_price"`
+	ExitPrice        float64            `json:"exit_price"`
+	Quantity         int                `json:"quantity"`
+	MarginINR        float64            `json:"margin_inr"`
+	CurrentLTP       float64            `json:"current_ltp"`
+	PnLINR           float64            `json:"pnl_inr"`
+	PnLPct           float64            `json:"pnl_pct"`
+	MFEPct           float64            `json:"mfe_pct"`
+	ExitReason       string             `json:"exit_reason"`
+	BrokerOrderID    string             `json:"broker_order_id"`
+	CreatedAt        time.Time          `json:"created_at"`
+	FilledAt         *time.Time         `json:"filled_at,omitempty"`
+	ClosedAt         *time.Time         `json:"closed_at,omitempty"`
+}
+
 type OrderIntent struct {
-	Symbol       string       `json:"symbol"`
-	Side         PositionSide `json:"side"`
-	MarginINR    float64      `json:"margin_inr"`
-	Tactic       string       `json:"tactic"`
-	Invalidation string       `json:"invalidation"`
+	Symbol           string       `json:"symbol"`
+	Side             PositionSide `json:"side"`
+	TargetEntryPrice float64      `json:"target_entry_price"`
+	StopLossPrice    float64      `json:"stop_loss_price"`
+	TargetPrice      float64      `json:"target_price"`
+	MarginINR        float64      `json:"margin_inr"`
+	Tactic           string       `json:"tactic"`
+	Invalidation     string       `json:"invalidation"`
 }
 
 type LiveEvent struct {
