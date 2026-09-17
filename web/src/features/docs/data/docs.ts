@@ -2,12 +2,326 @@ export interface DocArticle {
   id: string;
   title: string;
   description: string;
-  category: "backend" | "edge" | "quant" | "data";
+  category: "quant" | "backend";
   readTime: string;
   content: string;
 }
 
-export const BACKEND_DOCS: DocArticle[] = [
+export const ALL_DOCS: DocArticle[] = [
+  // ==========================================
+  // SECTION 1: QUANT AI COGNITIVE BRAINS (3 Docs)
+  // ==========================================
+  {
+    id: "quant-architecture",
+    title: "Quant System & Cognitive Architecture",
+    description: "Core operating philosophy: AI as the reasoning brain, Python tools as sensory receptors, and the BaseBrain contract.",
+    category: "quant",
+    readTime: "4 min read",
+    content: `
+# Quant System & Cognitive Architecture
+
+The **GIDH Quant Architecture** is engineered around a single fundamental invariant: **AI is the reasoning brain; Python tools are the sensory body**.
+
+---
+
+## 1. Cognitive Architecture Topology
+
+\`\`\`mermaid
+flowchart TD
+    subgraph SensoryLayer [Sensory Tools Layer]
+        T1["Tool 1: Futures Sensor<br/>(OI, Inflows, Price Moves)"]
+        T2["Tool 2: Structure Sensor<br/>(CPR Geometry, Fuel, SMAs)"]
+        T3["Tool 3: Review Sensor<br/>(Execution MFE, Drawdowns)"]
+    end
+
+    subgraph IntelligenceLayer [AI Cognitive Reasoning Brain]
+        Reasoning["AI Reasoning Engine<br/>• Evaluates Institutional Flow<br/>• Detects Exhaustion Traps<br/>• Synthesizes Focus Universe"]
+        Forensics["EOD Forensic Lab<br/>• Post-Market Reflection<br/>• Win Rate & MFE Forensics"]
+    end
+
+    subgraph StorageLayer [PostgreSQL quant Universal Schema]
+        Sessions["quant.brain_sessions<br/>(Decisions, Features, Outcomes)"]
+        Memory["quant.brain_memory<br/>(Persistent Rolling Memory)"]
+    end
+
+    subgraph ExecutionLayer [Live War Room & Execution]
+        Micro["Micro Brains<br/>(1-Min Order Flow Live MIS)"]
+        UI["Web Cockpit UI<br/>(/macro, /radar)"]
+    end
+
+    T1 --> Reasoning
+    T2 --> Reasoning
+    Memory -.->|Feeds Prior Context| Reasoning
+
+    Reasoning --> Sessions
+    Sessions --> Micro
+    Sessions --> UI
+
+    Micro --> T3
+    T3 --> Forensics
+    Forensics --> Sessions
+    Forensics --> Memory
+\`\`\`
+
+---
+
+## 2. Core Operating Principles
+
+### A. No Hardcoded Trading Rules in Tools
+- Python sensory tools (\`futures_sensor.py\`, \`structure_sensor.py\`, \`review_tool.py\`) extract pure, high-dimensional quantitative measurements from TimescaleDB.
+- Tools contain **zero \`if/else\` trading heuristics**.
+- **The AI Agent** evaluates the raw multi-variable matrix, contextualizes market regimes, detects exhaustion traps, and synthesizes decisions.
+
+### B. The 3-Phase Cognitive Lifecycle
+- Every trading brain executes the same invariant loop:
+$$\\text{Sensory Ingestion (Tools)} \\longrightarrow \\text{AI Decision Persistence} \\longrightarrow \\text{EOD Forensic Review \\& Memory}$$
+- **Continuous Rolling Memory**: Yesterday's EOD execution forensics immediately feed into today's pre-market reasoning.
+
+---
+
+## 3. Directory Hierarchy
+
+\`\`\`
+quant/
+├── base/                           # DB connections & sizing constants
+│   ├── db.py                       # TimescaleDB connection pool
+│   └── models.py                   # Shared dataclasses
+│
+├── brains/                         # Autonomous Cognitive Trading Brains
+│   ├── base_brain.py               # Abstract BaseBrain contract
+│   │
+│   ├── macro_brain/                # 🧠 Brain 1: Pre-Market Macro Selector
+│   │   ├── tools/
+│   │   │   ├── futures_sensor.py   # Tool 1: Raw Futures Dynamics (OI, Inflows)
+│   │   │   ├── structure_sensor.py # Tool 2: Daily Features (CPR, SMAs, Fuel)
+│   │   │   └── review_tool.py      # Tool 3: EOD Outcome & Forensic Reviewer
+│   │   └── dispatcher.py           # Ingestion bridge & universal JSONB persistence
+│   │
+│   └── micro_brains/               # ⚡ Micro Brains: Intraday 1M Live Execution
+│
+├── ai-docs/                        # Agent Context & Documentation
+│   ├── ARCHITECTURE.md
+│   ├── BRAIN_PROTOCOL.md
+│   └── BRAIN_1_MACRO_SELECTOR.md
+│
+└── towncenter.py                   # Master CLI Cockpit Interface
+\`\`\`
+
+---
+
+## 4. Universal 2-Table JSONB Database Schema
+
+All brains write to and read from **2 universal tables** in PostgreSQL without schema migrations:
+
+### \`quant.brain_sessions\` (Session Decisions & Outcomes)
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| \`session_date\` | \`DATE\` | Trading session date (PK) |
+| \`brain_id\` | \`VARCHAR\` | Brain identifier (e.g. \`macro_selector\`, \`micro_vwap\`) (PK) |
+| \`decisions\` | \`JSONB\` | Focus picks, entry orders, stops, profit targets |
+| \`sensory_features\` | \`JSONB\` | Raw multidimensional state snapshot at decision time |
+| \`ai_thesis\` | \`TEXT\` | AI qualitative reasoning and setup thesis |
+| \`outcomes\` | \`JSONB\` | Post-market execution results (Gap %, MFE, Drawdown, Net %) |
+| \`forensics\` | \`TEXT\` | AI post-market evolutionary reflection |
+
+### \`quant.brain_memory\` (Persistent Rolling Memory)
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| \`brain_id\` | \`VARCHAR\` | Primary key identifying the brain |
+| \`memory_state\` | \`JSONB\` | Rolling multi-day memory buffer, campaign tracker, and learned patterns |
+| \`updated_at\` | \`TIMESTAMPTZ\` | Timestamp of last cognitive update |
+`
+  },
+  {
+    id: "quant-brain-protocol",
+    title: "The BaseBrain Contract & Developer Guide",
+    description: "Specification for implementing new trading brains in 3 simple steps under quant/brains/.",
+    category: "quant",
+    readTime: "3 min read",
+    content: `
+# The BaseBrain Contract & Developer Guide
+
+Every trading brain (Macro Selector, Micro VWAP, Micro ORB, Pullback Defense, Risk Governor) inherits from \`BaseBrain\` in \`quant/brains/base_brain.py\`.
+
+---
+
+## 1. Brain Implementation Protocol
+
+\`\`\`mermaid
+flowchart TD
+    subgraph Step1 [Step 1: Create Directory]
+        D1["quant/brains/micro_name/<br/>├── tools/<br/>│   ├── custom_sensor.py<br/>│   └── review_sensor.py<br/>└── dispatcher.py"]
+    end
+
+    subgraph Step2 [Step 2: Implement BaseBrain]
+        C1["class CustomBrain(BaseBrain):<br/>• __init__('micro_name')<br/>• build_sensory_packet()<br/>• Inherits .record_decision()<br/>• Inherits .record_eod_forensics()"]
+    end
+
+    subgraph Step3 [Step 3: Register in Towncenter]
+        T1["towncenter.py<br/>Add CLI subcommand"]
+    end
+
+    Step1 --> Step2
+    Step2 --> Step3
+\`\`\`
+
+---
+
+## 2. Abstract BaseBrain Contract
+
+\`\`\`python
+from abc import ABC, abstractmethod
+
+class BaseBrain(ABC):
+    def __init__(self, brain_id: str):
+        self.brain_id = brain_id
+
+    @abstractmethod
+    def build_sensory_packet(self, session_date: str, conn=None) -> dict:
+        """Extracts raw tool measurements. Zero heuristic rules."""
+        pass
+
+    def record_decision(self, session_date: str, decisions: dict, sensory_features: dict, ai_thesis: str, conn=None):
+        """Universal persistence to quant.brain_sessions"""
+        ...
+
+    def record_eod_forensics(self, session_date: str, outcomes_payload: dict, forensics_summary: str, conn=None):
+        """Universal persistence for EOD review & syncs quant.brain_memory"""
+        ...
+
+    def get_rolling_memory(self, conn=None) -> dict:
+        """Loads persistent rolling memory for this brain"""
+        ...
+\`\`\`
+
+---
+
+## 3. Building a New Brain in 3 Steps
+
+### Step 1: Create the Brain Directory
+\`\`\`
+quant/brains/micro_vwap/
+├── tools/
+│   ├── vwap_sensor.py      # Raw 1-min VWAP distances & volume profile
+│   └── execution_sensor.py # Fill & slippage metrics
+└── dispatcher.py           # Inherits from BaseBrain("micro_vwap")
+\`\`\`
+
+### Step 2: Implement \`dispatcher.py\`
+\`\`\`python
+from quant.brains.base_brain import BaseBrain
+from quant.brains.micro_vwap.tools.vwap_sensor import extract_vwap_state
+
+class MicroVwapBrain(BaseBrain):
+    def __init__(self):
+        super().__init__(brain_id="micro_vwap")
+
+    def build_sensory_packet(self, session_date: str, conn=None) -> dict:
+        return {
+            "session_date": session_date,
+            "brain_id": self.brain_id,
+            "rolling_memory": self.get_rolling_memory(conn=conn),
+            "vwap_state": extract_vwap_state(session_date, conn=conn)
+        }
+\`\`\`
+
+### Step 3: Register in \`quant/towncenter.py\`
+- Add a subcommand to allow CLI execution and memory inspection.
+`
+  },
+  {
+    id: "quant-brain-1-macro",
+    title: "Brain 1: Pre-Market Macro Selector",
+    description: "Autonomous pre-market institutional surveillance engine: Futures Capital Inflow, Daily CPR Geometry, Macro Fuel %, and Trap Avoidance.",
+    category: "quant",
+    readTime: "4 min read",
+    content: `
+# Brain 1: Pre-Market Macro Selector
+
+**Brain 1 (Macro Selector)** evaluates market structure **before 09:15 AM IST** and emits the active **Focus Universe**.
+
+---
+
+## 1. Pre-Market Selection & Lifecycle Flow
+
+\`\`\`mermaid
+flowchart TD
+    subgraph PreMarket [08:30 AM: Pre-Market Surveillance]
+        T1["Tool 1: Futures Sensor<br/>1D, 3D, 5D Inflows (₹ Cr)"]
+        T2["Tool 2: Structure Sensor<br/>CPR Width %, SMAs, Fuel %"]
+        Mem["quant.brain_memory<br/>Ingest Prior Day Context"]
+        Brain["🧠 AI Intelligence Brain<br/>Contextual Reasoning & Synthesis"]
+    end
+
+    subgraph OutputUniverse [Pre-Market Focus Universe]
+        Bulls["🟢 Focus Bulls<br/>(Inflow + >40% Fuel + Narrow CPR)"]
+        Bears["🔴 Focus Bears<br/>(Outflow + Compressed Resistance)"]
+        Traps["⚠️ Blacklisted Traps<br/>(0-25% Fuel Rubber-band Chases)"]
+    end
+
+    subgraph IntradayLive [09:15 AM - 03:30 PM]
+        Micro["Micro Brains Live Execution<br/>(1-Min Order Flow & VWAP Defense)"]
+    end
+
+    subgraph PostMarket [03:45 PM: Post-Market Forensics]
+        T3["Tool 3: Review Tool<br/>(Actual Cash Outcomes & MFE)"]
+        EOD["🧠 AI EOD Forensics<br/>Reflection & Learnings"]
+        SaveMem["quant.brain_memory<br/>Update Rolling State"]
+    end
+
+    T1 --> Brain
+    T2 --> Brain
+    Mem --> Brain
+
+    Brain --> Bulls
+    Brain --> Bears
+    Brain --> Traps
+
+    Bulls --> Micro
+    Bears --> Micro
+
+    Micro --> T3
+    T3 --> EOD
+    EOD --> SaveMem
+\`\`\`
+
+---
+
+## 2. Sensory Tools & Mathematical Formulas
+
+### A. Tool 1: Futures Dynamics (\`futures_sensor.py\`)
+- **Fresh Capital Inflow (₹ Crores)**:
+  $$\\text{Inflow}_{1D} = \\frac{(\\text{Close}_{T} - \\text{Close}_{T-1}) \\times \\text{OI}_{T}}{10,000,000}$$
+- Tracks 1D, 3D, and 5D cumulative capital deployment.
+
+### B. Tool 2: Structure Sensor (\`structure_sensor.py\`)
+- **CPR Width % (Compression)**:
+  $$\\text{CPR Width \\%} = \\frac{|\\text{TC} - \\text{BC}|}{\\text{Pivot}} \\times 100.0$$
+- **Macro Range Fuel % (Remaining Gas)**:
+  $$\\text{Fuel \\%} = 100.0 - \\min\\left(100.0, \\frac{\\text{High}_{3D} - \\text{Low}_{3D}}{2.5 \\times \\text{ADR}_{20}} \\times 100.0\\right)$$
+
+### C. Tool 3: EOD Review Tool (\`review_tool.py\`)
+- Measures actual cash market execution on Date $T+1$:
+  - Gap %, Max Favorable Expansion (MFE), Max Adverse Drawdown (MAE), EOD Net %.
+  - **Trap Avoidance Accuracy**: Verified percentage of blacklisted traps that faded from open.
+
+---
+
+## 3. CLI Execution Commands
+
+\`\`\`bash
+# Ingest sensory packet and view top candidates for any session:
+.venv/bin/python3 -m quant.towncenter macro 2026-09-08
+
+# Check persistent rolling memory for Brain 1:
+.venv/bin/python3 -m quant.towncenter memory --brain macro_selector
+\`\`\`
+`
+  },
+
+  // ==========================================
+  // SECTION 2: BACKEND STREAMING & DATA PIPELINE (5 Docs)
+  // ==========================================
   {
     id: "backend-architecture",
     title: "Real-Time Streaming Pipeline",
@@ -77,7 +391,7 @@ flowchart TD
 
 ---
 
-## 2. Streaming Lifecycle & Component Responsibilities
+## 2. Streaming Lifecycle & Responsibilities
 
 | Component | Responsibility | Frequency / SLA |
 | :--- | :--- | :--- |
@@ -92,69 +406,63 @@ flowchart TD
 
 ## 3. Streaming Engine State Machine
 
-1. **09:10:00 IST (In-Memory Hydration & WebSocket Warmup)**:
-   - \`UniverseStreamEngine\` detects market warmup window (550 mins from midnight).
-   - **Loads Pre-Calculated Baselines**: Reads the baseline metrics (Daily ATR-14, ADR-20, Camarilla Pivots, Expected Volume curves) that were **already pre-calculated by the EOD batch job** the previous evening from the database.
-   - Connects persistent WebSocket to Zerodha Kite Ticker in \`ModeQuote\`.
-   - Subscribes to all 210 universe tokens and waits for continuous market open.
-   - Sets Redis key \`gidh:live:active\` (3s heartbeat) to signal the Edge layer that live streaming is ready.
-2. **09:15:00 - 15:30:00 IST (Continuous Live Market Ingestion Loop)**:
-   - Concurrently processes live incoming continuous ticks and updates \`InstrumentState\` in-memory with zero lock contention.
-   - Publishes 1Hz live snapshots and heartbeats to Redis (\`gidh:live:active\`).
-   - Flushes completed 1m OHLCV candles and 47 features to TimescaleDB at \`:00\` every minute.
-3. **15:30:00 IST (Market Close & Teardown)**:
-   - Gracefully disconnects Zerodha Kite Ticker WebSocket stream.
-   - Flushes final pending 1-minute candle bars to TimescaleDB.
-   - Transitions into dormant state until the next trading session.
+### A. 09:10:00 IST (In-Memory Hydration & WebSocket Warmup)
+- \`UniverseStreamEngine\` detects market warmup window (550 mins from midnight).
+- Loads pre-calculated baseline metrics (ATR-14, ADR-20, Camarilla Pivots, Expected Volume curves) computed by the EOD batch job.
+- Connects persistent WebSocket to Zerodha Kite Ticker in \`ModeQuote\`.
+- Subscribes to all 210 universe tokens and waits for continuous market open.
+- Sets Redis key \`gidh:live:active\` (3s heartbeat) to signal the Edge layer that live streaming is ready.
 `
   },
   {
-    id: "backend-auth",
-    title: "Broker Authentication (gidh-auth)",
-    description: "Automated Zerodha TOTP login service, session token renewal, and environment synchronization.",
+    id: "backend-auth-service",
+    title: "Zerodha Kite Automated Auth & TOTP Login",
+    description: "Automated daily TOTP authentication, session cookie extraction, and 24-hour access token provisioning.",
     category: "backend",
-    readTime: "3 min read",
+    readTime: "2 min read",
     content: `
-# Broker Authentication (gidh-auth)
+# Zerodha Kite Automated Auth & TOTP Login
 
-The \`gidh-auth\` CLI (\`backend/cmd/gidh-auth\`) automates the daily Zerodha Kite Connect authentication cycle, acquiring valid access tokens for market data streaming and order routing.
+Located in \`backend/cmd/gidh-auth\`, this service provides headless automated Zerodha Kite login using TOTP multi-factor authentication.
 
 ---
 
-## 1. Authentication Flows
+## 1. Authentication Handshake Pipeline
 
 \`\`\`mermaid
-flowchart LR
-    Start["gidh-auth CLI<br/>Execution"]
-    Check{"Credentials<br/>Available?"}
-    TOTP["Automated TOTP<br/>Login Handshake"]
-    Browser["Interactive Browser<br/>OAuth Flow"]
-    Token["Write Active<br/>KITE_ACCESS_TOKEN"]
+flowchart TD
+    Seed["Base32 TOTP Secret<br/>(KITE_TOTP_SECRET)"]
+    OTP["Generate 6-Digit TOTP<br/>(pquerna/otp)"]
+    Login["Kite Login API Handshake<br/>(https://kite.zerodha.com/api/login)"]
+    Token["Exchange Request Token<br/>(api_key + api_secret)"]
+    Env[".env Configuration File<br/>(Save 24-Hour KITE_ACCESS_TOKEN)"]
 
-    Start --> Check
-    Check -->|UserID + TOTP Secret| TOTP
-    Check -->|Manual Fallback| Browser
-    TOTP --> Token
-    Browser --> Token
+    Seed --> OTP
+    OTP --> Login
+    Login --> Token
+    Token --> Env
 \`\`\`
 
-### A. Automated TOTP Flow (Headless / Zero Interaction)
+---
+
+## 2. Authentication Modes
+
+### A. Headless Automated Flow (Production & CI)
 When \`KITE_USER_ID\`, \`KITE_PASSWORD\`, and \`KITE_TOTP_SECRET\` exist in the environment:
-1. Generates 6-digit TOTP code using \`pquerna/otp\`.
-2. Emulates Zerodha login handshake against \`https://kite.zerodha.com/api/login\`.
-3. Exchanges \`request_token\` for a valid 24-hour \`access_token\`.
-4. Writes the updated token directly to the \`.env\` configuration file.
+- Generates 6-digit TOTP code using \`pquerna/otp\`.
+- Emulates Zerodha login handshake against \`https://kite.zerodha.com/api/login\`.
+- Exchanges \`request_token\` for a valid 24-hour \`access_token\`.
+- Writes the updated token directly to the \`.env\` configuration file.
 
 ### B. Interactive Browser Flow (Manual Fallback)
 If automated credentials are absent or fail:
-1. Prints the Zerodha Connect login URL:
-   \`https://kite.zerodha.com/connect/login?v=3&api_key=...\`
-2. User completes browser login and pastes the redirected \`request_token\`.
-3. \`gidh-auth\` generates and writes the active \`access_token\`.
+- Prints the Zerodha Connect login URL: \`https://kite.zerodha.com/connect/login?v=3&api_key=...\`
+- User completes browser login and pastes the redirected \`request_token\`.
+- \`gidh-auth\` generates and writes the active \`access_token\`.
 
 ---
 
-## 2. CLI Usage
+## 3. CLI Usage
 
 \`\`\`bash
 # Run automated/interactive login
@@ -163,19 +471,6 @@ go run ./backend/cmd/gidh-auth
 # Or pass a pre-acquired request token directly
 go run ./backend/cmd/gidh-auth <request_token>
 \`\`\`
-
----
-
-## 3. Environment Variables
-
-| Variable | Required | Description |
-| :--- | :--- | :--- |
-| \`KITE_API_KEY\` | Yes | Zerodha Connect App API Key |
-| \`KITE_API_SECRET\` | Yes | Zerodha Connect App API Secret |
-| \`KITE_USER_ID\` | Optional | Zerodha 6-character User ID (for automated login) |
-| \`KITE_PASSWORD\` | Optional | Broker account password (for automated login) |
-| \`KITE_TOTP_SECRET\` | Optional | Base32 TOTP Authenticator seed secret |
-| \`KITE_ACCESS_TOKEN\` | Output | Auto-generated 24-hour active session token |
 `
   },
   {
@@ -207,6 +502,10 @@ flowchart LR
     Calc --> RStore
 \`\`\`
 
+---
+
+## 2. Engine Processing Steps
+
 ### A. Atomic Sub-Second Ingestion
 - Each tick updates the stock's \`MinHigh\`, \`MinLow\`, \`MinClose\`, \`MinVolume\`, and cumulative turnover in \`InstrumentState\`.
 - Mutex locks are scoped at the fine-grained engine level to eliminate latency spikes.
@@ -222,7 +521,7 @@ Every second, \`LiveSnapshot()\` derives real-time metrics across all 210 univer
 
 ---
 
-## 2. Redis Key Protocol
+## 3. Redis Key Protocol
 
 | Redis Key | Type | TTL | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -245,7 +544,31 @@ At every completed minute (\`:00\` seconds), the backend flushes 1-minute candle
 
 ---
 
-## 1. Feature Categories
+## 1. Feature Computation Pipeline
+
+\`\`\`mermaid
+flowchart TD
+    Tick["1-Minute Completed Candle<br/>(:00 Second Boundary)"]
+    Calc["IntradayFeatureEngine<br/>Parallel Vectorized Computation"]
+    
+    subgraph MathFeatures [47 Mathematical Features]
+        F1["VWAP & Standard Deviation Bands (±1σ, ±2σ)"]
+        F2["Price Action Geometry (CLV, Wick Ratios, Body Ratio)"]
+        F3["Relative Volume (RVOL) & Rolling Log Volatility"]
+        F4["Volatility & ADR Fuel Exhaustion"]
+        F5["Opening Range Dynamics (OR15, OR30 Boundaries)"]
+    end
+
+    DB["TimescaleDB Hypertable<br/>market.intraday_features_1m"]
+
+    Tick --> Calc
+    Calc --> MathFeatures
+    MathFeatures --> DB
+\`\`\`
+
+---
+
+## 2. Feature Categories & Mathematical Formulas
 
 ### A. Volume-Weighted Price & Standard Deviation Bands
 - **Session VWAP**:
@@ -253,27 +576,20 @@ At every completed minute (\`:00\` seconds), the backend flushes 1-minute candle
 - **VWAP Standard Deviation ($\\sigma$)**:
   $$\\sigma = \\sqrt{\\max\\left(0, \\frac{\\sum (\\text{Price}^2 \\times \\text{Volume})}{\\sum \\text{Volume}} - \\text{VWAP}^2\\right)}$$
 - **VWAP Upper & Lower Bands**: $\\text{VWAP} \\pm 1\\sigma, \\text{VWAP} \\pm 2\\sigma$.
-- **VWAP Distance ($\sigma$)**: Normalized z-score of current price relative to VWAP.
 
 ### B. Price Action & Location
 - **CLV (Close Location Value)**:
   $$\\text{CLV} = \\frac{(\\text{Close} - \\text{Low}) - (\\text{High} - \\text{Close})}{\\text{High} - \\text{Low}} \\in [-1.0, +1.0]$$
-- **Upper / Lower Wick Ratio**: Fraction of candle range occupied by upper and lower shadows.
 - **Bar Body Ratio**: $\\frac{|\\text{Close} - \\text{Open}|}{\\text{High} - \\text{Low}}$.
 
 ### C. Institutional Relative Volume (RVOL)
-- **Time-Decayed Expected Volume Profile**: Pre-calculated baseline curve based on the median 30-day volume at minute $t$.
+- **Time-Decayed Expected Volume Profile**: Pre-calculated baseline curve based on median 30-day volume at minute $t$.
 - **RVOL**:
   $$\\text{RVOL}_t = \\frac{\\text{CumulativeVolume}_t}{\\text{ExpectedCumulativeVolume}_t}$$
-- **Rolling Log Return Volatilities**: $\\text{rVol}_5$, $\\text{rVol}_{15}$, $\\text{rVol}_{30}$ computed from 1-min log returns.
 
 ### D. Volatility & Fuel Exhaustion
 - **Session Range / ATR(14)**: Current session range divided by 14-day Daily ATR.
 - **ADR Fuel Used**: % of 20-day Average Daily Range consumed.
-
-### E. Opening Range Dynamics (ORB)
-- **OR15 High / Low**: 15-minute Opening Range boundary (frozen after 09:30 IST).
-- **OR30 High / Low**: 30-minute Opening Range boundary (frozen after 09:45 IST).
 `
   },
   {
@@ -305,6 +621,10 @@ flowchart TD
     Step4 --> Step5
 \`\`\`
 
+---
+
+## 2. Pipeline Execution Steps
+
 ### A. Universe Verification
 - Confirms all 210 active F&O instruments are mapped and active in \`market.instruments\`.
 
@@ -326,3 +646,5 @@ flowchart TD
 `
   }
 ];
+
+export const BACKEND_DOCS = ALL_DOCS;

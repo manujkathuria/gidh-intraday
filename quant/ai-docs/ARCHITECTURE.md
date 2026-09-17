@@ -1,91 +1,91 @@
-# 🦅 GIDH Quant Architecture & Strategic Mandate
+# 🦅 GIDH QUANT SYSTEM: AGENT & BRAIN ARCHITECTURE
 
-Welcome to the **GIDH Quant Base** (`quant/`). This document is the institutional blueprint for any AI agent or quant developer collaborating on this repository.
-
----
-
-## 1. Core Philosophy: The Vulture (Gidh) Mandate
-- **80% Premarket Selection & Institutional Surveillance**: We do not predict or guess moves. We identify multi-day campaigns where institutional heavyweights (FIIs, DIIs, prop desks) have already deployed billions in fresh Futures Open Interest.
-- **20% Micro-Gate Confirmation (Feast After the Kill)**: We act strictly *after* institutional intent is confirmed at market open. We enter early (09:16 to 09:45 AM) only when price respects VWAP, relative volume surges, and ADR fuel is not exhausted.
-- **Zero Overnight Ruin**: 100% intraday MIS with 5x leverage on ₹50,000 gross position sizes (₹10,000 margin per stock). Max 4 concurrent slots. All positions flat before 15:30 IST.
+> **Mandatory Context for AI Agents & Quant Developers**: This document outlines the fundamental operating protocol, multi-brain hierarchy, and universal database schema for the GIDH quantitative trading engine.
 
 ---
 
-## 2. Directory Architecture
+## 1. Core Operating Philosophy
+
+1. **AI is the Brain; Python Tools are the Sensory Body**:
+   - Python tools (`sensors.py`, `review_sensor.py`) extract pure, unadulterated high-dimensional measurements from TimescaleDB (Futures OI, capital inflows, CPR geometry, range fuel, 1-minute order flow).
+   - Python tools **DO NOT** contain hardcoded `if/else` heuristic trading rules.
+   - **The AI Agent (You)** evaluates the raw sensory vectors, applies contextual reasoning, detects traps/exhaustion, and makes trading decisions.
+
+2. **Autonomous Cognitive Loop**:
+   - Every brain operates on a 3-stage continuous lifecycle:
+     $$\text{Sensory Ingestion (Tools)} \longrightarrow \text{AI Decision Persistence} \longrightarrow \text{EOD Forensic Review \& Memory Update}$$
+   - Memory is continuous: yesterday's EOD forensic learnings immediately feed into today's pre-market reasoning.
+
+---
+
+## 2. Directory Layout
 
 ```
 quant/
-├── base/                   # Core DB connections, capital sizing, and shared models
-│   ├── db.py               # TimescaleDB connection pool & sizing constants
-│   └── models.py           # CampaignStage, OrderSide, TradeSignal, TradeResult dataclasses
+├── base/                           # Core DB connections & sizing constants
+│   ├── db.py                       # TimescaleDB connection pool & parameters
+│   └── models.py                   # Shared data structures
 │
-├── campaigns/              # Institutional Macro Engine (Daily EOD & Pre-Market)
-│   ├── tracker.py          # State Machine: Day 1 Launch -> Active Continuation -> Coiling -> Exhaustion
-│   └── scanner.py          # 5-Gate Funnel (Liquidity, Triple SMAs, Futures OI Surge, 20D Proximity)
+├── brains/                         # Autonomous Cognitive Trading Brains
+│   ├── base_brain.py               # Abstract BaseBrain contract (inherited by all brains)
+│   │
+│   ├── macro_brain/                # 🧠 BRAIN 1: PRE-MARKET MACRO SELECTOR
+│   │   ├── tools/
+│   │   │   ├── futures_sensor.py   # Tool 1: 1D/3D/5D Futures Dynamics (OI, Inflows, Price)
+│   │   │   ├── structure_sensor.py # Tool 2: Daily Structural Geometry (CPR, SMAs, Fuel)
+│   │   │   └── review_tool.py      # Tool 3: EOD Ground-Truth Outcome Extractor
+│   │   └── dispatcher.py           # Ingestion bridge & universal JSONB persistence
+│   │
+│   └── micro_brains/               # ⚡ MICRO BRAINS: INTRADAY LIVE EXECUTION (09:15 - 15:30)
+│       └── ...                     # (VWAP Rejection, ORB Breakout, Pullback Defense)
 │
-├── execution/              # Micro Execution & Simulation Engine (1-Minute Intraday)
-│   └── simulator.py        # Dynamic 1-min early execution (09:16 - 09:45 AM) with ADR Fuel Gate (<50%)
+├── ai-docs/                        # Institutional Knowledge & Agent Context
+│   ├── ARCHITECTURE.md             # This overarching architecture blueprint
+│   ├── BRAIN_PROTOCOL.md           # The BaseBrain contract and rules for creating new brains
+│   └── BRAIN_1_MACRO_SELECTOR.md   # Deep-dive manual for Brain 1 (Macro Selector)
 │
-├── evolution/              # Self-Refining Forensic Analysis (The Lab)
-│   └── post_mortem.py      # EOD trade forensics (Win Rate, Profit Factor, MFE/MAE, Fuel metrics)
-│
-├── inspector.py            # Volume Profile, Point of Control (POC), Low-Volume Voids
-├── towncenter.py           # Unified CLI Cockpit for Research, Scanning, and Live Simulation
-└── ai-docs/                # Institutional Knowledge & Agent Context Documentation
+└── towncenter.py                   # Master CLI Cockpit Interface
 ```
 
 ---
 
-## 3. The 5-Gate Premarket Selection Funnel
-Every morning before 09:15 AM, the system runs a 5-gate query across all ~210 F&O stocks:
+## 3. Universal 2-Table JSONB Database Schema
 
-1. **Gate 1 (Liquidity & Spread Protection)**:
-   - `prior_close` between ₹300 and ₹5,000.
-   - `average_daily_volume_20` $\ge 500,000$ shares/day.
-   - `adr_20_pct` $\ge 1.85\%$.
-2. **Gate 2 (Macro Trend Alignment)**:
-   - Bullish: `prior_close > sma_20 >= sma_50` and `prior_close > sma_200`.
-   - Bearish: `prior_close < sma_20 <= sma_50` and `prior_close < sma_200`.
-3. **Gate 3 (Institutional Fresh Fuel Injection)**:
-   - `futures_oi_1d_change_pct` $\ge +5.0\%$ (proves institutional capital block commitment).
-4. **Gate 4 (Price Conviction)**:
-   - Longs: `futures_price_change_pct` $\ge +1.0\%$ (Long Buildup).
-   - Shorts: `futures_price_change_pct` $\le -1.0\%$ (Short Buildup).
-5. **Gate 5 (Clear Air Proximity)**:
-   - Longs: `distance_20d_high_pct` $\le 4.0\%$ (Zero overhead trapped bagholders).
-   - Shorts: `distance_20d_low_pct` $\le 4.0\%$ (Falling into air pockets).
+All brains write and read from **2 universal tables** in PostgreSQL (`quant` schema) without requiring schema migrations:
 
----
+### Table 1: `quant.brain_sessions` (Session Decisions & Outcomes)
+```sql
+CREATE TABLE IF NOT EXISTS quant.brain_sessions (
+    session_date DATE NOT NULL,
+    brain_id VARCHAR(64) NOT NULL,          -- 'macro_selector', 'micro_vwap', 'micro_orb', etc.
+    decisions JSONB NOT NULL DEFAULT '{}'::jsonb, 
+    sensory_features JSONB NOT NULL DEFAULT '{}'::jsonb,
+    ai_thesis TEXT,
+    outcomes JSONB DEFAULT '{}'::jsonb,
+    forensics TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    reviewed_at TIMESTAMPTZ,
+    PRIMARY KEY (session_date, brain_id)
+);
+```
 
-## 4. The 4 Micro-Gates (09:16 to 09:45 AM Execution)
-Do **NOT** wait for a rigid 09:30 AM timer. Evaluate every 1-minute candle dynamically:
-
-1. **Fuel Gate (`adr_fuel_used_pct < 50%`)**: Never chase a stock that has burned $\ge 50\%$ of its ADR before entry (avoids buying the peak of rubber-band moves).
-2. **VWAP Gate**: Price strictly above VWAP for Longs / strictly below VWAP for Shorts.
-3. **RVOL Gate**: `relative_volume >= 0.80x` (active institutional flow).
-4. **Level Breakout**: Price breaks 5-min Opening Range (ORB5) or Prior Day High/Low.
-
----
-
-## 5. Capital & Sizing Model
-- **Capital**: ₹10,000 margin per stock $\times$ 5x MIS leverage = **₹50,000 gross position size**.
-- **Quantity Formula**: $\text{Shares} = \lfloor 50,000 / \text{Entry Price} \rfloor$.
-- **Friction**: Exact ₹70 round-trip deduction per ₹50k trade (brokerage + STT + exchange turnover fees).
-- **Max Concurrent Positions**: 4 slots.
+### Table 2: `quant.brain_memory` (Persistent Multi-Day Rolling Memory)
+```sql
+CREATE TABLE IF NOT EXISTS quant.brain_memory (
+    brain_id VARCHAR(64) PRIMARY KEY,       -- e.g. 'macro_selector'
+    memory_state JSONB NOT NULL DEFAULT '{}'::jsonb, -- Rolling learned patterns & active campaigns
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
 
 ---
 
-## 6. How to Run & Verify
+## 4. Master CLI Commands
+
 ```bash
-# Scan active campaigns
-.venv/bin/python -m quant.towncenter campaigns 2026-08-25
+# Ingest sensory packet for Brain 1 on any historical or live date:
+.venv/bin/python3 -m quant.towncenter macro 2026-09-08
 
-# Generate 08:45 AM pre-market watchlist
-.venv/bin/python -m quant.towncenter scan 2026-08-25
-
-# Replay dynamic 1-min simulation & see net realized PnL
-.venv/bin/python -m quant.towncenter simulate 2026-08-25
-
-# Run EOD post-mortem forensic analysis
-.venv/bin/python -m quant.towncenter evolve 2026-08-25
+# Check persistent rolling memory for any brain:
+.venv/bin/python3 -m quant.towncenter memory --brain macro_selector
 ```

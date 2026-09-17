@@ -30,20 +30,20 @@ export const DocContentRenderer: React.FC<Props> = ({ content }) => {
             </h3>
           ),
           p: ({ children }) => (
-            <p className="text-foreground/80 leading-relaxed my-3">{children}</p>
+            <p className="text-foreground/80 leading-relaxed my-2.5">{children}</p>
           ),
           ul: ({ children }) => (
-            <ul className="list-disc list-inside space-y-1.5 my-3 pl-1 text-foreground/80">
+            <ul className="list-disc pl-5 space-y-1 my-2.5 text-foreground/80">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal list-inside space-y-1.5 my-3 pl-1 text-foreground/80">
+            <ol className="list-decimal pl-5 space-y-1.5 my-2.5 text-foreground/80">
               {children}
             </ol>
           ),
           li: ({ children }) => (
-            <li className="text-foreground/80 leading-normal">{children}</li>
+            <li className="text-foreground/80 leading-relaxed my-0.5">{children}</li>
           ),
           code: ({ children, className }) => {
             const match = /language-(\w+)/.exec(className || "");
@@ -63,7 +63,7 @@ export const DocContentRenderer: React.FC<Props> = ({ content }) => {
             }
 
             return (
-              <code className="px-1.5 py-0.5 rounded bg-surface-muted text-foreground border border-surface-border text-[11px] font-mono">
+              <code className="px-1.5 py-0.5 rounded bg-surface-muted text-foreground border border-surface-border text-[11px] font-mono whitespace-nowrap">
                 {children}
               </code>
             );
