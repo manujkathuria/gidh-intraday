@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { usePathname } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 import { NavigationItems } from "./components/NavigationItems";
 import { MobileDrawerSidebar } from "./components/MobileDrawerSidebar";
@@ -14,8 +13,6 @@ interface Props {
 }
 
 export const AppShell: React.FC<Props> = ({ children }) => {
-  const pathname = usePathname();
-  const isDocsPage = pathname === "/docs";
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const {
@@ -40,49 +37,45 @@ export const AppShell: React.FC<Props> = ({ children }) => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground select-none">
-      {/* 1. Mobile Drawer Slide-Over (Hidden on /docs) */}
-      {!isDocsPage && (
-        <MobileDrawerSidebar
-          isOpen={isMobileOpen}
-          onClose={() => setIsMobileOpen(false)}
-          activeCount={activeCount}
-        />
-      )}
+      {/* 1. Mobile Drawer Slide-Over */}
+      <MobileDrawerSidebar
+        isOpen={isMobileOpen}
+        onClose={() => setIsMobileOpen(false)}
+        activeCount={activeCount}
+      />
 
-      {/* 2. Desktop / iPad Rail (Hidden on /docs, visible md+) */}
-      {!isDocsPage && (
-        <aside
-          className={`hidden md:flex bg-surface border-r border-surface-border flex-col shrink-0 z-20 select-none p-2.5 ${
-            isCollapsed ? "w-14" : "w-52"
-          }`}
-        >
-          <div className="flex flex-col gap-2 min-w-0">
-            {/* Top Sidebar Header with Collapse Button & Brand */}
-            <div
-              className={`flex items-center h-8 pb-2 border-b border-surface-border ${
-                isCollapsed ? "justify-center" : "justify-between px-1"
-              }`}
+      {/* 2. Desktop / iPad Rail (visible md+) */}
+      <aside
+        className={`hidden md:flex bg-surface border-r border-surface-border flex-col shrink-0 z-20 select-none p-2.5 ${
+          isCollapsed ? "w-14" : "w-52"
+        }`}
+      >
+        <div className="flex flex-col gap-2 min-w-0">
+          {/* Top Sidebar Header with Collapse Button & Brand */}
+          <div
+            className={`flex items-center h-8 pb-2 border-b border-surface-border ${
+              isCollapsed ? "justify-center" : "justify-between px-1"
+            }`}
+          >
+            {!isCollapsed && (
+              <span className="font-extrabold text-xs tracking-wider text-foreground select-none uppercase whitespace-nowrap">
+                GIDH WAR ROOM
+              </span>
+            )}
+            <button
+              onClick={handleToggleSidebar}
+              title={isCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)"}
+              className="p-1.5 rounded-md hover:bg-surface-hover text-foreground/70 hover:text-foreground transition flex items-center justify-center cursor-pointer"
+              aria-label="Toggle Sidebar"
             >
-              {!isCollapsed && (
-                <span className="font-extrabold text-xs tracking-wider text-foreground select-none uppercase whitespace-nowrap">
-                  GIDH WAR ROOM
-                </span>
-              )}
-              <button
-                onClick={handleToggleSidebar}
-                title={isCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)"}
-                className="p-1.5 rounded-md hover:bg-surface-hover text-foreground/70 hover:text-foreground transition flex items-center justify-center cursor-pointer"
-                aria-label="Toggle Sidebar"
-              >
-                <PanelLeft className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Navigation Links */}
-            <NavigationItems activeCount={activeCount} isCollapsed={isCollapsed} />
+              <PanelLeft className="w-4 h-4" />
+            </button>
           </div>
-        </aside>
-      )}
+
+          {/* Navigation Links */}
+          <NavigationItems activeCount={activeCount} isCollapsed={isCollapsed} />
+        </div>
+      </aside>
 
       {/* 3. Main Workspace Viewport */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">

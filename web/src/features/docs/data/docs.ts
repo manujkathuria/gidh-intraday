@@ -1,6 +1,7 @@
 export interface DocArticle {
   id: string;
   title: string;
+  shortTitle: string;
   description: string;
   category: "quant" | "backend";
   readTime: string;
@@ -14,6 +15,7 @@ export const ALL_DOCS: DocArticle[] = [
   {
     id: "quant-architecture",
     title: "Quant System & Cognitive Architecture",
+    shortTitle: "Cognitive Architecture",
     description: "Core operating philosophy: AI as the reasoning brain, Python tools as sensory receptors, and the BaseBrain contract.",
     category: "quant",
     readTime: "4 min read",
@@ -81,7 +83,7 @@ $$\\text{Sensory Ingestion (Tools)} \\longrightarrow \\text{AI Decision Persiste
 
 ## 3. Directory Hierarchy
 
-\`\`\`
+\`\`\`text
 quant/
 ├── base/                           # DB connections & sizing constants
 │   ├── db.py                       # TimescaleDB connection pool
@@ -135,6 +137,7 @@ All brains write to and read from **2 universal tables** in PostgreSQL without s
   {
     id: "quant-brain-protocol",
     title: "The BaseBrain Contract & Developer Guide",
+    shortTitle: "BaseBrain Contract",
     description: "Specification for implementing new trading brains in 3 simple steps under quant/brains/.",
     category: "quant",
     readTime: "3 min read",
@@ -199,7 +202,7 @@ class BaseBrain(ABC):
 ## 3. Building a New Brain in 3 Steps
 
 ### Step 1: Create the Brain Directory
-\`\`\`
+\`\`\`text
 quant/brains/micro_vwap/
 ├── tools/
 │   ├── vwap_sensor.py      # Raw 1-min VWAP distances & volume profile
@@ -232,6 +235,7 @@ class MicroVwapBrain(BaseBrain):
   {
     id: "quant-brain-1-macro",
     title: "Brain 1: Pre-Market Macro Selector",
+    shortTitle: "Macro Selector Brain",
     description: "Autonomous pre-market institutional surveillance engine: Futures Capital Inflow, Daily CPR Geometry, Macro Fuel %, and Trap Avoidance.",
     category: "quant",
     readTime: "4 min read",
@@ -248,74 +252,48 @@ class MicroVwapBrain(BaseBrain):
 flowchart TD
     subgraph PreMarket [08:30 AM: Pre-Market Surveillance]
         T1["Tool 1: Futures Sensor<br/>1D, 3D, 5D Inflows (₹ Cr)"]
-        T2["Tool 2: Structure Sensor<br/>CPR Width %, SMAs, Fuel %"]
-        Mem["quant.brain_memory<br/>Ingest Prior Day Context"]
-        Brain["🧠 AI Intelligence Brain<br/>Contextual Reasoning & Synthesis"]
+        T2["Tool 2: Structure Sensor<br/>CPR Geometry, SMAs, Fuel %"]
+        Memory["Load Rolling Memory<br/>(3-Day Traps & Regime)"]
     end
 
-    subgraph OutputUniverse [Pre-Market Focus Universe]
-        Bulls["🟢 Focus Bulls<br/>(Inflow + >40% Fuel + Narrow CPR)"]
-        Bears["🔴 Focus Bears<br/>(Outflow + Compressed Resistance)"]
-        Traps["⚠️ Blacklisted Traps<br/>(0-25% Fuel Rubber-band Chases)"]
+    subgraph AIReasoning [AI Macro Selector Brain]
+        Agent["Synthesize Institutional Flow<br/>Filter Volume Climax Traps<br/>Select Top Long/Short Universe"]
     end
 
-    subgraph IntradayLive [09:15 AM - 03:30 PM]
-        Micro["Micro Brains Live Execution<br/>(1-Min Order Flow & VWAP Defense)"]
+    subgraph MarketOpen [09:15 AM: Session Execution]
+        DB["Persist to quant.brain_sessions<br/>Decisions + Raw Sensory Features"]
+        WarRoom["War Room Cockpit UI (/macro)<br/>Displays Selected Focus Stocks"]
     end
 
-    subgraph PostMarket [03:45 PM: Post-Market Forensics]
-        T3["Tool 3: Review Tool<br/>(Actual Cash Outcomes & MFE)"]
-        EOD["🧠 AI EOD Forensics<br/>Reflection & Learnings"]
-        SaveMem["quant.brain_memory<br/>Update Rolling State"]
+    subgraph PostMarket [15:35 PM: EOD Forensic Review]
+        T3["Tool 3: Review Tool<br/>Extracts Actual MFE & Outcomes"]
+        ForensicLab["AI Forensic Review<br/>Update Rolling Memory State"]
     end
 
-    T1 --> Brain
-    T2 --> Brain
-    Mem --> Brain
-
-    Brain --> Bulls
-    Brain --> Bears
-    Brain --> Traps
-
-    Bulls --> Micro
-    Bears --> Micro
-
-    Micro --> T3
-    T3 --> EOD
-    EOD --> SaveMem
+    T1 --> Agent
+    T2 --> Agent
+    Memory --> Agent
+    Agent --> DB
+    DB --> WarRoom
+    WarRoom --> T3
+    T3 --> ForensicLab
 \`\`\`
 
 ---
 
-## 2. Sensory Tools & Mathematical Formulas
+## 2. Sensory Measurement Tools
 
-### A. Tool 1: Futures Dynamics (\`futures_sensor.py\`)
-- **Fresh Capital Inflow (₹ Crores)**:
-  $$\\text{Inflow}_{1D} = \\frac{(\\text{Close}_{T} - \\text{Close}_{T-1}) \\times \\text{OI}_{T}}{10,000,000}$$
-- Tracks 1D, 3D, and 5D cumulative capital deployment.
+### Tool 1: Futures Capital Inflow (\`futures_sensor.py\`)
+- Quantifies institutional positioning across 1-day, 3-day, and 5-day lookbacks:
+$$\\text{Inflow} = \\frac{\\Delta \\text{Open Interest} \\times \\text{Future VWAP}}{\\text{Lot Size}}$$
+- Flags institutional build-ups (**Long Build**, **Short Build**, **Long Unwinding**, **Short Covering**).
 
-### B. Tool 2: Structure Sensor (\`structure_sensor.py\`)
-- **CPR Width % (Compression)**:
-  $$\\text{CPR Width \\%} = \\frac{|\\text{TC} - \\text{BC}|}{\\text{Pivot}} \\times 100.0$$
-- **Macro Range Fuel % (Remaining Gas)**:
-  $$\\text{Fuel \\%} = 100.0 - \\min\\left(100.0, \\frac{\\text{High}_{3D} - \\text{Low}_{3D}}{2.5 \\times \\text{ADR}_{20}} \\times 100.0\\right)$$
+### Tool 2: Structural Geometry & Fuel (\`structure_sensor.py\`)
+- **Daily CPR Width %**: $\\frac{|\\text{TC} - \\text{BC}|}{\\text{Pivot}} \\times 100$.
+- **Macro Fuel %**: Percentage distance to nearest daily hurdle (Previous Day High/Low, Weekly High/Low, Daily 20/50/200 SMA).
 
-### C. Tool 3: EOD Review Tool (\`review_tool.py\`)
-- Measures actual cash market execution on Date $T+1$:
-  - Gap %, Max Favorable Expansion (MFE), Max Adverse Drawdown (MAE), EOD Net %.
-  - **Trap Avoidance Accuracy**: Verified percentage of blacklisted traps that faded from open.
-
----
-
-## 3. CLI Execution Commands
-
-\`\`\`bash
-# Ingest sensory packet and view top candidates for any session:
-.venv/bin/python3 -m quant.towncenter macro 2026-09-08
-
-# Check persistent rolling memory for Brain 1:
-.venv/bin/python3 -m quant.towncenter memory --brain macro_selector
-\`\`\`
+### Tool 3: EOD Forensic Reviewer (\`review_tool.py\`)
+- Extracts ground-truth intraday execution: **Max Favorable Excursion (MFE %)**, **Drawdown %**, and **Intraday Net Move %**.
 `
   },
 
@@ -325,6 +303,7 @@ flowchart TD
   {
     id: "backend-architecture",
     title: "Real-Time Streaming Pipeline",
+    shortTitle: "Streaming Pipeline",
     description: "End-to-end streaming architecture: sub-second Kite tick ingestion, atomic in-memory buffering, 1Hz Redis state broadcast, and TimescaleDB hypertable flushing.",
     category: "backend",
     readTime: "4 min read",
@@ -417,6 +396,7 @@ flowchart TD
   {
     id: "backend-auth-service",
     title: "Zerodha Kite Automated Auth & TOTP Login",
+    shortTitle: "Automated Kite Auth",
     description: "Automated daily TOTP authentication, session cookie extraction, and 24-hour access token provisioning.",
     category: "backend",
     readTime: "2 min read",
@@ -476,6 +456,7 @@ go run ./backend/cmd/gidh-auth <request_token>
   {
     id: "backend-live-engine",
     title: "Live 1Hz Engine & Redis Protocol",
+    shortTitle: "1Hz Live Engine",
     description: "How sub-second ticks are aggregated in-memory and broadcast via Redis PubSub for UI delivery.",
     category: "backend",
     readTime: "3 min read",
@@ -534,6 +515,7 @@ Every second, \`LiveSnapshot()\` derives real-time metrics across all 210 univer
   {
     id: "backend-feature-calculator",
     title: "47-Feature Intraday Mathematical Core",
+    shortTitle: "47-Feature Math Core",
     description: "Detailed mathematical formulas for the 47 quant features computed at every 1-minute candle close.",
     category: "backend",
     readTime: "5 min read",
@@ -595,6 +577,7 @@ flowchart TD
   {
     id: "backend-eod-batch",
     title: "EOD Pipeline & Data Integrity Jobs",
+    shortTitle: "EOD Integrity Jobs",
     description: "Automated end-of-day data verification, Kite repair backfills, and daily baseline publishing.",
     category: "backend",
     readTime: "3 min read",

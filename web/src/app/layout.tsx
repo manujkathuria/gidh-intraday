@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { AppShell } from "@/features/header";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { AuthGate } from "@/features/auth/AuthGate";
 import "./globals.css";
@@ -18,9 +17,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground">
         <AuthProvider>
-          <AuthGate>
-            <AppShell>{children}</AppShell>
-          </AuthGate>
+          <AuthGate>{children}</AuthGate>
         </AuthProvider>
       </body>
     </html>

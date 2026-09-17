@@ -48,7 +48,8 @@ export const DocContentRenderer: React.FC<Props> = ({ content }) => {
           code: ({ children, className }) => {
             const match = /language-(\w+)/.exec(className || "");
             const isMermaid = match && match[1] === "mermaid";
-            const isBlock = Boolean(match);
+            const isMultiline = String(children).includes("\n");
+            const isBlock = Boolean(match) || isMultiline;
 
             if (isMermaid) {
               return <MermaidRenderer chart={String(children).trim()} />;
@@ -56,7 +57,7 @@ export const DocContentRenderer: React.FC<Props> = ({ content }) => {
 
             if (isBlock) {
               return (
-                <code className="block bg-background border border-surface-border rounded-md p-3.5 font-mono text-[11px] text-foreground/90 overflow-x-auto my-3 leading-snug">
+                <code className="block bg-background border border-surface-border rounded-md p-3.5 font-mono text-[11px] text-foreground/90 overflow-x-auto my-3 leading-snug whitespace-pre font-normal">
                   {children}
                 </code>
               );
@@ -68,7 +69,7 @@ export const DocContentRenderer: React.FC<Props> = ({ content }) => {
               </code>
             );
           },
-          pre: ({ children }) => <pre className="my-3">{children}</pre>,
+          pre: ({ children }) => <pre className="my-2 overflow-x-auto">{children}</pre>,
           blockquote: ({ children }) => (
             <blockquote className="border-l-2 border-foreground/40 pl-3.5 my-3 text-foreground/70 italic">
               {children}
