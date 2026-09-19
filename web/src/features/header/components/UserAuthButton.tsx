@@ -60,7 +60,7 @@ export const UserAuthButton: React.FC = () => {
           <span className="text-xs font-bold text-foreground truncate">
             {user.displayName || "Quant Operator"}
           </span>
-          <span className="text-[10px] text-foreground/50 truncate font-mono">
+          <span className="text-[10px] text-foreground/50 truncate ">
             {user.email}
           </span>
         </div>
@@ -78,9 +78,8 @@ export const UserAuthButton: React.FC = () => {
           {({ focus }) => (
             <button
               onClick={signOut}
-              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-semibold text-foreground transition cursor-pointer ${
-                focus ? "bg-surface-hover" : ""
-              }`}
+              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-semibold text-foreground transition cursor-pointer ${focus ? "bg-surface-hover" : ""
+                }`}
             >
               <LogOut className="w-3.5 h-3.5 text-foreground/70" />
               <span>Sign Out</span>

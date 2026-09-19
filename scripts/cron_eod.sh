@@ -28,9 +28,8 @@ if [ -f "${APP_DIR}/bin/gidh-auth" ]; then
     echo "[1/2] Running ./bin/gidh-batch eod..." >> "${LOG_FILE}"
     "${APP_DIR}/bin/gidh-batch" eod >> "${LOG_FILE}" 2>&1
 else
-    docker exec gidh-backend /app/bin/gidh-auth >> "${LOG_FILE}" 2>&1 || true
-    echo "[1/2] Running gidh-batch eod in container..." >> "${LOG_FILE}"
-    docker exec gidh-backend /app/bin/gidh-batch eod >> "${LOG_FILE}" 2>&1
+    echo "[ERROR] Missing ${APP_DIR}/bin/gidh-auth and gidh-batch utility binaries." >> "${LOG_FILE}"
+    exit 1
 fi
 
 echo "================================================================" >> "${LOG_FILE}"

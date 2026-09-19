@@ -90,11 +90,10 @@ export const RadarFilterBar: React.FC<Props> = ({
                 <button
                   key={p.id}
                   onClick={() => setPreset(p.id)}
-                  className={`px-3 py-1 rounded transition text-xs flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                    isActive
+                  className={`px-3 py-1 rounded transition text-xs flex items-center gap-1.5 cursor-pointer shrink-0 ${isActive
                       ? "bg-surface text-foreground font-extrabold shadow-2xs border border-surface-border"
                       : "text-foreground/60 hover:text-foreground hover:bg-surface-hover/60 border border-transparent font-medium"
-                  }`}
+                    }`}
                 >
                   <Icon className={`w-3.5 h-3.5 ${isActive ? "text-foreground" : "text-foreground/50"}`} />
                   <span>{p.label}</span>
@@ -145,7 +144,7 @@ export const RadarFilterBar: React.FC<Props> = ({
             className="block w-full rounded-md bg-surface pl-8.5 pr-3 py-1.5 text-xs text-foreground placeholder:text-foreground/40 border border-surface-border focus:outline-1 focus:-outline-offset-1 focus:outline-foreground focus:border-foreground"
           />
         </div>
-        <div className="text-[11px] text-foreground/50 shrink-0 font-mono px-1">
+        <div className="text-[11px] text-foreground/50 shrink-0  px-1">
           <span className="font-bold text-foreground">{visibleCount}</span>/{totalCount}
         </div>
       </div>

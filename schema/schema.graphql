@@ -154,11 +154,78 @@ type ActivePosition {
   pnlPct: Float!
   mfePct: Float!
   stopFloorPct: Float!
+  stopLossPrice: Float
+  targetPrice: Float
   tactic: String
   invalidation: String
   brokerOrderId: String
   openedAt: String!
   updatedAt: String!
+}
+
+enum TradeSide {
+  LONG
+  SHORT
+}
+
+enum ManagedOrderType {
+  MARKET
+  SYNTHETIC_LIMIT
+}
+
+enum ManagedOrderStatus {
+  PENDING
+  TRIGGERING
+  SUBMITTING
+  SUBMITTED
+  FILLED
+  REJECTED
+  CANCELLED
+  RECONCILE_REQUIRED
+  EXIT_SUBMITTED
+  CLOSED
+}
+
+type ManagedOrder {
+  id: ID!
+  clientOrderId: ID!
+  brokerOrderId: String
+  orderType: ManagedOrderType!
+  status: ManagedOrderStatus!
+  symbol: String!
+  instrumentToken: Int!
+  exchange: String!
+  side: TradeSide!
+  quantity: Int!
+  marginInr: Float!
+  limitPrice: Float
+  expectedStopPrice: Float
+  expectedTargetPrice: Float
+  actualFillPrice: Float
+  stopPrice: Float
+  targetPrice: Float
+  rejectionReason: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+input PlaceMarketOrderInput {
+  clientOrderId: ID!
+  symbol: String!
+  side: TradeSide!
+  marginInr: Float!
+  tactic: String
+  invalidation: String!
+}
+
+input PlaceLimitOrderInput {
+  clientOrderId: ID!
+  symbol: String!
+  side: TradeSide!
+  limitPrice: Float!
+  marginInr: Float!
+  tactic: String
+  invalidation: String!
 }
 
 """
@@ -249,11 +316,14 @@ type Query {
 
   # Live Positions
   livePositions: [ActivePosition!]!
+  managedOrders: [ManagedOrder!]!
 }
 
 type Mutation {
-  createOrder(symbol: String!, side: String!, marginInr: Float, tactic: String, invalidation: String): ActivePosition!
-  squareOffPosition(symbol: String!, reason: String): Boolean!
+  placeMarketOrder(input: PlaceMarketOrderInput!): ManagedOrder!
+  placeLimitOrder(input: PlaceLimitOrderInput!): ManagedOrder!
+  cancelLimitOrder(id: ID!): ManagedOrder!
+  squareOffPosition(symbol: String!, reason: String!): ManagedOrder!
 }
 
 type Subscription {

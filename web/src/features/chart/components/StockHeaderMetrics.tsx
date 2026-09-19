@@ -2,8 +2,8 @@
 
 import React from "react";
 import { ReplayStock } from "@/lib/api";
-import { StockSearchCombobox } from "./StockSearchCombobox";
 import { ChartIntervalSelector } from "./ChartIntervalSelector";
+import { ChartTradeButtons } from "./ChartTradeButtons";
 import { StockSummaryItem } from "../types";
 import { ChartInterval } from "./candleAggregator";
 
@@ -18,6 +18,10 @@ interface Props {
   onSelectSymbol?: (sym: string) => void;
   interval?: ChartInterval;
   onChangeInterval?: (interval: ChartInterval) => void;
+  // Modal toggle
+  onOpenOrderModal?: (side: "LONG" | "SHORT") => void;
+  isOrderModalOpen?: boolean;
+  activeOrderSide?: "LONG" | "SHORT";
 }
 
 export const StockHeaderMetrics: React.FC<Props> = ({
@@ -29,6 +33,9 @@ export const StockHeaderMetrics: React.FC<Props> = ({
   onSelectSymbol,
   interval = "5m",
   onChangeInterval,
+  onOpenOrderModal,
+  isOrderModalOpen,
+  activeOrderSide,
 }) => {
   const price = stockInfo?.price || lastClosePrice;
   const movePct = stockInfo?.move_pct || 0;
@@ -38,8 +45,8 @@ export const StockHeaderMetrics: React.FC<Props> = ({
 
   return (
     <div className="h-10 px-3 bg-surface border border-surface-border rounded-lg flex items-center justify-between gap-3 select-none text-xs shrink-0">
-      {/* Left: Integrated Interval Selector */}
-      <div className="flex items-center gap-2 min-w-0">
+      {/* Left: Integrated Interval Selector & Quick LONG / SHRT buttons */}
+      <div className="flex items-center gap-3 min-w-0">
         {onChangeInterval && (
           <div className="flex items-center">
             <ChartIntervalSelector
@@ -47,6 +54,19 @@ export const StockHeaderMetrics: React.FC<Props> = ({
               onChangeInterval={onChangeInterval}
             />
           </div>
+        )}
+
+        {/* Vertical Separator & Trade Buttons */}
+        {onOpenOrderModal && (
+          <>
+            <div className="h-4 w-[1px] bg-surface-border" />
+            <ChartTradeButtons
+              symbol={activeSymbol}
+              onOpenOrderModal={onOpenOrderModal}
+              isOrderModalOpen={isOrderModalOpen}
+              activeOrderSide={activeOrderSide}
+            />
+          </>
         )}
       </div>
 
@@ -79,7 +99,7 @@ export const StockHeaderMetrics: React.FC<Props> = ({
           </span>
         )}
 
-        {/* VWAP Distance (Clean subtle tag) */}
+        {/* VWAP Distance */}
         {vwapDist !== 0 && (
           <span className="hidden lg:inline-flex items-center text-xs font-semibold text-foreground/50">
             {vwapDist >= 0 ? "+" : ""}{vwapDist.toFixed(1)}% VWAP

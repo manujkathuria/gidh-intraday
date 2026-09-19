@@ -37,17 +37,17 @@ export function aggregateCandles(candles: Candle[], interval: ChartInterval): Ca
 
 function buildAggregatedBar(bars: Candle[], time: number): Candle {
   const open = bars[0].open;
-  let high = -Infinity;
-  let low = Infinity;
+  let high = bars[0].high;
+  let low = bars[0].low;
   let totalVol = 0;
   const lastBar = bars[bars.length - 1];
   const lastClose = lastBar.close;
   const lastVwap = lastBar.vwap;
 
   for (const b of bars) {
-    if (b.high > high) high = b.high;
-    if (b.low < low) low = b.low;
-    totalVol += b.volume;
+    if (typeof b.high === "number" && Number.isFinite(b.high) && b.high > high) high = b.high;
+    if (typeof b.low === "number" && Number.isFinite(b.low) && b.low < low) low = b.low;
+    if (typeof b.volume === "number" && Number.isFinite(b.volume)) totalVol += b.volume;
   }
 
   return {

@@ -57,14 +57,14 @@ export const DocContentRenderer: React.FC<Props> = ({ content }) => {
 
             if (isBlock) {
               return (
-                <code className="block bg-background border border-surface-border rounded-md p-3.5 font-mono text-[11px] text-foreground/90 overflow-x-auto my-3 leading-snug whitespace-pre font-normal">
+                <code className="block bg-background border border-surface-border rounded-md p-3.5  text-[11px] text-foreground/90 overflow-x-auto my-3 leading-snug whitespace-pre font-normal">
                   {children}
                 </code>
               );
             }
 
             return (
-              <code className="px-1.5 py-0.5 rounded bg-surface-muted text-foreground border border-surface-border text-[11px] font-mono whitespace-nowrap">
+              <code className="px-1.5 py-0.5 rounded bg-surface-muted text-foreground border border-surface-border text-[11px]  whitespace-nowrap">
                 {children}
               </code>
             );

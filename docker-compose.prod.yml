@@ -12,12 +12,13 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
-      - backend
+      - edge
     networks:
       - gidh-net
 
   # 2. Frontend Cockpit (Next.js 16 Standalone)
   frontend:
+    image: gidh-intraday-frontend:latest
     build:
       context: ./web
       dockerfile: Dockerfile
@@ -36,12 +37,13 @@ services:
     networks:
       - gidh-net
 
-  # 3. Backend Engine (Go - Read API + Order Manager + Firebase Admin Auth)
-  backend:
+  # 3. Edge API and sole live-order execution owner
+  edge:
+    image: gidh-intraday-edge:latest
     build:
-      context: ./backend
+      context: ./edge
       dockerfile: Dockerfile
-    container_name: gidh-backend
+    container_name: gidh-edge
     restart: unless-stopped
     environment:
       - DB_HOST=gidh-timescaledb
@@ -59,7 +61,10 @@ services:
       - KITE_PASSWORD=${KITE_PASSWORD:-}
       - KITE_TOTP_SECRET=${KITE_TOTP_SECRET:-}
       - FIREBASE_CREDENTIALS_B64=${FIREBASE_CREDENTIALS_B64:-}
-      - GIDH_API_ADDR=0.0.0.0:8080
+      - ORDER_AUTHORIZED_EMAILS=${ORDER_AUTHORIZED_EMAILS:-kathuria.manuj@gmail.com,sylviachadha@gmail.com}
+      - ORDER_LIVE_ENABLED=${ORDER_LIVE_ENABLED:-false}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://gidh.tech,https://www.gidh.tech}
+      - PORT=8080
       - ENV=production
     volumes:
       - ./.env:/app/.env

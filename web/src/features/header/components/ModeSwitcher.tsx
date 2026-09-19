@@ -33,7 +33,7 @@ export const ModeSwitcher: React.FC<Props> = ({
       </div>
 
       {/* Local Session Indicator */}
-      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-muted border border-surface-border text-[10px] font-mono text-foreground/60 uppercase">
+      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-muted border border-surface-border text-[10px]  text-foreground/60 uppercase">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
         <span>COMPLETED</span>
       </div>

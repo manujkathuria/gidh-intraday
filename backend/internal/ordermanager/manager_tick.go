@@ -69,13 +69,19 @@ func (m *Manager) processVirtualBrackets(ctx context.Context, symbol string, ltp
 				vbo.MFEPct = vbo.PnLPct
 			}
 
-			// 1. Target 1 Check (+2.0R)
-			hitTarget := (vbo.Side == SideLong && ltp >= vbo.TargetPrice) ||
-				(vbo.Side == SideShort && ltp <= vbo.TargetPrice)
+			// 1. Target Check (+2.0R or custom price if set)
+			hitTarget := false
+			if vbo.TargetPrice > 0 {
+				hitTarget = (vbo.Side == SideLong && ltp >= vbo.TargetPrice) ||
+					(vbo.Side == SideShort && ltp <= vbo.TargetPrice)
+			}
 
-			// 2. Stop Loss Check (1.0% MAE)
-			hitStop := (vbo.Side == SideLong && ltp <= vbo.StopLossPrice) ||
-				(vbo.Side == SideShort && ltp >= vbo.StopLossPrice)
+			// 2. Stop Loss Check (1.0% MAE or custom price if set)
+			hitStop := false
+			if vbo.StopLossPrice > 0 {
+				hitStop = (vbo.Side == SideLong && ltp <= vbo.StopLossPrice) ||
+					(vbo.Side == SideShort && ltp >= vbo.StopLossPrice)
+			}
 
 			if hitTarget || hitStop {
 				vbo.ExitPrice = ltp
@@ -96,6 +102,10 @@ func (m *Manager) processVirtualBrackets(ctx context.Context, symbol string, ltp
 					_, _ = m.kiteClient.PlaceMISMarketOrder(ctx, vbo.Exchange, vbo.Symbol, exitTxn, vbo.Quantity, "GIDH_EXIT")
 				}
 				_ = m.redisStore.PublishLiveEvent(ctx, "VBO_CLOSED", vbo)
+
+				// Prune from active orders in Redis
+				_ = m.redisStore.RemoveVirtualBracketOrder(ctx, vbo.ID)
+				continue
 			}
 		}
 

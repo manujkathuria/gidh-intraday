@@ -16,7 +16,7 @@ type Database struct {
 func Connect(ctx context.Context) (*Database, error) {
 	host := os.Getenv("DB_HOST")
 	if host == "" {
-		host = "192.168.68.107"
+		host = "localhost"
 	}
 	port := os.Getenv("DB_PORT")
 	if port == "" {
@@ -36,7 +36,7 @@ func Connect(ctx context.Context) (*Database, error) {
 	}
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, pass, name)
-	
+
 	config, err := pgxpool.ParseConfig(connStr)
 	if err != nil {
 		return nil, fmt.Errorf("parse db config: %w", err)

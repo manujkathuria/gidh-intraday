@@ -27,6 +27,14 @@ export const PositionsTerminal: React.FC = () => {
     setSelectedSymbol,
     orderSide,
     setOrderSide,
+    orderType,
+    setOrderType,
+    targetEntryPrice,
+    setTargetEntryPrice,
+    stopLossPrice,
+    setStopLossPrice,
+    targetPrice,
+    setTargetPrice,
     orderTactic,
     setOrderTactic,
     submittingOrder,
@@ -51,30 +59,32 @@ export const PositionsTerminal: React.FC = () => {
       />
 
       {/* 2. Section Header & Order Action Button */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-foreground/70" />
-          <h2 className="text-sm font-black uppercase tracking-wider text-foreground">
-            Active Trade Slots (5 Max)
+          <Zap className="w-3.5 h-3.5 text-foreground/60" />
+          <h2 className="text-xs  font-bold uppercase tracking-wider text-foreground">
+            5-Slot Trade Matrix
           </h2>
+          <span className="text-[10px]  px-1.5 py-0.5 rounded bg-surface-muted border border-surface-border text-foreground/60">
+            {usedSlots}/5 ACTIVE
+          </span>
         </div>
 
         <button
           onClick={() => setShowOrderModal(true)}
           disabled={availableSlots === 0}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition ${
-            availableSlots > 0
-              ? "bg-foreground text-background hover:bg-foreground/90 shadow-sm cursor-pointer"
+          className={`px-3 py-1.5 rounded-lg text-xs  font-bold flex items-center gap-1.5 transition ${availableSlots > 0
+              ? "bg-foreground text-background hover:bg-foreground/90 shadow-xs cursor-pointer"
               : "bg-surface-muted text-foreground/30 border border-surface-border cursor-not-allowed"
-          }`}
+            }`}
         >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Enter MIS Trade (₹10k Margin)</span>
+          <Plus className="w-3 h-3" />
+          <span>New Order</span>
         </button>
       </div>
 
       {/* 3. 5 Fixed Slots Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
         {Array.from({ length: 5 }).map((_, slotIndex) => {
           const pos = positionsList[slotIndex];
           if (pos) {
@@ -97,7 +107,7 @@ export const PositionsTerminal: React.FC = () => {
         })}
       </div>
 
-      {/* 4. Live Operating Brain Reference */}
+      {/* 4. Live Operating Brain Reference (Collapsible) */}
       <BrainProtocolCard />
 
       {/* 5. Quick Order Modal */}
@@ -108,8 +118,14 @@ export const PositionsTerminal: React.FC = () => {
         setSelectedSymbol={setSelectedSymbol}
         orderSide={orderSide}
         setOrderSide={setOrderSide}
-        orderTactic={orderTactic}
-        setOrderTactic={setOrderTactic}
+        orderType={orderType}
+        setOrderType={setOrderType}
+        targetEntryPrice={targetEntryPrice}
+        setTargetEntryPrice={setTargetEntryPrice}
+        stopLossPrice={stopLossPrice}
+        setStopLossPrice={setStopLossPrice}
+        targetPrice={targetPrice}
+        setTargetPrice={setTargetPrice}
         searchFilter={searchFilter}
         setSearchFilter={setSearchFilter}
         filteredSymbols={filteredSymbols}

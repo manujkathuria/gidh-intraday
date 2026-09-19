@@ -16,10 +16,12 @@ export const getGraphQLEndpoint = (): string => {
 
 export async function executeGraphQL<T = any>(query: string, variables: Record<string, any> = {}): Promise<T> {
   const endpoint = getGraphQLEndpoint();
+  const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
   const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({
       query,
@@ -39,3 +41,4 @@ export async function executeGraphQL<T = any>(query: string, variables: Record<s
 
   return json.data;
 }
+import { auth } from "./firebase";

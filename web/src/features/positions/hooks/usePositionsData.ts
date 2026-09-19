@@ -18,6 +18,10 @@ export function usePositionsData() {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState("");
   const [orderSide, setOrderSide] = useState<"LONG" | "SHORT">("LONG");
+  const [orderType, setOrderType] = useState<"MARKET" | "LIMIT">("MARKET");
+  const [targetEntryPrice, setTargetEntryPrice] = useState<string>("");
+  const [stopLossPrice, setStopLossPrice] = useState<string>("");
+  const [targetPrice, setTargetPrice] = useState<string>("");
   const [orderTactic, setOrderTactic] = useState("15M ORB BREAKOUT");
   const [submittingOrder, setSubmittingOrder] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
@@ -40,17 +44,15 @@ export function usePositionsData() {
   const fnoStocks = snapshot?.stocks || [];
 
   const availableSymbols = useMemo(() => {
-    return fnoStocks
-      .filter((s) => !activePositions[s.symbol])
-      .map((s) => ({
-        symbol: s.symbol,
-        price: s.price,
-        move_pct: s.move_pct,
-        rvol: s.rvol,
-        sector: s.sector,
-        is_above_vwap: s.is_above_vwap,
-      }));
-  }, [fnoStocks, activePositions]);
+    return fnoStocks.map((s: any) => ({
+      symbol: s.symbol,
+      price: s.price,
+      move_pct: s.move_pct,
+      rvol: s.rvol,
+      sector: s.sector,
+      is_above_vwap: s.is_above_vwap,
+    }));
+  }, [fnoStocks]);
 
   const filteredSymbols = useMemo(() => {
     if (!searchFilter) return availableSymbols.slice(0, 30);
@@ -72,7 +74,9 @@ export function usePositionsData() {
     const intent: OrderIntent = {
       symbol: selectedSymbol,
       side: orderSide,
+      order_type: orderType,
       margin_inr: 10000,
+      target_entry_price: orderType === "LIMIT" && targetEntryPrice ? parseFloat(targetEntryPrice) : undefined,
       tactic: orderTactic,
       invalidation: "15M_VWAP_CROSS",
     };
@@ -83,6 +87,10 @@ export function usePositionsData() {
       setShowOrderModal(false);
       setSelectedSymbol("");
       setSearchFilter("");
+      setTargetEntryPrice("");
+      setStopLossPrice("");
+      setTargetPrice("");
+      setOrderType("MARKET");
     }
   };
 
@@ -105,6 +113,14 @@ export function usePositionsData() {
     setSelectedSymbol,
     orderSide,
     setOrderSide,
+    orderType,
+    setOrderType,
+    targetEntryPrice,
+    setTargetEntryPrice,
+    stopLossPrice,
+    setStopLossPrice,
+    targetPrice,
+    setTargetPrice,
     orderTactic,
     setOrderTactic,
     submittingOrder,

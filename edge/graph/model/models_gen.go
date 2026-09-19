@@ -2,24 +2,32 @@
 
 package model
 
+import (
+	"fmt"
+	"io"
+	"strconv"
+)
+
 // Active Trading Position & Order Lifecycle
 type ActivePosition struct {
-	Symbol          string  `json:"symbol"`
-	InstrumentToken int     `json:"instrumentToken"`
-	Exchange        string  `json:"exchange"`
-	Side            string  `json:"side"`
-	Quantity        int     `json:"quantity"`
-	EntryPrice      float64 `json:"entryPrice"`
-	CurrentLtp      float64 `json:"currentLtp"`
-	PnlInr          float64 `json:"pnlInr"`
-	PnlPct          float64 `json:"pnlPct"`
-	MfePct          float64 `json:"mfePct"`
-	StopFloorPct    float64 `json:"stopFloorPct"`
-	Tactic          *string `json:"tactic,omitempty"`
-	Invalidation    *string `json:"invalidation,omitempty"`
-	BrokerOrderID   *string `json:"brokerOrderId,omitempty"`
-	OpenedAt        string  `json:"openedAt"`
-	UpdatedAt       string  `json:"updatedAt"`
+	Symbol          string   `json:"symbol"`
+	InstrumentToken int      `json:"instrumentToken"`
+	Exchange        string   `json:"exchange"`
+	Side            string   `json:"side"`
+	Quantity        int      `json:"quantity"`
+	EntryPrice      float64  `json:"entryPrice"`
+	CurrentLtp      float64  `json:"currentLtp"`
+	PnlInr          float64  `json:"pnlInr"`
+	PnlPct          float64  `json:"pnlPct"`
+	MfePct          float64  `json:"mfePct"`
+	StopFloorPct    float64  `json:"stopFloorPct"`
+	StopLossPrice   *float64 `json:"stopLossPrice,omitempty"`
+	TargetPrice     *float64 `json:"targetPrice,omitempty"`
+	Tactic          *string  `json:"tactic,omitempty"`
+	Invalidation    *string  `json:"invalidation,omitempty"`
+	BrokerOrderID   *string  `json:"brokerOrderId,omitempty"`
+	OpenedAt        string   `json:"openedAt"`
+	UpdatedAt       string   `json:"updatedAt"`
 }
 
 // Quant Brain Rule Configuration
@@ -76,6 +84,29 @@ type FuturesInflowResponse struct {
 	Data           []*FuturesInflowItem `json:"data"`
 }
 
+type ManagedOrder struct {
+	ID                  string             `json:"id"`
+	ClientOrderID       string             `json:"clientOrderId"`
+	BrokerOrderID       *string            `json:"brokerOrderId,omitempty"`
+	OrderType           ManagedOrderType   `json:"orderType"`
+	Status              ManagedOrderStatus `json:"status"`
+	Symbol              string             `json:"symbol"`
+	InstrumentToken     int                `json:"instrumentToken"`
+	Exchange            string             `json:"exchange"`
+	Side                TradeSide          `json:"side"`
+	Quantity            int                `json:"quantity"`
+	MarginInr           float64            `json:"marginInr"`
+	LimitPrice          *float64           `json:"limitPrice,omitempty"`
+	ExpectedStopPrice   *float64           `json:"expectedStopPrice,omitempty"`
+	ExpectedTargetPrice *float64           `json:"expectedTargetPrice,omitempty"`
+	ActualFillPrice     *float64           `json:"actualFillPrice,omitempty"`
+	StopPrice           *float64           `json:"stopPrice,omitempty"`
+	TargetPrice         *float64           `json:"targetPrice,omitempty"`
+	RejectionReason     *string            `json:"rejectionReason,omitempty"`
+	CreatedAt           string             `json:"createdAt"`
+	UpdatedAt           string             `json:"updatedAt"`
+}
+
 // Live Market Stream & Redis Heartbeat Status
 type MarketStatus struct {
 	IsLive        bool    `json:"isLive"`
@@ -111,6 +142,25 @@ type OperatingScheduleItem struct {
 	Desc           string `json:"desc"`
 	RiskConstraint string `json:"riskConstraint"`
 	Status         string `json:"status"`
+}
+
+type PlaceLimitOrderInput struct {
+	ClientOrderID string    `json:"clientOrderId"`
+	Symbol        string    `json:"symbol"`
+	Side          TradeSide `json:"side"`
+	LimitPrice    float64   `json:"limitPrice"`
+	MarginInr     float64   `json:"marginInr"`
+	Tactic        *string   `json:"tactic,omitempty"`
+	Invalidation  string    `json:"invalidation"`
+}
+
+type PlaceMarketOrderInput struct {
+	ClientOrderID string    `json:"clientOrderId"`
+	Symbol        string    `json:"symbol"`
+	Side          TradeSide `json:"side"`
+	MarginInr     float64   `json:"marginInr"`
+	Tactic        *string   `json:"tactic,omitempty"`
+	Invalidation  string    `json:"invalidation"`
 }
 
 type Query struct {
@@ -193,4 +243,143 @@ type UniverseItem struct {
 	FutureExpiry      string  `json:"futureExpiry"`
 	FutureLotSize     int     `json:"futureLotSize"`
 	FutureTickSize    float64 `json:"futureTickSize"`
+}
+
+type ManagedOrderStatus string
+
+const (
+	ManagedOrderStatusPending           ManagedOrderStatus = "PENDING"
+	ManagedOrderStatusTriggering        ManagedOrderStatus = "TRIGGERING"
+	ManagedOrderStatusSubmitting        ManagedOrderStatus = "SUBMITTING"
+	ManagedOrderStatusSubmitted         ManagedOrderStatus = "SUBMITTED"
+	ManagedOrderStatusFilled            ManagedOrderStatus = "FILLED"
+	ManagedOrderStatusRejected          ManagedOrderStatus = "REJECTED"
+	ManagedOrderStatusCancelled         ManagedOrderStatus = "CANCELLED"
+	ManagedOrderStatusReconcileRequired ManagedOrderStatus = "RECONCILE_REQUIRED"
+	ManagedOrderStatusExitSubmitted     ManagedOrderStatus = "EXIT_SUBMITTED"
+	ManagedOrderStatusClosed            ManagedOrderStatus = "CLOSED"
+)
+
+var AllManagedOrderStatus = []ManagedOrderStatus{
+	ManagedOrderStatusPending,
+	ManagedOrderStatusTriggering,
+	ManagedOrderStatusSubmitting,
+	ManagedOrderStatusSubmitted,
+	ManagedOrderStatusFilled,
+	ManagedOrderStatusRejected,
+	ManagedOrderStatusCancelled,
+	ManagedOrderStatusReconcileRequired,
+	ManagedOrderStatusExitSubmitted,
+	ManagedOrderStatusClosed,
+}
+
+func (e ManagedOrderStatus) IsValid() bool {
+	switch e {
+	case ManagedOrderStatusPending, ManagedOrderStatusTriggering, ManagedOrderStatusSubmitting, ManagedOrderStatusSubmitted, ManagedOrderStatusFilled, ManagedOrderStatusRejected, ManagedOrderStatusCancelled, ManagedOrderStatusReconcileRequired, ManagedOrderStatusExitSubmitted, ManagedOrderStatusClosed:
+		return true
+	}
+	return false
+}
+
+func (e ManagedOrderStatus) String() string {
+	return string(e)
+}
+
+func (e *ManagedOrderStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ManagedOrderStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ManagedOrderStatus", str)
+	}
+	return nil
+}
+
+func (e ManagedOrderStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type ManagedOrderType string
+
+const (
+	ManagedOrderTypeMarket         ManagedOrderType = "MARKET"
+	ManagedOrderTypeSyntheticLimit ManagedOrderType = "SYNTHETIC_LIMIT"
+)
+
+var AllManagedOrderType = []ManagedOrderType{
+	ManagedOrderTypeMarket,
+	ManagedOrderTypeSyntheticLimit,
+}
+
+func (e ManagedOrderType) IsValid() bool {
+	switch e {
+	case ManagedOrderTypeMarket, ManagedOrderTypeSyntheticLimit:
+		return true
+	}
+	return false
+}
+
+func (e ManagedOrderType) String() string {
+	return string(e)
+}
+
+func (e *ManagedOrderType) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ManagedOrderType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ManagedOrderType", str)
+	}
+	return nil
+}
+
+func (e ManagedOrderType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type TradeSide string
+
+const (
+	TradeSideLong  TradeSide = "LONG"
+	TradeSideShort TradeSide = "SHORT"
+)
+
+var AllTradeSide = []TradeSide{
+	TradeSideLong,
+	TradeSideShort,
+}
+
+func (e TradeSide) IsValid() bool {
+	switch e {
+	case TradeSideLong, TradeSideShort:
+		return true
+	}
+	return false
+}
+
+func (e TradeSide) String() string {
+	return string(e)
+}
+
+func (e *TradeSide) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = TradeSide(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid TradeSide", str)
+	}
+	return nil
+}
+
+func (e TradeSide) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }

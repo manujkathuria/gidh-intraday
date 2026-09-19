@@ -2,7 +2,7 @@
 # ==============================================================================
 # sync_market_data.sh
 #
-# Syncs market data from the production VM to local Ubuntu TimescaleDB server
+# Syncs market data from the production VM to local MacBook TimescaleDB
 # for specific trading dates.
 #
 # Usage:
@@ -17,9 +17,9 @@ REMOTE_HOST="manuj@148.230.66.138"
 REMOTE_CONTAINER="gidh-timescaledb"
 REMOTE_DB="gidh_intraday"
 
-LOCAL_HOST="manuj@192.168.68.107"
-LOCAL_CONTAINER="timescaledb-local"
 LOCAL_DB="gidh_intraday"
+LOCAL_USER="postgres"
+LOCAL_HOST="localhost"
 
 DATES=("${@}")
 if [ ${#DATES[@]} -eq 0 ]; then
@@ -28,7 +28,7 @@ if [ ${#DATES[@]} -eq 0 ]; then
 fi
 
 echo "======================================================================"
-echo " Starting Market Data Sync from VM (${REMOTE_HOST}) to Local Ubuntu (${LOCAL_HOST})"
+echo " Starting Market Data Sync from Production (${REMOTE_HOST}) to Local Mac"
 echo " Target Dates: ${DATES[*]}"
 echo "======================================================================"
 
@@ -37,7 +37,7 @@ echo "==> [1/3] Syncing base reference tables (instruments, future_contracts)...
 ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} pg_dump -U postgres -d ${REMOTE_DB} --data-only --inserts --on-conflict-do-nothing \
     --table=market.instruments \
     --table=market.future_contracts" \
-    | ssh "${LOCAL_HOST}" "docker exec -i ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -q"
+    | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -q
 
 # 2. Sync each requested date
 for DATE in "${DATES[@]}"; do
@@ -50,7 +50,7 @@ for DATE in "${DATES[@]}"; do
     TS_END="${NEXT_DATE} 00:00:00+05:30"
 
     echo " -> Clearing existing local data for ${DATE}..."
-    ssh "${LOCAL_HOST}" "docker exec ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -c \"
+    psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "
         DELETE FROM market.cash_candles_1d WHERE session_date = '${DATE}';
         DELETE FROM market.future_candles_1d WHERE session_date = '${DATE}';
         DELETE FROM market.cash_candles_1m WHERE ts >= '${TS_START}' AND ts < '${TS_END}';
@@ -60,58 +60,58 @@ for DATE in "${DATES[@]}"; do
         DELETE FROM market.data_readiness WHERE session_date = '${DATE}';
         DELETE FROM market.feature_runs WHERE session_date = '${DATE}';
         DELETE FROM market.preopen_snapshots WHERE session_date = '${DATE}';
-    \""
+    "
 
     # A. Sync feature_runs for this date
     echo " -> market.feature_runs"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.feature_runs WHERE session_date = '${DATE}') TO STDOUT WITH (FORMAT csv);\"" \
-        | ssh "${LOCAL_HOST}" "docker exec -i ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -c \"COPY market.feature_runs FROM STDIN WITH (FORMAT csv);\""
+        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.feature_runs FROM STDIN WITH (FORMAT csv);"
 
     # B. Daily cash & future candles
     echo " -> market.cash_candles_1d"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.cash_candles_1d WHERE session_date = '${DATE}') TO STDOUT WITH (FORMAT csv);\"" \
-        | ssh "${LOCAL_HOST}" "docker exec -i ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -c \"COPY market.cash_candles_1d FROM STDIN WITH (FORMAT csv);\""
+        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.cash_candles_1d FROM STDIN WITH (FORMAT csv);"
 
     echo " -> market.future_candles_1d"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.future_candles_1d WHERE session_date = '${DATE}') TO STDOUT WITH (FORMAT csv);\"" \
-        | ssh "${LOCAL_HOST}" "docker exec -i ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -c \"COPY market.future_candles_1d FROM STDIN WITH (FORMAT csv);\""
+        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.future_candles_1d FROM STDIN WITH (FORMAT csv);"
 
     # C. Minute cash & future candles
     echo " -> market.cash_candles_1m"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.cash_candles_1m WHERE ts >= '${TS_START}' AND ts < '${TS_END}') TO STDOUT WITH (FORMAT csv);\"" \
-        | ssh "${LOCAL_HOST}" "docker exec -i ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -c \"COPY market.cash_candles_1m FROM STDIN WITH (FORMAT csv);\""
+        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.cash_candles_1m FROM STDIN WITH (FORMAT csv);"
 
     echo " -> market.future_candles_1m"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.future_candles_1m WHERE ts >= '${TS_START}' AND ts < '${TS_END}') TO STDOUT WITH (FORMAT csv);\"" \
-        | ssh "${LOCAL_HOST}" "docker exec -i ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -c \"COPY market.future_candles_1m FROM STDIN WITH (FORMAT csv);\""
+        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.future_candles_1m FROM STDIN WITH (FORMAT csv);"
 
     # D. Intraday features 1m
     echo " -> market.intraday_features_1m"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.intraday_features_1m WHERE ts >= '${TS_START}' AND ts < '${TS_END}') TO STDOUT WITH (FORMAT csv);\"" \
-        | ssh "${LOCAL_HOST}" "docker exec -i ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -c \"COPY market.intraday_features_1m FROM STDIN WITH (FORMAT csv);\""
+        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.intraday_features_1m FROM STDIN WITH (FORMAT csv);"
 
     # E. Daily features
     echo " -> market.daily_features"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT df.* FROM market.daily_features df JOIN market.feature_runs fr ON df.feature_run_id = fr.id WHERE fr.session_date = '${DATE}') TO STDOUT WITH (FORMAT csv);\"" \
-        | ssh "${LOCAL_HOST}" "docker exec -i ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -c \"COPY market.daily_features FROM STDIN WITH (FORMAT csv);\""
+        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.daily_features FROM STDIN WITH (FORMAT csv);"
 
     # F. Data readiness (required for Sessions resolver in UI)
     echo " -> market.data_readiness"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.data_readiness WHERE session_date = '${DATE}') TO STDOUT WITH (FORMAT csv);\"" \
-        | ssh "${LOCAL_HOST}" "docker exec -i ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -c \"COPY market.data_readiness FROM STDIN WITH (FORMAT csv);\""
+        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.data_readiness FROM STDIN WITH (FORMAT csv);"
 
     # G. Preopen snapshots
     echo " -> market.preopen_snapshots"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.preopen_snapshots WHERE session_date = '${DATE}') TO STDOUT WITH (FORMAT csv);\"" \
-        | ssh "${LOCAL_HOST}" "docker exec -i ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -c \"COPY market.preopen_snapshots FROM STDIN WITH (FORMAT csv);\""
+        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.preopen_snapshots FROM STDIN WITH (FORMAT csv);"
 
     echo "==> Completed sync for ${DATE}"
 done
 
 echo "======================================================================"
-echo " Sync Summary Verification on Local Ubuntu (${LOCAL_HOST}):"
+echo " Sync Summary Verification on Local Mac:"
 for DATE in "${DATES[@]}"; do
-    ssh "${LOCAL_HOST}" "docker exec ${LOCAL_CONTAINER} psql -U postgres -d ${LOCAL_DB} -t -A -c \"
+    psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -t -A -c "
         SELECT '${DATE} | cash_candles_1m: ' || count(*) FROM market.cash_candles_1m WHERE ts >= '${DATE} 00:00:00+05:30' AND ts < date '${DATE}' + 1
         UNION ALL
         SELECT '${DATE} | future_candles_1m: ' || count(*) FROM market.future_candles_1m WHERE ts >= '${DATE} 00:00:00+05:30' AND ts < date '${DATE}' + 1
@@ -125,7 +125,7 @@ for DATE in "${DATES[@]}"; do
         SELECT '${DATE} | daily_features: ' || count(*) FROM market.daily_features df JOIN market.feature_runs fr ON df.feature_run_id = fr.id WHERE fr.session_date = '${DATE}'
         UNION ALL
         SELECT '${DATE} | data_readiness: ' || count(*) FROM market.data_readiness WHERE session_date = '${DATE}';
-    \""
+    "
 done
 echo "======================================================================"
 echo "Done!"

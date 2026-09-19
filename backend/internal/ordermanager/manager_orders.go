@@ -24,10 +24,6 @@ func (m *Manager) PlaceOrder(ctx context.Context, intent OrderIntent) (*ActivePo
 		return nil, fmt.Errorf("max concurrent slots reached (%d/%d). Cannot enter %s", len(activePositions), m.maxSlots, intent.Symbol)
 	}
 
-	if _, exists := activePositions[intent.Symbol]; exists {
-		return nil, fmt.Errorf("position for %s already active", intent.Symbol)
-	}
-
 	instruments, err := m.instrumentRepo.GetActiveInstruments(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch instruments: %w", err)
@@ -120,11 +116,6 @@ func (m *Manager) PlaceOrder(ctx context.Context, intent OrderIntent) (*ActivePo
 	if err := m.redisStore.SaveActivePosition(ctx, pos); err != nil {
 		return nil, fmt.Errorf("failed to save active position to redis: %w", err)
 	}
-	_ = m.redisStore.AddWSToken(ctx, pos.InstrumentToken)
-
-	if m.tracker != nil && pos.InstrumentToken > 0 {
-		m.tracker.SubscribePosition(pos.Symbol, pos.InstrumentToken)
-	}
 
 	_ = m.redisStore.PublishLiveEvent(ctx, "ORDER_FILLED", pos)
 	log.Printf("[ORDER MANAGER] Successfully opened %s position for %s (Qty: %d @ %.2f) | OrderID: %s",
@@ -188,11 +179,6 @@ func (m *Manager) PlaceVirtualBracketOrder(ctx context.Context, intent OrderInte
 
 	if err := m.redisStore.SaveVirtualBracketOrder(ctx, vbo); err != nil {
 		return nil, fmt.Errorf("failed to save virtual bracket to redis: %w", err)
-	}
-	_ = m.redisStore.AddWSToken(ctx, vbo.InstrumentToken)
-
-	if m.tracker != nil && vbo.InstrumentToken > 0 {
-		m.tracker.SubscribePosition(vbo.Symbol, vbo.InstrumentToken)
 	}
 
 	_ = m.redisStore.PublishLiveEvent(ctx, "VBO_REGISTERED", vbo)

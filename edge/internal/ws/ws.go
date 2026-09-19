@@ -5,18 +5,36 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"gidh-intraday/edge/internal/cache"
 	"gidh-intraday/edge/internal/db"
+	"gidh-intraday/edge/internal/ordermanager"
 
 	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true
+		}
+		allowed := os.Getenv("ALLOWED_ORIGINS")
+		if allowed == "" && strings.EqualFold(os.Getenv("ENV"), "production") {
+			allowed = "https://gidh.tech,https://www.gidh.tech"
+		} else if allowed == "" {
+			allowed = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080"
+		}
+		for _, candidate := range strings.Split(allowed, ",") {
+			if origin == strings.TrimSpace(candidate) {
+				return true
+			}
+		}
+		return false
 	},
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
@@ -51,7 +69,7 @@ func (h *Hub) listenRedis() {
 		return
 	}
 	ctx := context.Background()
-	pubsub := h.redis.Client.Subscribe(ctx, "gidh:radar", "gidh:chart", "gidh:orders", "gidh:sectors", "gidh:market")
+	pubsub := h.redis.Client.Subscribe(ctx, "gidh:radar", "gidh:chart", "gidh:orders", "gidh:sectors", "gidh:market", ordermanager.KeyLiveEvents)
 	ch := pubsub.Channel()
 
 	// 1Hz Throttle ticker
@@ -62,7 +80,7 @@ func (h *Hub) listenRedis() {
 		switch msg.Channel {
 		case "gidh:radar", "gidh:market":
 			h.broadcastRadar([]byte(msg.Payload))
-		case "gidh:orders":
+		case "gidh:orders", ordermanager.KeyLiveEvents:
 			h.broadcastOrders([]byte(msg.Payload))
 		case "gidh:sectors":
 			h.broadcastSectors([]byte(msg.Payload))
@@ -199,9 +217,13 @@ func (h *Hub) HandleOrdersStream(w http.ResponseWriter, r *http.Request) {
 		h.mu.Unlock()
 	}()
 
+	orders := redisHashValues(r.Context(), h.redis, ordermanager.KeyOrders)
+	positions := redisHashValues(r.Context(), h.redis, ordermanager.KeyPositions)
 	_ = conn.WriteJSON(map[string]interface{}{
-		"type":    "INITIAL_STATE",
-		"payload": []interface{}{},
+		"type": "INITIAL_STATE",
+		"payload": map[string]interface{}{
+			"orders": orders, "positions": positions,
+		},
 	})
 
 	for {
@@ -210,6 +232,23 @@ func (h *Hub) HandleOrdersStream(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+}
+
+func redisHashValues(ctx context.Context, client *cache.RedisClient, key string) []json.RawMessage {
+	if client == nil || client.Client == nil {
+		return []json.RawMessage{}
+	}
+	values, err := client.Client.HVals(ctx, key).Result()
+	if err != nil {
+		return []json.RawMessage{}
+	}
+	result := make([]json.RawMessage, 0, len(values))
+	for _, value := range values {
+		if json.Valid([]byte(value)) {
+			result = append(result, json.RawMessage(value))
+		}
+	}
+	return result
 }
 
 // HandleSectorsStream handles /v1/stream/sectors

@@ -5,7 +5,8 @@ Institutional-grade, zero-latency quantitative market terminal, replay engine, a
 ## Architecture
 
 - **Web Cockpit**: Next.js 16 (App Router, TailwindCSS, Lightweight Charts, Firebase Auth Gate).
-- **Backend**: Go (Read API, Replay Streamer, Order Manager with Zerodha Kite & Paper Trading).
+- **Edge**: Go GraphQL/WebSocket API and sole Redis/Zerodha live-order owner.
+- **Backend**: Go market-data, feature, integrity, and batch utilities.
 - **Storage**: TimescaleDB 16 (3.45M+ 1m/1d candles and roll-forward features) & Redis 7 (Hot state & Pub/Sub).
 - **Edge**: Nginx SSL reverse proxy (`gidh.tech`).
 
@@ -17,8 +18,8 @@ Institutional-grade, zero-latency quantitative market terminal, replay engine, a
 # 1. Start database & cache
 docker compose -f docker-compose.local.yml up timescaledb-local redis-local -d
 
-# 2. Run backend API (offline paper trading mode)
-make api-restart
+# 2. Run edge API (paper execution is the safe default)
+make edge
 
 # 3. Start Web UI
 make web
@@ -33,8 +34,7 @@ make web
 
 ```bash
 make web          # Start Next.js War Room UI (pnpm dev)
-make api          # Start Go API
-make api-restart  # Kill port 8080 and restart Go API
+make edge         # Start the Go edge API
 make universe     # Sync 210 F&O instruments
 make history      # Backfill 1m / 1d historical candles
 make features     # Generate daily baseline features

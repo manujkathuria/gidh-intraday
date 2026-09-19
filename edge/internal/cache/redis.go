@@ -15,7 +15,7 @@ type RedisClient struct {
 func Connect(ctx context.Context) *RedisClient {
 	addr := os.Getenv("REDIS_ADDR")
 	if addr == "" {
-		addr = "192.168.68.107:6379"
+		addr = "localhost:6379"
 	}
 	pass := os.Getenv("REDIS_PASSWORD")
 

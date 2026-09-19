@@ -61,7 +61,6 @@ def extract_structure_dynamics(session_date: str, conn=None) -> pd.DataFrame:
     SELECT 
         i.id AS instrument_id,
         i.symbol,
-        i.sector,
         df.prior_close,
         df.prior_high,
         df.prior_low,

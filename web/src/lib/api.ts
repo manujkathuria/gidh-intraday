@@ -266,6 +266,8 @@ export interface ActivePosition {
   pnl_pct: number;
   mfe_pct: number;
   stop_floor_pct: number;
+  stop_loss_price?: number;
+  target_price?: number;
   tactic?: string;
   invalidation?: string;
   broker_order_id?: string;
@@ -274,11 +276,37 @@ export interface ActivePosition {
 }
 
 export interface OrderIntent {
+  client_order_id?: string;
   symbol: string;
-  side: "LONG" | "SHORT" | "BUY" | "SELL";
+  side: "LONG" | "SHORT";
+  order_type: "MARKET" | "LIMIT";
+  target_entry_price?: number;
   margin_inr?: number;
   tactic?: string;
   invalidation?: string;
+}
+
+export interface ManagedOrder {
+  id: string;
+  client_order_id: string;
+  broker_order_id?: string;
+  order_type: "MARKET" | "SYNTHETIC_LIMIT";
+  status: "PENDING" | "TRIGGERING" | "SUBMITTING" | "SUBMITTED" | "FILLED" | "REJECTED" | "CANCELLED" | "RECONCILE_REQUIRED" | "EXIT_SUBMITTED" | "CLOSED";
+  symbol: string;
+  instrument_token: number;
+  exchange: string;
+  side: "LONG" | "SHORT";
+  quantity: number;
+  margin_inr: number;
+  limit_price?: number;
+  expected_stop_price?: number;
+  expected_target_price?: number;
+  actual_fill_price?: number;
+  stop_price?: number;
+  target_price?: number;
+  rejection_reason?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface LivePositionsResponse {
@@ -302,6 +330,8 @@ export async function fetchLivePositions(): Promise<ActivePosition[]> {
           pnlPct
           mfePct
           stopFloorPct
+          stopLossPrice
+          targetPrice
           tactic
           invalidation
           brokerOrderId
@@ -323,6 +353,8 @@ export async function fetchLivePositions(): Promise<ActivePosition[]> {
         pnl_pct: p.pnlPct,
         mfe_pct: p.mfePct,
         stop_floor_pct: p.stopFloorPct,
+        stop_loss_price: p.stopLossPrice,
+        target_price: p.targetPrice,
         tactic: p.tactic,
         invalidation: p.invalidation,
         broker_order_id: p.brokerOrderId,
@@ -336,57 +368,96 @@ export async function fetchLivePositions(): Promise<ActivePosition[]> {
   return [];
 }
 
-export async function createLiveOrder(intent: OrderIntent): Promise<ActivePosition | null> {
-  try {
-    const data = await executeGraphQL<{ createOrder: any }>(`
-      mutation CreateLiveOrder($symbol: String!, $side: String!, $marginInr: Float, $tactic: String, $invalidation: String) {
-        createOrder(symbol: $symbol, side: $side, marginInr: $marginInr, tactic: $tactic, invalidation: $invalidation) {
-          symbol
-          instrumentToken
-          exchange
-          side
-          quantity
-          entryPrice
-          currentLtp
-          pnlInr
-          pnlPct
-          mfePct
-          stopFloorPct
-          tactic
-          invalidation
-          brokerOrderId
-          openedAt
-          updatedAt
-        }
+const managedOrderSelection = `
+  id
+  clientOrderId
+  brokerOrderId
+  orderType
+  status
+  symbol
+  instrumentToken
+  exchange
+  side
+  quantity
+  marginInr
+  limitPrice
+  expectedStopPrice
+  expectedTargetPrice
+  actualFillPrice
+  stopPrice
+  targetPrice
+  rejectionReason
+  createdAt
+  updatedAt
+`;
+
+const mapManagedOrder = (order: any): ManagedOrder => ({
+  id: order.id,
+  client_order_id: order.clientOrderId,
+  broker_order_id: order.brokerOrderId,
+  order_type: order.orderType,
+  status: order.status,
+  symbol: order.symbol,
+  instrument_token: order.instrumentToken,
+  exchange: order.exchange,
+  side: order.side,
+  quantity: order.quantity,
+  margin_inr: order.marginInr,
+  limit_price: order.limitPrice,
+  expected_stop_price: order.expectedStopPrice,
+  expected_target_price: order.expectedTargetPrice,
+  actual_fill_price: order.actualFillPrice,
+  stop_price: order.stopPrice,
+  target_price: order.targetPrice,
+  rejection_reason: order.rejectionReason,
+  created_at: order.createdAt,
+  updated_at: order.updatedAt,
+});
+
+export async function fetchManagedOrders(): Promise<ManagedOrder[]> {
+  const data = await executeGraphQL<{ managedOrders: any[] }>(`
+    query ManagedOrders {
+      managedOrders {
+        ${managedOrderSelection}
       }
-    `, {
+    }
+  `);
+  return (data?.managedOrders || []).map(mapManagedOrder);
+}
+
+export async function createLiveOrder(intent: OrderIntent): Promise<ManagedOrder | null> {
+  try {
+    const clientOrderId = intent.client_order_id ?? crypto.randomUUID();
+    const commonInput = {
+      clientOrderId,
       symbol: intent.symbol,
       side: intent.side,
-      marginInr: intent.margin_inr,
+      marginInr: intent.margin_inr ?? 10000,
       tactic: intent.tactic,
-      invalidation: intent.invalidation,
-    });
-    if (data && data.createOrder) {
-      const p = data.createOrder;
-      return {
-        symbol: p.symbol,
-        instrument_token: p.instrumentToken,
-        exchange: p.exchange,
-        side: p.side,
-        quantity: p.quantity,
-        entry_price: p.entryPrice,
-        current_ltp: p.currentLtp,
-        pnl_inr: p.pnlInr,
-        pnl_pct: p.pnlPct,
-        mfe_pct: p.mfePct,
-        stop_floor_pct: p.stopFloorPct,
-        tactic: p.tactic,
-        invalidation: p.invalidation,
-        broker_order_id: p.brokerOrderId,
-        opened_at: p.openedAt,
-        updated_at: p.updatedAt,
-      };
+      invalidation: intent.invalidation ?? "15M_VWAP_CROSS",
+    };
+    if (intent.order_type === "LIMIT") {
+      if (!intent.target_entry_price || intent.target_entry_price <= 0) {
+        throw new Error("A positive limit price is required");
+      }
+      const data = await executeGraphQL<{ placeLimitOrder: any }>(`
+        mutation PlaceLimitOrder($input: PlaceLimitOrderInput!) {
+          placeLimitOrder(input: $input) {
+            ${managedOrderSelection}
+          }
+        }
+      `, { input: { ...commonInput, limitPrice: intent.target_entry_price } });
+      return data?.placeLimitOrder ? mapManagedOrder(data.placeLimitOrder) : null;
     }
+
+    const data = await executeGraphQL<{ placeMarketOrder: any }>(`
+      mutation PlaceMarketOrder($input: PlaceMarketOrderInput!) {
+        placeMarketOrder(input: $input) {
+          ${managedOrderSelection}
+        }
+      }
+    `, { input: commonInput });
+    return data?.placeMarketOrder ? mapManagedOrder(data.placeMarketOrder) : null;
   } catch (err) {
     console.error("Failed to create live order via GraphQL:", err);
     throw err;
@@ -397,18 +468,31 @@ export async function createLiveOrder(intent: OrderIntent): Promise<ActivePositi
 export async function squareOffLivePosition(
   symbol: string,
   reason = "MANUAL_SQUARE_OFF"
-): Promise<boolean> {
+): Promise<ManagedOrder | null> {
   try {
-    const data = await executeGraphQL<{ squareOffPosition: boolean }>(`
-      mutation SquareOff($symbol: String!, $reason: String) {
-        squareOffPosition(symbol: $symbol, reason: $reason)
+    const data = await executeGraphQL<{ squareOffPosition: any }>(`
+      mutation SquareOff($symbol: String!, $reason: String!) {
+        squareOffPosition(symbol: $symbol, reason: $reason) {
+          ${managedOrderSelection}
+        }
       }
     `, { symbol, reason });
-    return Boolean(data?.squareOffPosition);
+    return data?.squareOffPosition ? mapManagedOrder(data.squareOffPosition) : null;
   } catch (err) {
     console.error("Failed to square off position:", err);
-    return false;
+    return null;
   }
+}
+
+export async function cancelLimitOrder(id: string): Promise<ManagedOrder | null> {
+  const data = await executeGraphQL<{ cancelLimitOrder: any }>(`
+    mutation CancelLimitOrder($id: ID!) {
+      cancelLimitOrder(id: $id) {
+        ${managedOrderSelection}
+      }
+    }
+  `, { id });
+  return data?.cancelLimitOrder ? mapManagedOrder(data.cancelLimitOrder) : null;
 }
 
 export async function fetchQuantBrainRules(): Promise<any[]> {

@@ -62,8 +62,10 @@ type ComplexityRoot struct {
 		Quantity        func(childComplexity int) int
 		Side            func(childComplexity int) int
 		StopFloorPct    func(childComplexity int) int
+		StopLossPrice   func(childComplexity int) int
 		Symbol          func(childComplexity int) int
 		Tactic          func(childComplexity int) int
+		TargetPrice     func(childComplexity int) int
 		UpdatedAt       func(childComplexity int) int
 	}
 
@@ -117,6 +119,29 @@ type ComplexityRoot struct {
 		TotalCount     func(childComplexity int) int
 	}
 
+	ManagedOrder struct {
+		ActualFillPrice     func(childComplexity int) int
+		BrokerOrderID       func(childComplexity int) int
+		ClientOrderID       func(childComplexity int) int
+		CreatedAt           func(childComplexity int) int
+		Exchange            func(childComplexity int) int
+		ExpectedStopPrice   func(childComplexity int) int
+		ExpectedTargetPrice func(childComplexity int) int
+		ID                  func(childComplexity int) int
+		InstrumentToken     func(childComplexity int) int
+		LimitPrice          func(childComplexity int) int
+		MarginInr           func(childComplexity int) int
+		OrderType           func(childComplexity int) int
+		Quantity            func(childComplexity int) int
+		RejectionReason     func(childComplexity int) int
+		Side                func(childComplexity int) int
+		Status              func(childComplexity int) int
+		StopPrice           func(childComplexity int) int
+		Symbol              func(childComplexity int) int
+		TargetPrice         func(childComplexity int) int
+		UpdatedAt           func(childComplexity int) int
+	}
+
 	MarketStatus struct {
 		IsLive        func(childComplexity int) int
 		LastTickAgeMs func(childComplexity int) int
@@ -137,8 +162,10 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateOrder       func(childComplexity int, symbol string, side string, marginInr *float64, tactic *string, invalidation *string) int
-		SquareOffPosition func(childComplexity int, symbol string, reason *string) int
+		CancelLimitOrder  func(childComplexity int, id string) int
+		PlaceLimitOrder   func(childComplexity int, input model.PlaceLimitOrderInput) int
+		PlaceMarketOrder  func(childComplexity int, input model.PlaceMarketOrderInput) int
+		SquareOffPosition func(childComplexity int, symbol string, reason string) int
 	}
 
 	OperatingScheduleItem struct {
@@ -159,6 +186,7 @@ type ComplexityRoot struct {
 		FuturesInflow     func(childComplexity int, date *string, minPrice *float64, maxPrice *float64, minInflow *float64, minOiPct *float64) int
 		Health            func(childComplexity int) int
 		LivePositions     func(childComplexity int) int
+		ManagedOrders     func(childComplexity int) int
 		MarketSnapshot    func(childComplexity int, date *string) int
 		MarketStatus      func(childComplexity int) int
 		OperatingSchedule func(childComplexity int) int
@@ -246,8 +274,10 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	CreateOrder(ctx context.Context, symbol string, side string, marginInr *float64, tactic *string, invalidation *string) (*model.ActivePosition, error)
-	SquareOffPosition(ctx context.Context, symbol string, reason *string) (bool, error)
+	PlaceMarketOrder(ctx context.Context, input model.PlaceMarketOrderInput) (*model.ManagedOrder, error)
+	PlaceLimitOrder(ctx context.Context, input model.PlaceLimitOrderInput) (*model.ManagedOrder, error)
+	CancelLimitOrder(ctx context.Context, id string) (*model.ManagedOrder, error)
+	SquareOffPosition(ctx context.Context, symbol string, reason string) (*model.ManagedOrder, error)
 }
 type QueryResolver interface {
 	Health(ctx context.Context) (string, error)
@@ -263,6 +293,7 @@ type QueryResolver interface {
 	BrainRules(ctx context.Context) ([]*model.BrainRuleItem, error)
 	OperatingSchedule(ctx context.Context) ([]*model.OperatingScheduleItem, error)
 	LivePositions(ctx context.Context) ([]*model.ActivePosition, error)
+	ManagedOrders(ctx context.Context) ([]*model.ManagedOrder, error)
 }
 type SubscriptionResolver interface {
 	MarketTicks(ctx context.Context, symbols []string) (<-chan *model.MarketTick, error)
@@ -380,6 +411,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ActivePosition.StopFloorPct(childComplexity), true
 
+	case "ActivePosition.stopLossPrice":
+		if e.complexity.ActivePosition.StopLossPrice == nil {
+			break
+		}
+
+		return e.complexity.ActivePosition.StopLossPrice(childComplexity), true
+
 	case "ActivePosition.symbol":
 		if e.complexity.ActivePosition.Symbol == nil {
 			break
@@ -393,6 +431,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ActivePosition.Tactic(childComplexity), true
+
+	case "ActivePosition.targetPrice":
+		if e.complexity.ActivePosition.TargetPrice == nil {
+			break
+		}
+
+		return e.complexity.ActivePosition.TargetPrice(childComplexity), true
 
 	case "ActivePosition.updatedAt":
 		if e.complexity.ActivePosition.UpdatedAt == nil {
@@ -667,6 +712,146 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.FuturesInflowResponse.TotalCount(childComplexity), true
 
+	case "ManagedOrder.actualFillPrice":
+		if e.complexity.ManagedOrder.ActualFillPrice == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.ActualFillPrice(childComplexity), true
+
+	case "ManagedOrder.brokerOrderId":
+		if e.complexity.ManagedOrder.BrokerOrderID == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.BrokerOrderID(childComplexity), true
+
+	case "ManagedOrder.clientOrderId":
+		if e.complexity.ManagedOrder.ClientOrderID == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.ClientOrderID(childComplexity), true
+
+	case "ManagedOrder.createdAt":
+		if e.complexity.ManagedOrder.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.CreatedAt(childComplexity), true
+
+	case "ManagedOrder.exchange":
+		if e.complexity.ManagedOrder.Exchange == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.Exchange(childComplexity), true
+
+	case "ManagedOrder.expectedStopPrice":
+		if e.complexity.ManagedOrder.ExpectedStopPrice == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.ExpectedStopPrice(childComplexity), true
+
+	case "ManagedOrder.expectedTargetPrice":
+		if e.complexity.ManagedOrder.ExpectedTargetPrice == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.ExpectedTargetPrice(childComplexity), true
+
+	case "ManagedOrder.id":
+		if e.complexity.ManagedOrder.ID == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.ID(childComplexity), true
+
+	case "ManagedOrder.instrumentToken":
+		if e.complexity.ManagedOrder.InstrumentToken == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.InstrumentToken(childComplexity), true
+
+	case "ManagedOrder.limitPrice":
+		if e.complexity.ManagedOrder.LimitPrice == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.LimitPrice(childComplexity), true
+
+	case "ManagedOrder.marginInr":
+		if e.complexity.ManagedOrder.MarginInr == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.MarginInr(childComplexity), true
+
+	case "ManagedOrder.orderType":
+		if e.complexity.ManagedOrder.OrderType == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.OrderType(childComplexity), true
+
+	case "ManagedOrder.quantity":
+		if e.complexity.ManagedOrder.Quantity == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.Quantity(childComplexity), true
+
+	case "ManagedOrder.rejectionReason":
+		if e.complexity.ManagedOrder.RejectionReason == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.RejectionReason(childComplexity), true
+
+	case "ManagedOrder.side":
+		if e.complexity.ManagedOrder.Side == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.Side(childComplexity), true
+
+	case "ManagedOrder.status":
+		if e.complexity.ManagedOrder.Status == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.Status(childComplexity), true
+
+	case "ManagedOrder.stopPrice":
+		if e.complexity.ManagedOrder.StopPrice == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.StopPrice(childComplexity), true
+
+	case "ManagedOrder.symbol":
+		if e.complexity.ManagedOrder.Symbol == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.Symbol(childComplexity), true
+
+	case "ManagedOrder.targetPrice":
+		if e.complexity.ManagedOrder.TargetPrice == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.TargetPrice(childComplexity), true
+
+	case "ManagedOrder.updatedAt":
+		if e.complexity.ManagedOrder.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.ManagedOrder.UpdatedAt(childComplexity), true
+
 	case "MarketStatus.isLive":
 		if e.complexity.MarketStatus.IsLive == nil {
 			break
@@ -758,17 +943,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.MarketTick.Volume(childComplexity), true
 
-	case "Mutation.createOrder":
-		if e.complexity.Mutation.CreateOrder == nil {
+	case "Mutation.cancelLimitOrder":
+		if e.complexity.Mutation.CancelLimitOrder == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_createOrder_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_cancelLimitOrder_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateOrder(childComplexity, args["symbol"].(string), args["side"].(string), args["marginInr"].(*float64), args["tactic"].(*string), args["invalidation"].(*string)), true
+		return e.complexity.Mutation.CancelLimitOrder(childComplexity, args["id"].(string)), true
+
+	case "Mutation.placeLimitOrder":
+		if e.complexity.Mutation.PlaceLimitOrder == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_placeLimitOrder_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PlaceLimitOrder(childComplexity, args["input"].(model.PlaceLimitOrderInput)), true
+
+	case "Mutation.placeMarketOrder":
+		if e.complexity.Mutation.PlaceMarketOrder == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_placeMarketOrder_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PlaceMarketOrder(childComplexity, args["input"].(model.PlaceMarketOrderInput)), true
 
 	case "Mutation.squareOffPosition":
 		if e.complexity.Mutation.SquareOffPosition == nil {
@@ -780,7 +989,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SquareOffPosition(childComplexity, args["symbol"].(string), args["reason"].(*string)), true
+		return e.complexity.Mutation.SquareOffPosition(childComplexity, args["symbol"].(string), args["reason"].(string)), true
 
 	case "OperatingScheduleItem.desc":
 		if e.complexity.OperatingScheduleItem.Desc == nil {
@@ -889,6 +1098,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.LivePositions(childComplexity), true
+
+	case "Query.managedOrders":
+		if e.complexity.Query.ManagedOrders == nil {
+			break
+		}
+
+		return e.complexity.Query.ManagedOrders(childComplexity), true
 
 	case "Query.marketSnapshot":
 		if e.complexity.Query.MarketSnapshot == nil {
@@ -1340,7 +1556,10 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := executionContext{opCtx, e, 0, 0, make(chan graphql.DeferredResult)}
-	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
+	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputPlaceLimitOrderInput,
+		ec.unmarshalInputPlaceMarketOrderInput,
+	)
 	first := true
 
 	switch opCtx.Operation.Operation {
@@ -1610,11 +1829,78 @@ type ActivePosition {
   pnlPct: Float!
   mfePct: Float!
   stopFloorPct: Float!
+  stopLossPrice: Float
+  targetPrice: Float
   tactic: String
   invalidation: String
   brokerOrderId: String
   openedAt: String!
   updatedAt: String!
+}
+
+enum TradeSide {
+  LONG
+  SHORT
+}
+
+enum ManagedOrderType {
+  MARKET
+  SYNTHETIC_LIMIT
+}
+
+enum ManagedOrderStatus {
+  PENDING
+  TRIGGERING
+  SUBMITTING
+  SUBMITTED
+  FILLED
+  REJECTED
+  CANCELLED
+  RECONCILE_REQUIRED
+  EXIT_SUBMITTED
+  CLOSED
+}
+
+type ManagedOrder {
+  id: ID!
+  clientOrderId: ID!
+  brokerOrderId: String
+  orderType: ManagedOrderType!
+  status: ManagedOrderStatus!
+  symbol: String!
+  instrumentToken: Int!
+  exchange: String!
+  side: TradeSide!
+  quantity: Int!
+  marginInr: Float!
+  limitPrice: Float
+  expectedStopPrice: Float
+  expectedTargetPrice: Float
+  actualFillPrice: Float
+  stopPrice: Float
+  targetPrice: Float
+  rejectionReason: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+input PlaceMarketOrderInput {
+  clientOrderId: ID!
+  symbol: String!
+  side: TradeSide!
+  marginInr: Float!
+  tactic: String
+  invalidation: String!
+}
+
+input PlaceLimitOrderInput {
+  clientOrderId: ID!
+  symbol: String!
+  side: TradeSide!
+  limitPrice: Float!
+  marginInr: Float!
+  tactic: String
+  invalidation: String!
 }
 
 """
@@ -1705,11 +1991,14 @@ type Query {
 
   # Live Positions
   livePositions: [ActivePosition!]!
+  managedOrders: [ManagedOrder!]!
 }
 
 type Mutation {
-  createOrder(symbol: String!, side: String!, marginInr: Float, tactic: String, invalidation: String): ActivePosition!
-  squareOffPosition(symbol: String!, reason: String): Boolean!
+  placeMarketOrder(input: PlaceMarketOrderInput!): ManagedOrder!
+  placeLimitOrder(input: PlaceLimitOrderInput!): ManagedOrder!
+  cancelLimitOrder(id: ID!): ManagedOrder!
+  squareOffPosition(symbol: String!, reason: String!): ManagedOrder!
 }
 
 type Subscription {
@@ -1730,123 +2019,87 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
-func (ec *executionContext) field_Mutation_createOrder_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+func (ec *executionContext) field_Mutation_cancelLimitOrder_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := ec.field_Mutation_createOrder_argsSymbol(ctx, rawArgs)
+	arg0, err := ec.field_Mutation_cancelLimitOrder_argsID(ctx, rawArgs)
 	if err != nil {
 		return nil, err
 	}
-	args["symbol"] = arg0
-	arg1, err := ec.field_Mutation_createOrder_argsSide(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["side"] = arg1
-	arg2, err := ec.field_Mutation_createOrder_argsMarginInr(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["marginInr"] = arg2
-	arg3, err := ec.field_Mutation_createOrder_argsTactic(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["tactic"] = arg3
-	arg4, err := ec.field_Mutation_createOrder_argsInvalidation(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["invalidation"] = arg4
+	args["id"] = arg0
 	return args, nil
 }
-func (ec *executionContext) field_Mutation_createOrder_argsSymbol(
+func (ec *executionContext) field_Mutation_cancelLimitOrder_argsID(
 	ctx context.Context,
 	rawArgs map[string]any,
 ) (string, error) {
-	if _, ok := rawArgs["symbol"]; !ok {
+	if _, ok := rawArgs["id"]; !ok {
 		var zeroVal string
 		return zeroVal, nil
 	}
 
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("symbol"))
-	if tmp, ok := rawArgs["symbol"]; ok {
-		return ec.unmarshalNString2string(ctx, tmp)
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+	if tmp, ok := rawArgs["id"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
 	}
 
 	var zeroVal string
 	return zeroVal, nil
 }
 
-func (ec *executionContext) field_Mutation_createOrder_argsSide(
+func (ec *executionContext) field_Mutation_placeLimitOrder_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_placeLimitOrder_argsInput(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_placeLimitOrder_argsInput(
 	ctx context.Context,
 	rawArgs map[string]any,
-) (string, error) {
-	if _, ok := rawArgs["side"]; !ok {
-		var zeroVal string
+) (model.PlaceLimitOrderInput, error) {
+	if _, ok := rawArgs["input"]; !ok {
+		var zeroVal model.PlaceLimitOrderInput
 		return zeroVal, nil
 	}
 
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("side"))
-	if tmp, ok := rawArgs["side"]; ok {
-		return ec.unmarshalNString2string(ctx, tmp)
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["input"]; ok {
+		return ec.unmarshalNPlaceLimitOrderInput2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐPlaceLimitOrderInput(ctx, tmp)
 	}
 
-	var zeroVal string
+	var zeroVal model.PlaceLimitOrderInput
 	return zeroVal, nil
 }
 
-func (ec *executionContext) field_Mutation_createOrder_argsMarginInr(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*float64, error) {
-	if _, ok := rawArgs["marginInr"]; !ok {
-		var zeroVal *float64
-		return zeroVal, nil
+func (ec *executionContext) field_Mutation_placeMarketOrder_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_placeMarketOrder_argsInput(ctx, rawArgs)
+	if err != nil {
+		return nil, err
 	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("marginInr"))
-	if tmp, ok := rawArgs["marginInr"]; ok {
-		return ec.unmarshalOFloat2ᚖfloat64(ctx, tmp)
-	}
-
-	var zeroVal *float64
-	return zeroVal, nil
+	args["input"] = arg0
+	return args, nil
 }
-
-func (ec *executionContext) field_Mutation_createOrder_argsTactic(
+func (ec *executionContext) field_Mutation_placeMarketOrder_argsInput(
 	ctx context.Context,
 	rawArgs map[string]any,
-) (*string, error) {
-	if _, ok := rawArgs["tactic"]; !ok {
-		var zeroVal *string
+) (model.PlaceMarketOrderInput, error) {
+	if _, ok := rawArgs["input"]; !ok {
+		var zeroVal model.PlaceMarketOrderInput
 		return zeroVal, nil
 	}
 
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("tactic"))
-	if tmp, ok := rawArgs["tactic"]; ok {
-		return ec.unmarshalOString2ᚖstring(ctx, tmp)
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["input"]; ok {
+		return ec.unmarshalNPlaceMarketOrderInput2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐPlaceMarketOrderInput(ctx, tmp)
 	}
 
-	var zeroVal *string
-	return zeroVal, nil
-}
-
-func (ec *executionContext) field_Mutation_createOrder_argsInvalidation(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*string, error) {
-	if _, ok := rawArgs["invalidation"]; !ok {
-		var zeroVal *string
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("invalidation"))
-	if tmp, ok := rawArgs["invalidation"]; ok {
-		return ec.unmarshalOString2ᚖstring(ctx, tmp)
-	}
-
-	var zeroVal *string
+	var zeroVal model.PlaceMarketOrderInput
 	return zeroVal, nil
 }
 
@@ -1886,18 +2139,18 @@ func (ec *executionContext) field_Mutation_squareOffPosition_argsSymbol(
 func (ec *executionContext) field_Mutation_squareOffPosition_argsReason(
 	ctx context.Context,
 	rawArgs map[string]any,
-) (*string, error) {
+) (string, error) {
 	if _, ok := rawArgs["reason"]; !ok {
-		var zeroVal *string
+		var zeroVal string
 		return zeroVal, nil
 	}
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("reason"))
 	if tmp, ok := rawArgs["reason"]; ok {
-		return ec.unmarshalOString2ᚖstring(ctx, tmp)
+		return ec.unmarshalNString2string(ctx, tmp)
 	}
 
-	var zeroVal *string
+	var zeroVal string
 	return zeroVal, nil
 }
 
@@ -2998,6 +3251,88 @@ func (ec *executionContext) _ActivePosition_stopFloorPct(ctx context.Context, fi
 }
 
 func (ec *executionContext) fieldContext_ActivePosition_stopFloorPct(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActivePosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ActivePosition_stopLossPrice(ctx context.Context, field graphql.CollectedField, obj *model.ActivePosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ActivePosition_stopLossPrice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StopLossPrice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ActivePosition_stopLossPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActivePosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ActivePosition_targetPrice(ctx context.Context, field graphql.CollectedField, obj *model.ActivePosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ActivePosition_targetPrice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TargetPrice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ActivePosition_targetPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ActivePosition",
 		Field:      field,
@@ -4897,6 +5232,862 @@ func (ec *executionContext) fieldContext_FuturesInflowResponse_data(_ context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _ManagedOrder_id(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_clientOrderId(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_clientOrderId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ClientOrderID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_clientOrderId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_brokerOrderId(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_brokerOrderId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BrokerOrderID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_brokerOrderId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_orderType(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_orderType(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.OrderType, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.ManagedOrderType)
+	fc.Result = res
+	return ec.marshalNManagedOrderType2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrderType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_orderType(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ManagedOrderType does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_status(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_status(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Status, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.ManagedOrderStatus)
+	fc.Result = res
+	return ec.marshalNManagedOrderStatus2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrderStatus(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ManagedOrderStatus does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_symbol(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_symbol(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Symbol, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_symbol(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_instrumentToken(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_instrumentToken(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.InstrumentToken, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_instrumentToken(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_exchange(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_exchange(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Exchange, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_exchange(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_side(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_side(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Side, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.TradeSide)
+	fc.Result = res
+	return ec.marshalNTradeSide2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐTradeSide(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_side(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type TradeSide does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_quantity(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_quantity(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Quantity, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_quantity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_marginInr(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_marginInr(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MarginInr, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_marginInr(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_limitPrice(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_limitPrice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LimitPrice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_limitPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_expectedStopPrice(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_expectedStopPrice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExpectedStopPrice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_expectedStopPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_expectedTargetPrice(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_expectedTargetPrice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExpectedTargetPrice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_expectedTargetPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_actualFillPrice(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_actualFillPrice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ActualFillPrice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_actualFillPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_stopPrice(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_stopPrice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StopPrice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_stopPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_targetPrice(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_targetPrice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TargetPrice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_targetPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_rejectionReason(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_rejectionReason(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RejectionReason, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_rejectionReason(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_createdAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ManagedOrder_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.ManagedOrder) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ManagedOrder_updatedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ManagedOrder_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ManagedOrder",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _MarketStatus_isLive(ctx context.Context, field graphql.CollectedField, obj *model.MarketStatus) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_MarketStatus_isLive(ctx, field)
 	if err != nil {
@@ -5463,8 +6654,8 @@ func (ec *executionContext) fieldContext_MarketTick_timestamp(_ context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_createOrder(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_createOrder(ctx, field)
+func (ec *executionContext) _Mutation_placeMarketOrder(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_placeMarketOrder(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -5477,7 +6668,7 @@ func (ec *executionContext) _Mutation_createOrder(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateOrder(rctx, fc.Args["symbol"].(string), fc.Args["side"].(string), fc.Args["marginInr"].(*float64), fc.Args["tactic"].(*string), fc.Args["invalidation"].(*string))
+		return ec.resolvers.Mutation().PlaceMarketOrder(rctx, fc.Args["input"].(model.PlaceMarketOrderInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5489,12 +6680,12 @@ func (ec *executionContext) _Mutation_createOrder(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.ActivePosition)
+	res := resTmp.(*model.ManagedOrder)
 	fc.Result = res
-	return ec.marshalNActivePosition2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐActivePosition(ctx, field.Selections, res)
+	return ec.marshalNManagedOrder2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrder(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_createOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_placeMarketOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -5502,40 +6693,48 @@ func (ec *executionContext) fieldContext_Mutation_createOrder(ctx context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "symbol":
-				return ec.fieldContext_ActivePosition_symbol(ctx, field)
-			case "instrumentToken":
-				return ec.fieldContext_ActivePosition_instrumentToken(ctx, field)
-			case "exchange":
-				return ec.fieldContext_ActivePosition_exchange(ctx, field)
-			case "side":
-				return ec.fieldContext_ActivePosition_side(ctx, field)
-			case "quantity":
-				return ec.fieldContext_ActivePosition_quantity(ctx, field)
-			case "entryPrice":
-				return ec.fieldContext_ActivePosition_entryPrice(ctx, field)
-			case "currentLtp":
-				return ec.fieldContext_ActivePosition_currentLtp(ctx, field)
-			case "pnlInr":
-				return ec.fieldContext_ActivePosition_pnlInr(ctx, field)
-			case "pnlPct":
-				return ec.fieldContext_ActivePosition_pnlPct(ctx, field)
-			case "mfePct":
-				return ec.fieldContext_ActivePosition_mfePct(ctx, field)
-			case "stopFloorPct":
-				return ec.fieldContext_ActivePosition_stopFloorPct(ctx, field)
-			case "tactic":
-				return ec.fieldContext_ActivePosition_tactic(ctx, field)
-			case "invalidation":
-				return ec.fieldContext_ActivePosition_invalidation(ctx, field)
+			case "id":
+				return ec.fieldContext_ManagedOrder_id(ctx, field)
+			case "clientOrderId":
+				return ec.fieldContext_ManagedOrder_clientOrderId(ctx, field)
 			case "brokerOrderId":
-				return ec.fieldContext_ActivePosition_brokerOrderId(ctx, field)
-			case "openedAt":
-				return ec.fieldContext_ActivePosition_openedAt(ctx, field)
+				return ec.fieldContext_ManagedOrder_brokerOrderId(ctx, field)
+			case "orderType":
+				return ec.fieldContext_ManagedOrder_orderType(ctx, field)
+			case "status":
+				return ec.fieldContext_ManagedOrder_status(ctx, field)
+			case "symbol":
+				return ec.fieldContext_ManagedOrder_symbol(ctx, field)
+			case "instrumentToken":
+				return ec.fieldContext_ManagedOrder_instrumentToken(ctx, field)
+			case "exchange":
+				return ec.fieldContext_ManagedOrder_exchange(ctx, field)
+			case "side":
+				return ec.fieldContext_ManagedOrder_side(ctx, field)
+			case "quantity":
+				return ec.fieldContext_ManagedOrder_quantity(ctx, field)
+			case "marginInr":
+				return ec.fieldContext_ManagedOrder_marginInr(ctx, field)
+			case "limitPrice":
+				return ec.fieldContext_ManagedOrder_limitPrice(ctx, field)
+			case "expectedStopPrice":
+				return ec.fieldContext_ManagedOrder_expectedStopPrice(ctx, field)
+			case "expectedTargetPrice":
+				return ec.fieldContext_ManagedOrder_expectedTargetPrice(ctx, field)
+			case "actualFillPrice":
+				return ec.fieldContext_ManagedOrder_actualFillPrice(ctx, field)
+			case "stopPrice":
+				return ec.fieldContext_ManagedOrder_stopPrice(ctx, field)
+			case "targetPrice":
+				return ec.fieldContext_ManagedOrder_targetPrice(ctx, field)
+			case "rejectionReason":
+				return ec.fieldContext_ManagedOrder_rejectionReason(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ManagedOrder_createdAt(ctx, field)
 			case "updatedAt":
-				return ec.fieldContext_ActivePosition_updatedAt(ctx, field)
+				return ec.fieldContext_ManagedOrder_updatedAt(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type ActivePosition", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type ManagedOrder", field.Name)
 		},
 	}
 	defer func() {
@@ -5545,7 +6744,201 @@ func (ec *executionContext) fieldContext_Mutation_createOrder(ctx context.Contex
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_createOrder_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_placeMarketOrder_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_placeLimitOrder(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_placeLimitOrder(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PlaceLimitOrder(rctx, fc.Args["input"].(model.PlaceLimitOrderInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.ManagedOrder)
+	fc.Result = res
+	return ec.marshalNManagedOrder2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrder(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_placeLimitOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManagedOrder_id(ctx, field)
+			case "clientOrderId":
+				return ec.fieldContext_ManagedOrder_clientOrderId(ctx, field)
+			case "brokerOrderId":
+				return ec.fieldContext_ManagedOrder_brokerOrderId(ctx, field)
+			case "orderType":
+				return ec.fieldContext_ManagedOrder_orderType(ctx, field)
+			case "status":
+				return ec.fieldContext_ManagedOrder_status(ctx, field)
+			case "symbol":
+				return ec.fieldContext_ManagedOrder_symbol(ctx, field)
+			case "instrumentToken":
+				return ec.fieldContext_ManagedOrder_instrumentToken(ctx, field)
+			case "exchange":
+				return ec.fieldContext_ManagedOrder_exchange(ctx, field)
+			case "side":
+				return ec.fieldContext_ManagedOrder_side(ctx, field)
+			case "quantity":
+				return ec.fieldContext_ManagedOrder_quantity(ctx, field)
+			case "marginInr":
+				return ec.fieldContext_ManagedOrder_marginInr(ctx, field)
+			case "limitPrice":
+				return ec.fieldContext_ManagedOrder_limitPrice(ctx, field)
+			case "expectedStopPrice":
+				return ec.fieldContext_ManagedOrder_expectedStopPrice(ctx, field)
+			case "expectedTargetPrice":
+				return ec.fieldContext_ManagedOrder_expectedTargetPrice(ctx, field)
+			case "actualFillPrice":
+				return ec.fieldContext_ManagedOrder_actualFillPrice(ctx, field)
+			case "stopPrice":
+				return ec.fieldContext_ManagedOrder_stopPrice(ctx, field)
+			case "targetPrice":
+				return ec.fieldContext_ManagedOrder_targetPrice(ctx, field)
+			case "rejectionReason":
+				return ec.fieldContext_ManagedOrder_rejectionReason(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ManagedOrder_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ManagedOrder_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagedOrder", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_placeLimitOrder_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_cancelLimitOrder(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_cancelLimitOrder(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CancelLimitOrder(rctx, fc.Args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.ManagedOrder)
+	fc.Result = res
+	return ec.marshalNManagedOrder2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrder(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_cancelLimitOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManagedOrder_id(ctx, field)
+			case "clientOrderId":
+				return ec.fieldContext_ManagedOrder_clientOrderId(ctx, field)
+			case "brokerOrderId":
+				return ec.fieldContext_ManagedOrder_brokerOrderId(ctx, field)
+			case "orderType":
+				return ec.fieldContext_ManagedOrder_orderType(ctx, field)
+			case "status":
+				return ec.fieldContext_ManagedOrder_status(ctx, field)
+			case "symbol":
+				return ec.fieldContext_ManagedOrder_symbol(ctx, field)
+			case "instrumentToken":
+				return ec.fieldContext_ManagedOrder_instrumentToken(ctx, field)
+			case "exchange":
+				return ec.fieldContext_ManagedOrder_exchange(ctx, field)
+			case "side":
+				return ec.fieldContext_ManagedOrder_side(ctx, field)
+			case "quantity":
+				return ec.fieldContext_ManagedOrder_quantity(ctx, field)
+			case "marginInr":
+				return ec.fieldContext_ManagedOrder_marginInr(ctx, field)
+			case "limitPrice":
+				return ec.fieldContext_ManagedOrder_limitPrice(ctx, field)
+			case "expectedStopPrice":
+				return ec.fieldContext_ManagedOrder_expectedStopPrice(ctx, field)
+			case "expectedTargetPrice":
+				return ec.fieldContext_ManagedOrder_expectedTargetPrice(ctx, field)
+			case "actualFillPrice":
+				return ec.fieldContext_ManagedOrder_actualFillPrice(ctx, field)
+			case "stopPrice":
+				return ec.fieldContext_ManagedOrder_stopPrice(ctx, field)
+			case "targetPrice":
+				return ec.fieldContext_ManagedOrder_targetPrice(ctx, field)
+			case "rejectionReason":
+				return ec.fieldContext_ManagedOrder_rejectionReason(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ManagedOrder_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ManagedOrder_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagedOrder", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_cancelLimitOrder_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5566,7 +6959,7 @@ func (ec *executionContext) _Mutation_squareOffPosition(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SquareOffPosition(rctx, fc.Args["symbol"].(string), fc.Args["reason"].(*string))
+		return ec.resolvers.Mutation().SquareOffPosition(rctx, fc.Args["symbol"].(string), fc.Args["reason"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5578,9 +6971,9 @@ func (ec *executionContext) _Mutation_squareOffPosition(ctx context.Context, fie
 		}
 		return graphql.Null
 	}
-	res := resTmp.(bool)
+	res := resTmp.(*model.ManagedOrder)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalNManagedOrder2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrder(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_squareOffPosition(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5590,7 +6983,49 @@ func (ec *executionContext) fieldContext_Mutation_squareOffPosition(ctx context.
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManagedOrder_id(ctx, field)
+			case "clientOrderId":
+				return ec.fieldContext_ManagedOrder_clientOrderId(ctx, field)
+			case "brokerOrderId":
+				return ec.fieldContext_ManagedOrder_brokerOrderId(ctx, field)
+			case "orderType":
+				return ec.fieldContext_ManagedOrder_orderType(ctx, field)
+			case "status":
+				return ec.fieldContext_ManagedOrder_status(ctx, field)
+			case "symbol":
+				return ec.fieldContext_ManagedOrder_symbol(ctx, field)
+			case "instrumentToken":
+				return ec.fieldContext_ManagedOrder_instrumentToken(ctx, field)
+			case "exchange":
+				return ec.fieldContext_ManagedOrder_exchange(ctx, field)
+			case "side":
+				return ec.fieldContext_ManagedOrder_side(ctx, field)
+			case "quantity":
+				return ec.fieldContext_ManagedOrder_quantity(ctx, field)
+			case "marginInr":
+				return ec.fieldContext_ManagedOrder_marginInr(ctx, field)
+			case "limitPrice":
+				return ec.fieldContext_ManagedOrder_limitPrice(ctx, field)
+			case "expectedStopPrice":
+				return ec.fieldContext_ManagedOrder_expectedStopPrice(ctx, field)
+			case "expectedTargetPrice":
+				return ec.fieldContext_ManagedOrder_expectedTargetPrice(ctx, field)
+			case "actualFillPrice":
+				return ec.fieldContext_ManagedOrder_actualFillPrice(ctx, field)
+			case "stopPrice":
+				return ec.fieldContext_ManagedOrder_stopPrice(ctx, field)
+			case "targetPrice":
+				return ec.fieldContext_ManagedOrder_targetPrice(ctx, field)
+			case "rejectionReason":
+				return ec.fieldContext_ManagedOrder_rejectionReason(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ManagedOrder_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ManagedOrder_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagedOrder", field.Name)
 		},
 	}
 	defer func() {
@@ -6838,6 +8273,10 @@ func (ec *executionContext) fieldContext_Query_livePositions(_ context.Context, 
 				return ec.fieldContext_ActivePosition_mfePct(ctx, field)
 			case "stopFloorPct":
 				return ec.fieldContext_ActivePosition_stopFloorPct(ctx, field)
+			case "stopLossPrice":
+				return ec.fieldContext_ActivePosition_stopLossPrice(ctx, field)
+			case "targetPrice":
+				return ec.fieldContext_ActivePosition_targetPrice(ctx, field)
 			case "tactic":
 				return ec.fieldContext_ActivePosition_tactic(ctx, field)
 			case "invalidation":
@@ -6850,6 +8289,92 @@ func (ec *executionContext) fieldContext_Query_livePositions(_ context.Context, 
 				return ec.fieldContext_ActivePosition_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ActivePosition", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_managedOrders(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_managedOrders(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ManagedOrders(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.ManagedOrder)
+	fc.Result = res
+	return ec.marshalNManagedOrder2ᚕᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrderᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_managedOrders(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ManagedOrder_id(ctx, field)
+			case "clientOrderId":
+				return ec.fieldContext_ManagedOrder_clientOrderId(ctx, field)
+			case "brokerOrderId":
+				return ec.fieldContext_ManagedOrder_brokerOrderId(ctx, field)
+			case "orderType":
+				return ec.fieldContext_ManagedOrder_orderType(ctx, field)
+			case "status":
+				return ec.fieldContext_ManagedOrder_status(ctx, field)
+			case "symbol":
+				return ec.fieldContext_ManagedOrder_symbol(ctx, field)
+			case "instrumentToken":
+				return ec.fieldContext_ManagedOrder_instrumentToken(ctx, field)
+			case "exchange":
+				return ec.fieldContext_ManagedOrder_exchange(ctx, field)
+			case "side":
+				return ec.fieldContext_ManagedOrder_side(ctx, field)
+			case "quantity":
+				return ec.fieldContext_ManagedOrder_quantity(ctx, field)
+			case "marginInr":
+				return ec.fieldContext_ManagedOrder_marginInr(ctx, field)
+			case "limitPrice":
+				return ec.fieldContext_ManagedOrder_limitPrice(ctx, field)
+			case "expectedStopPrice":
+				return ec.fieldContext_ManagedOrder_expectedStopPrice(ctx, field)
+			case "expectedTargetPrice":
+				return ec.fieldContext_ManagedOrder_expectedTargetPrice(ctx, field)
+			case "actualFillPrice":
+				return ec.fieldContext_ManagedOrder_actualFillPrice(ctx, field)
+			case "stopPrice":
+				return ec.fieldContext_ManagedOrder_stopPrice(ctx, field)
+			case "targetPrice":
+				return ec.fieldContext_ManagedOrder_targetPrice(ctx, field)
+			case "rejectionReason":
+				return ec.fieldContext_ManagedOrder_rejectionReason(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ManagedOrder_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ManagedOrder_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ManagedOrder", field.Name)
 		},
 	}
 	return fc, nil
@@ -9029,6 +10554,10 @@ func (ec *executionContext) fieldContext_Subscription_liveOrderUpdates(_ context
 				return ec.fieldContext_ActivePosition_mfePct(ctx, field)
 			case "stopFloorPct":
 				return ec.fieldContext_ActivePosition_stopFloorPct(ctx, field)
+			case "stopLossPrice":
+				return ec.fieldContext_ActivePosition_stopLossPrice(ctx, field)
+			case "targetPrice":
+				return ec.fieldContext_ActivePosition_targetPrice(ctx, field)
 			case "tactic":
 				return ec.fieldContext_ActivePosition_tactic(ctx, field)
 			case "invalidation":
@@ -11393,6 +12922,137 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputPlaceLimitOrderInput(ctx context.Context, obj any) (model.PlaceLimitOrderInput, error) {
+	var it model.PlaceLimitOrderInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"clientOrderId", "symbol", "side", "limitPrice", "marginInr", "tactic", "invalidation"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "clientOrderId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clientOrderId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ClientOrderID = data
+		case "symbol":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("symbol"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Symbol = data
+		case "side":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("side"))
+			data, err := ec.unmarshalNTradeSide2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐTradeSide(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Side = data
+		case "limitPrice":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitPrice"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitPrice = data
+		case "marginInr":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("marginInr"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MarginInr = data
+		case "tactic":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tactic"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Tactic = data
+		case "invalidation":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("invalidation"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Invalidation = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputPlaceMarketOrderInput(ctx context.Context, obj any) (model.PlaceMarketOrderInput, error) {
+	var it model.PlaceMarketOrderInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"clientOrderId", "symbol", "side", "marginInr", "tactic", "invalidation"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "clientOrderId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clientOrderId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ClientOrderID = data
+		case "symbol":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("symbol"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Symbol = data
+		case "side":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("side"))
+			data, err := ec.unmarshalNTradeSide2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐTradeSide(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Side = data
+		case "marginInr":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("marginInr"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MarginInr = data
+		case "tactic":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tactic"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Tactic = data
+		case "invalidation":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("invalidation"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Invalidation = data
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -11467,6 +13127,10 @@ func (ec *executionContext) _ActivePosition(ctx context.Context, sel ast.Selecti
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "stopLossPrice":
+			out.Values[i] = ec._ActivePosition_stopLossPrice(ctx, field, obj)
+		case "targetPrice":
+			out.Values[i] = ec._ActivePosition_targetPrice(ctx, field, obj)
 		case "tactic":
 			out.Values[i] = ec._ActivePosition_tactic(ctx, field, obj)
 		case "invalidation":
@@ -11808,6 +13472,116 @@ func (ec *executionContext) _FuturesInflowResponse(ctx context.Context, sel ast.
 	return out
 }
 
+var managedOrderImplementors = []string{"ManagedOrder"}
+
+func (ec *executionContext) _ManagedOrder(ctx context.Context, sel ast.SelectionSet, obj *model.ManagedOrder) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, managedOrderImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ManagedOrder")
+		case "id":
+			out.Values[i] = ec._ManagedOrder_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "clientOrderId":
+			out.Values[i] = ec._ManagedOrder_clientOrderId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "brokerOrderId":
+			out.Values[i] = ec._ManagedOrder_brokerOrderId(ctx, field, obj)
+		case "orderType":
+			out.Values[i] = ec._ManagedOrder_orderType(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._ManagedOrder_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "symbol":
+			out.Values[i] = ec._ManagedOrder_symbol(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "instrumentToken":
+			out.Values[i] = ec._ManagedOrder_instrumentToken(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "exchange":
+			out.Values[i] = ec._ManagedOrder_exchange(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "side":
+			out.Values[i] = ec._ManagedOrder_side(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "quantity":
+			out.Values[i] = ec._ManagedOrder_quantity(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "marginInr":
+			out.Values[i] = ec._ManagedOrder_marginInr(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "limitPrice":
+			out.Values[i] = ec._ManagedOrder_limitPrice(ctx, field, obj)
+		case "expectedStopPrice":
+			out.Values[i] = ec._ManagedOrder_expectedStopPrice(ctx, field, obj)
+		case "expectedTargetPrice":
+			out.Values[i] = ec._ManagedOrder_expectedTargetPrice(ctx, field, obj)
+		case "actualFillPrice":
+			out.Values[i] = ec._ManagedOrder_actualFillPrice(ctx, field, obj)
+		case "stopPrice":
+			out.Values[i] = ec._ManagedOrder_stopPrice(ctx, field, obj)
+		case "targetPrice":
+			out.Values[i] = ec._ManagedOrder_targetPrice(ctx, field, obj)
+		case "rejectionReason":
+			out.Values[i] = ec._ManagedOrder_rejectionReason(ctx, field, obj)
+		case "createdAt":
+			out.Values[i] = ec._ManagedOrder_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._ManagedOrder_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var marketStatusImplementors = []string{"MarketStatus"}
 
 func (ec *executionContext) _MarketStatus(ctx context.Context, sel ast.SelectionSet, obj *model.MarketStatus) graphql.Marshaler {
@@ -11954,9 +13728,23 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
-		case "createOrder":
+		case "placeMarketOrder":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_createOrder(ctx, field)
+				return ec._Mutation_placeMarketOrder(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "placeLimitOrder":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_placeLimitOrder(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cancelLimitOrder":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_cancelLimitOrder(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -12363,6 +14151,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_livePositions(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "managedOrders":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_managedOrders(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -13541,6 +15351,84 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
+func (ec *executionContext) marshalNManagedOrder2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrder(ctx context.Context, sel ast.SelectionSet, v model.ManagedOrder) graphql.Marshaler {
+	return ec._ManagedOrder(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNManagedOrder2ᚕᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrderᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ManagedOrder) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNManagedOrder2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrder(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNManagedOrder2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrder(ctx context.Context, sel ast.SelectionSet, v *model.ManagedOrder) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ManagedOrder(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNManagedOrderStatus2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrderStatus(ctx context.Context, v any) (model.ManagedOrderStatus, error) {
+	var res model.ManagedOrderStatus
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNManagedOrderStatus2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrderStatus(ctx context.Context, sel ast.SelectionSet, v model.ManagedOrderStatus) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNManagedOrderType2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrderType(ctx context.Context, v any) (model.ManagedOrderType, error) {
+	var res model.ManagedOrderType
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNManagedOrderType2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐManagedOrderType(ctx context.Context, sel ast.SelectionSet, v model.ManagedOrderType) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNMarketStatus2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐMarketStatus(ctx context.Context, sel ast.SelectionSet, v model.MarketStatus) graphql.Marshaler {
 	return ec._MarketStatus(ctx, sel, &v)
 }
@@ -13621,6 +15509,16 @@ func (ec *executionContext) marshalNOperatingScheduleItem2ᚖgidhᚑintradayᚋe
 		return graphql.Null
 	}
 	return ec._OperatingScheduleItem(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNPlaceLimitOrderInput2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐPlaceLimitOrderInput(ctx context.Context, v any) (model.PlaceLimitOrderInput, error) {
+	res, err := ec.unmarshalInputPlaceLimitOrderInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNPlaceMarketOrderInput2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐPlaceMarketOrderInput(ctx context.Context, v any) (model.PlaceMarketOrderInput, error) {
+	res, err := ec.unmarshalInputPlaceMarketOrderInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNReplaySector2ᚕᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐReplaySectorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ReplaySector) graphql.Marshaler {
@@ -13908,6 +15806,16 @@ func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel
 	}
 
 	return ret
+}
+
+func (ec *executionContext) unmarshalNTradeSide2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐTradeSide(ctx context.Context, v any) (model.TradeSide, error) {
+	var res model.TradeSide
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNTradeSide2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐTradeSide(ctx context.Context, sel ast.SelectionSet, v model.TradeSide) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNUniverseItem2ᚕᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐUniverseItemᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.UniverseItem) graphql.Marshaler {

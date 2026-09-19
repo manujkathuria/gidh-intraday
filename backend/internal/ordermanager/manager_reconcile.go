@@ -86,23 +86,13 @@ func (m *Manager) SyncWithZerodha(ctx context.Context) error {
 			}
 
 			_ = m.redisStore.SaveActivePosition(ctx, pos)
-
-
-			if m.tracker != nil && pos.InstrumentToken > 0 {
-				m.tracker.SubscribePosition(pos.Symbol, pos.InstrumentToken)
-				_ = m.redisStore.AddWSToken(ctx, pos.InstrumentToken)
-			}
 		}
 	}
 
-	for sym, p := range activePositions {
+	for sym := range activePositions {
 		if !brokerNetMap[sym] {
 			log.Printf("[ORDER MANAGER] Pruning closed position from Redis: %s", sym)
 			_ = m.redisStore.RemoveActivePosition(ctx, sym)
-			if m.tracker != nil && p.InstrumentToken > 0 {
-				m.tracker.UnsubscribePosition(p.InstrumentToken)
-				_ = m.redisStore.RemoveWSToken(ctx, p.InstrumentToken)
-			}
 		}
 	}
 

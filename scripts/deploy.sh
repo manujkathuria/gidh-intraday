@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ==============================================================================
 # GIDH INTRADAY — MODULAR PRODUCTION DEPLOYMENT SCRIPT
-# Usage: ./scripts/deploy.sh [all | backend | frontend]
+# Usage: ./scripts/deploy.sh [all | edge | frontend]
 # ==============================================================================
 
 TARGET="${1:-${TARGET:-all}}"
@@ -38,10 +38,11 @@ if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "${VM_USER}@${VM_HOST}" "mkdir -p 
 fi
 log_ok "SSH connectivity established."
 
-# 2. Build backend if needed
+# 2. Build edge and backend utility binaries if needed
 IMAGES_TO_SAVE=()
-if [ "$TARGET" = "all" ] || [ "$TARGET" = "backend" ]; then
-    log_info "2/5 Testing & Building Backend (Linux/AMD64)..."
+if [ "$TARGET" = "all" ] || [ "$TARGET" = "edge" ]; then
+    log_info "2/5 Testing & Building Edge (Linux/AMD64)..."
+    (cd edge && go test ./...)
     (cd backend && go test ./...)
     
     mkdir -p bin
@@ -49,9 +50,9 @@ if [ "$TARGET" = "all" ] || [ "$TARGET" = "backend" ]; then
         CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o ../bin/gidh-auth ./cmd/gidh-auth && \
         CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o ../bin/gidh-batch ./cmd/gidh-batch)
 
-    docker buildx build --platform linux/amd64 -t "gidh-intraday-backend:${TAG}" -t "gidh-intraday-backend:latest" ./backend
-    IMAGES_TO_SAVE+=("gidh-intraday-backend:latest")
-    log_ok "Backend image & CLI binaries built."
+    docker buildx build --platform linux/amd64 -t "gidh-intraday-edge:${TAG}" -t "gidh-intraday-edge:latest" ./edge
+    IMAGES_TO_SAVE+=("gidh-intraday-edge:latest")
+    log_ok "Edge image & backend CLI binaries built."
 fi
 
 # 3. Build frontend if needed
@@ -80,26 +81,26 @@ ssh "${VM_USER}@${VM_HOST}" bash << EOF
     cd ${VM_PATH}
     chmod +x scripts/*.sh bin/* 2>/dev/null || true
 
-    if [ "$TARGET" = "backend" ]; then
-        docker compose -f docker-compose.prod.yml up -d --no-deps backend
+    if [ "$TARGET" = "edge" ]; then
+        docker compose -f docker-compose.prod.yml up -d --no-deps edge
     elif [ "$TARGET" = "frontend" ]; then
         docker compose -f docker-compose.prod.yml up -d --no-deps frontend
     else
         docker compose -f docker-compose.prod.yml up -d --remove-orphans
     fi
 
-    # If backend was updated, run health verification
-    if [ "$TARGET" = "all" ] || [ "$TARGET" = "backend" ]; then
-        echo "Waiting for Go backend healthcheck..."
+    # If edge was updated, run health verification
+    if [ "$TARGET" = "all" ] || [ "$TARGET" = "edge" ]; then
+        echo "Waiting for Go edge healthcheck..."
         for i in {1..10}; do
             sleep 2
-            if docker exec gidh-backend wget -qO- http://127.0.0.1:8080/healthz 2>/dev/null | grep -q 'ok'; then
-                echo "[HEALTH OK] Backend is live and healthy!"
+            if docker exec gidh-edge wget -qO- http://127.0.0.1:8080/healthz 2>/dev/null | grep -q 'ok'; then
+                echo "[HEALTH OK] Edge is live and healthy!"
                 break
             fi
             if [ "\$i" -eq 10 ]; then
-                echo "[HEALTH WARN] Backend healthcheck timed out. Inspecting logs:"
-                docker logs --tail 30 gidh-backend
+                echo "[HEALTH WARN] Edge healthcheck timed out. Inspecting logs:"
+                docker logs --tail 30 gidh-edge
                 exit 1
             fi
         done

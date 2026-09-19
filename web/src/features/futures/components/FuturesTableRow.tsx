@@ -23,7 +23,7 @@ export const FuturesTableRow: React.FC<Props> = ({ row, index }) => {
   return (
     <tr
       onClick={() => router.push(`/chart?symbol=${encodeURIComponent(row.symbol)}`)}
-      className="border-b border-surface-border transition-colors cursor-pointer group hover:bg-surface-hover/60 text-xs font-mono"
+      className="border-b border-surface-border transition-colors cursor-pointer group hover:bg-surface-hover/60 text-xs "
     >
       {/* Index */}
       <td className="py-2.5 px-3.5 text-center text-foreground/30 text-[11px] w-10 whitespace-nowrap hidden sm:table-cell">
@@ -36,7 +36,7 @@ export const FuturesTableRow: React.FC<Props> = ({ row, index }) => {
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="tracking-wide font-sans">{row.symbol}</span>
             {row.trading_symbol && (
-              <span className="text-[10px] text-foreground/40 font-mono hidden lg:inline">
+              <span className="text-[10px] text-foreground/40  hidden lg:inline">
                 {row.trading_symbol}
               </span>
             )}
@@ -73,8 +73,8 @@ export const FuturesTableRow: React.FC<Props> = ({ row, index }) => {
             pricePct > 0
               ? "text-emerald-600 dark:text-emerald-400 font-bold"
               : pricePct < 0
-              ? "text-rose-600 dark:text-rose-400 font-bold"
-              : "text-foreground/60"
+                ? "text-rose-600 dark:text-rose-400 font-bold"
+                : "text-foreground/60"
           }
         >
           {pricePct >= 0 ? "+" : ""}

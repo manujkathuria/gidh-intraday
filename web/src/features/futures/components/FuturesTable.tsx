@@ -47,11 +47,11 @@ export const FuturesTable: React.FC<Props> = ({
       {/* Mobile Card List View (< md) */}
       <div className="md:hidden bg-surface border border-surface-border rounded-lg overflow-hidden flex flex-col divide-y divide-surface-border">
         {loading ? (
-          <div className="py-16 text-center text-foreground/40 text-xs font-mono">
+          <div className="py-16 text-center text-foreground/40 text-xs ">
             Loading futures dynamics...
           </div>
         ) : data.length === 0 ? (
-          <div className="py-16 text-center text-foreground/40 text-xs font-mono">
+          <div className="py-16 text-center text-foreground/40 text-xs ">
             No contracts match this filter.
           </div>
         ) : (
@@ -75,14 +75,12 @@ export const FuturesTable: React.FC<Props> = ({
                     <th
                       key={col.label + i}
                       onClick={() => col.field && onSort(col.field)}
-                      className={`py-3 px-3.5 font-bold bg-surface whitespace-nowrap ${col.width || ""} ${col.hiddenClass || ""} ${
-                        col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"
-                      } ${isSortable ? "cursor-pointer hover:text-foreground" : ""}`}
+                      className={`py-3 px-3.5 font-bold bg-surface whitespace-nowrap ${col.width || ""} ${col.hiddenClass || ""} ${col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"
+                        } ${isSortable ? "cursor-pointer hover:text-foreground" : ""}`}
                     >
                       <div
-                        className={`flex items-center gap-1.5 ${
-                          col.align === "right" ? "justify-end" : col.align === "center" ? "justify-center" : "justify-start"
-                        }`}
+                        className={`flex items-center gap-1.5 ${col.align === "right" ? "justify-end" : col.align === "center" ? "justify-center" : "justify-start"
+                          }`}
                       >
                         <span>{col.label}</span>
                         {isSortable && (
@@ -101,13 +99,13 @@ export const FuturesTable: React.FC<Props> = ({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={COLUMNS.length} className="py-16 text-center text-foreground/40 text-xs font-mono">
+                  <td colSpan={COLUMNS.length} className="py-16 text-center text-foreground/40 text-xs ">
                     Loading futures dynamics...
                   </td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={COLUMNS.length} className="py-16 text-center text-foreground/40 text-xs font-mono">
+                  <td colSpan={COLUMNS.length} className="py-16 text-center text-foreground/40 text-xs ">
                     No contracts match this filter.
                   </td>
                 </tr>

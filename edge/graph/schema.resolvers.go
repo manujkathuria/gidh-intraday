@@ -9,22 +9,58 @@ import (
 	"fmt"
 	"gidh-intraday/edge/graph/generated"
 	"gidh-intraday/edge/graph/model"
+	edgeauth "gidh-intraday/edge/internal/auth"
+	"gidh-intraday/edge/internal/ordermanager"
 	"gidh-intraday/edge/internal/sector"
 )
 
-// CreateOrder mutation
-func (r *mutationResolver) CreateOrder(ctx context.Context, symbol string, side string, marginInr *float64, tactic *string, invalidation *string) (*model.ActivePosition, error) {
-	return &model.ActivePosition{
-		Symbol:    symbol,
-		Side:      side,
-		OpenedAt:  "now",
-		UpdatedAt: "now",
-	}, nil
+// PlaceMarketOrder is the resolver for the placeMarketOrder field.
+func (r *mutationResolver) PlaceMarketOrder(ctx context.Context, input model.PlaceMarketOrderInput) (*model.ManagedOrder, error) {
+	if r.Orders == nil {
+		return nil, fmt.Errorf("order manager is unavailable")
+	}
+	order, err := r.Orders.PlaceMarketOrder(ctx, ordermanager.PlaceMarketInput{
+		ClientOrderID: input.ClientOrderID, Symbol: input.Symbol,
+		Side: ordermanager.TradeSide(input.Side), MarginINR: input.MarginInr,
+		Tactic: optionalString(input.Tactic), Invalidation: input.Invalidation,
+		InitiatedBy: edgeauth.UserEmail(ctx),
+	})
+	return managedOrderModel(order), err
+}
+
+// PlaceLimitOrder is the resolver for the placeLimitOrder field.
+func (r *mutationResolver) PlaceLimitOrder(ctx context.Context, input model.PlaceLimitOrderInput) (*model.ManagedOrder, error) {
+	if r.Orders == nil {
+		return nil, fmt.Errorf("order manager is unavailable")
+	}
+	order, err := r.Orders.PlaceLimitOrder(ctx, ordermanager.PlaceLimitInput{
+		PlaceMarketInput: ordermanager.PlaceMarketInput{
+			ClientOrderID: input.ClientOrderID, Symbol: input.Symbol,
+			Side: ordermanager.TradeSide(input.Side), MarginINR: input.MarginInr,
+			Tactic: optionalString(input.Tactic), Invalidation: input.Invalidation,
+			InitiatedBy: edgeauth.UserEmail(ctx),
+		},
+		LimitPrice: input.LimitPrice,
+	})
+	return managedOrderModel(order), err
+}
+
+// CancelLimitOrder is the resolver for the cancelLimitOrder field.
+func (r *mutationResolver) CancelLimitOrder(ctx context.Context, id string) (*model.ManagedOrder, error) {
+	if r.Orders == nil {
+		return nil, fmt.Errorf("order manager is unavailable")
+	}
+	order, err := r.Orders.CancelLimitOrder(ctx, id)
+	return managedOrderModel(order), err
 }
 
 // SquareOffPosition mutation
-func (r *mutationResolver) SquareOffPosition(ctx context.Context, symbol string, reason *string) (bool, error) {
-	return true, nil
+func (r *mutationResolver) SquareOffPosition(ctx context.Context, symbol string, reason string) (*model.ManagedOrder, error) {
+	if r.Orders == nil {
+		return nil, fmt.Errorf("order manager is unavailable")
+	}
+	order, err := r.Orders.SquareOffPosition(ctx, symbol, reason, edgeauth.UserEmail(ctx))
+	return managedOrderModel(order), err
 }
 
 // Health resolver
@@ -662,7 +698,30 @@ func (r *queryResolver) OperatingSchedule(ctx context.Context) ([]*model.Operati
 
 // LivePositions resolver
 func (r *queryResolver) LivePositions(ctx context.Context) ([]*model.ActivePosition, error) {
-	return []*model.ActivePosition{}, nil
+	if r.Orders == nil {
+		return []*model.ActivePosition{}, nil
+	}
+	positions, err := r.Orders.ListPositions(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return activePositionModels(positions), nil
+}
+
+// ManagedOrders is the resolver for the managedOrders field.
+func (r *queryResolver) ManagedOrders(ctx context.Context) ([]*model.ManagedOrder, error) {
+	if r.Orders == nil {
+		return []*model.ManagedOrder{}, nil
+	}
+	orders, err := r.Orders.ListOrders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*model.ManagedOrder, 0, len(orders))
+	for _, order := range orders {
+		result = append(result, managedOrderModel(order))
+	}
+	return result, nil
 }
 
 // MarketTicks subscription (WebSocket)

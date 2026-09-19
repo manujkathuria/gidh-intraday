@@ -16,17 +16,16 @@ smallest correct change, and verify the result.
 
 <!-- gidh-forge:start -->
 
-## Gidh Forge sidecar
+## Gidh Forge Sidecar & AST Weapons (MANDATORY)
 
-When `gidh-forge` is available, use its 4 core superpowers to accelerate context and refactoring safety:
+DO NOT read or dump entire multi-thousand line files with raw tools when inspecting unfamiliar code. Always use `gidh-forge` to conserve context and pinpoint AST nodes:
 
-- **`map`**: Start non-trivial unfamiliar tasks with `gidh-forge map` to see code ownership, package topology, and symbol outlines in minimal tokens.
-- **`file <path>`**: Inspect a file with `gidh-forge file <path>` (macro outline + internal call graph) or `gidh-forge file <path> --focus <symbol>` (full target body + helper signatures) to understand code without reading 1,000s of lines.
-- **`impact <symbol>`**: Before changing shared functions or methods, run `gidh-forge impact <symbol>` (or `impact --diff`) to evaluate blast radius and callers across the workspace.
-- **`diff`**: Use `gidh-forge diff` to review semantic changes mapped directly to modified functions and classes.
-- Rely on standard tools (`view_file`, `grep_search`, `replace_file_content`) and the project's real compiler/test runner (`go build`, `cargo check`, `npm test`, `pytest`) for inspection, edits, and verification.
-
-If Gidh Forge is unavailable, use standard tools directly.
+- **Topology & Discovery**: Run `gidh-forge map` or `gidh-forge map <path>` (e.g. `gidh-forge map --agent`) to inspect package structure, symbol outlines, and modified boundaries in minimal tokens (<300 tokens).
+- **Targeted Inspection**: Use `gidh-forge file <path> --macro` for skeletons/types, or `gidh-forge file <path> --focus <symbol>` to view only the target function body and helper signatures instead of reading entire files.
+- **Blast Radius & Impact**: ALWAYS run `gidh-forge impact <symbol>` or `gidh-forge impact --diff` before modifying shared functions, hooks, state stores, or types to evaluate all upstream/downstream callers across Go, TypeScript, Python, and SQL.
+- **Semantic Diff Review**: Run `gidh-forge diff` to verify changes mapped directly to modified functions and classes.
+- For in-depth CLI usage and options, refer to [docs/GIDH_FORGE.md](file:///Users/manujkathuria/workspace/gidh/gidh-intraday/docs/GIDH_FORGE.md).
+- Only fall back to standard tools (`view_file`, `replace_file_content`) for surgical line-level edits once the target AST node has been identified.
 <!-- gidh-forge:end -->
 
 ## While coding

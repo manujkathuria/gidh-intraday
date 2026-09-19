@@ -4,6 +4,7 @@ import React from "react";
 import { Activity } from "lucide-react";
 import { StockHeaderMetrics } from "./components/StockHeaderMetrics";
 import { CandlestickCanvas } from "./components/CandlestickCanvas";
+import { ChartOrderModal } from "./components/ChartOrderModal";
 import { useChartStudio } from "./hooks/useChartStudio";
 
 export const ChartStudio: React.FC = () => {
@@ -20,17 +21,33 @@ export const ChartStudio: React.FC = () => {
     selectedDate,
     currentTimeMinutes,
     stockInfo,
+    currentPrice,
     allSymbols,
     filteredSymbols,
     mode,
+    entryPrice,
+    stopLossPrice,
+    targetPrice,
+    hasActivePosition,
+    // Order Modal & Limit Dragging
+    isOrderModalOpen,
+    orderSide,
+    setOrderSide,
+    orderType,
+    setOrderType,
+    limitPrice,
+    setLimitPrice,
+    handleOpenOrderModal,
+    handleCloseOrderModal,
+    dispatchOrder,
   } = useChartStudio();
 
   const lastClose = chartCandles.length > 0 ? chartCandles[chartCandles.length - 1].close : 0;
   const lastVwap = chartCandles.length > 0 ? chartCandles[chartCandles.length - 1].vwap : 0;
 
   return (
-    <div className="flex-1 w-full flex flex-col gap-2 min-h-0 overflow-hidden">
-      {/* 1. Header Metrics with Stock Search Combobox & Intervals */}
+    <div className="flex-1 w-full flex flex-col gap-2 min-h-0 overflow-hidden relative">
+      {/* 1. Header Metrics with Stock Search Combobox, Intervals & LONG / SHRT buttons */}
       <StockHeaderMetrics
         activeSymbol={activeSymbol}
         stockInfo={stockInfo}
@@ -42,9 +59,12 @@ export const ChartStudio: React.FC = () => {
         onSelectSymbol={handleSelectSymbol}
         interval={interval}
         onChangeInterval={setInterval}
+        onOpenOrderModal={handleOpenOrderModal}
+        isOrderModalOpen={isOrderModalOpen}
+        activeOrderSide={orderSide}
       />
 
-      {/* 2. Edge-to-Edge Candlestick Studio (Fits exact remaining height, NO scroll) */}
+      {/* 2. Edge-to-Edge Candlestick Studio with Entry, SL, TP, and Interactive Draggable Limit Lines */}
       <div className="flex-1 w-full bg-surface border border-surface-border rounded-lg p-2 flex flex-col min-h-0 relative overflow-hidden">
         {loadingCandles && (
           <div className="absolute top-3 right-3 z-20 bg-surface/90 border border-surface-border px-3 py-1.5 rounded text-xs text-foreground/70 flex items-center gap-2 shadow-lg backdrop-blur-sm">
@@ -53,6 +73,20 @@ export const ChartStudio: React.FC = () => {
           </div>
         )}
 
+        {/* 3. Connected Floating Chart Order Modal */}
+        <ChartOrderModal
+          isOpen={isOrderModalOpen}
+          onClose={handleCloseOrderModal}
+          symbol={activeSymbol}
+          currentPrice={currentPrice}
+          orderSide={orderSide}
+          orderType={orderType}
+          setOrderType={setOrderType}
+          limitPrice={limitPrice}
+          setLimitPrice={setLimitPrice}
+          onDispatchOrder={dispatchOrder}
+        />
+
         <div className="flex-1 w-full h-full min-h-0">
           <CandlestickCanvas
             candles={chartCandles}
@@ -60,6 +94,14 @@ export const ChartStudio: React.FC = () => {
             theme={theme}
             interval={interval}
             selectedDate={selectedDate}
+            entryPrice={entryPrice}
+            stopLossPrice={stopLossPrice}
+            targetPrice={targetPrice}
+            limitPrice={isOrderModalOpen && orderType === "LIMIT" ? limitPrice : undefined}
+            isLimitDraggable={isOrderModalOpen && orderType === "LIMIT"}
+            onLimitPriceChange={setLimitPrice}
+            orderSide={orderSide}
+            orderType={orderType}
           />
         </div>
       </div>

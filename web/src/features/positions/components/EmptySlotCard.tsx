@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ShieldCheck, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 interface Props {
   slotIndex: number;
@@ -10,27 +10,26 @@ interface Props {
 
 export const EmptySlotCard: React.FC<Props> = ({ slotIndex, onEnterTrade }) => {
   return (
-    <div className="border-2 border-dashed border-surface-border rounded-xl p-4 flex flex-col items-center justify-center text-center gap-3 min-h-[300px] hover:border-surface-border/80 transition">
-      <div className="p-3 rounded-full bg-surface-muted text-foreground/30">
-        <ShieldCheck className="w-6 h-6" />
+    <div
+      onClick={onEnterTrade}
+      className="border border-dashed border-surface-border hover:border-foreground/30 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2.5 min-h-[260px] bg-surface/30 hover:bg-surface-hover/40 transition cursor-pointer group"
+    >
+      <div className="w-8 h-8 rounded-full bg-surface-muted flex items-center justify-center text-foreground/40 group-hover:text-foreground group-hover:bg-surface transition">
+        <Plus className="w-4 h-4" />
       </div>
 
       <div>
-        <h4 className="text-xs font-black uppercase text-foreground/60">
-          Slot {slotIndex + 1} Empty
+        <h4 className="text-xs  font-bold uppercase text-foreground/70 tracking-wider">
+          Slot {slotIndex + 1}
         </h4>
-        <p className="text-[11px] text-foreground/40 mt-0.5">
-          ₹10,000 Margin Available
+        <p className="text-[10px] text-foreground/40 mt-0.5">
+          ₹10,000 Available
         </p>
       </div>
 
-      <button
-        onClick={onEnterTrade}
-        className="px-3 py-1.5 rounded-md bg-surface-muted hover:bg-surface-hover text-foreground/70 hover:text-foreground border border-surface-border text-xs font-bold transition flex items-center gap-1"
-      >
-        <Plus className="w-3 h-3" />
-        <span>Enter Trade</span>
-      </button>
+      <span className="text-[10px] font-bold text-foreground/50 group-hover:text-foreground underline decoration-surface-border group-hover:decoration-foreground transition">
+        + Dispatch MIS
+      </span>
     </div>
   );
 };

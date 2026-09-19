@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 interface Props {
   totalPnLINR: number;
@@ -25,130 +25,108 @@ export const HeroStatsMatrix: React.FC<Props> = ({
   onRefresh,
 }) => {
   const pnlPct = usedSlots > 0 ? (totalPnLINR / (usedSlots * 10000)) * 100 : 0;
+  const isProfit = totalPnLINR > 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-      {/* 1. Total Real-Time P&L */}
-      <div
-        className={`bg-surface border rounded-xl p-4 flex flex-col justify-between shadow-sm transition-colors ${
-          totalPnLINR > 0
-            ? "border-emerald-500/25 bg-emerald-500/[0.02]"
-            : totalPnLINR < 0
-            ? "border-rose-500/25 bg-rose-500/[0.02]"
-            : "border-surface-border"
-        }`}
-      >
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
+      {/* 1. Total Live P&L */}
+      <div className="bg-surface border border-surface-border rounded-xl p-3 flex flex-col justify-between shadow-xs">
         <div className="flex items-center justify-between">
-          <span className="font-bold text-foreground/50 uppercase tracking-wider text-[11px]">
+          <span className=" text-[10px] font-bold text-foreground/50 uppercase tracking-wider">
             Total Live P&L
           </span>
-          <span
-            className={`p-1.5 rounded-md border ${
-              totalPnLINR > 0
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                : totalPnLINR < 0
-                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
-                : "bg-surface-muted text-foreground/70 border-surface-border"
-            }`}
-          >
-            {totalPnLINR >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+          <span className="text-[10px]  text-foreground/40">
+            {usedSlots}/5 SLOTS
           </span>
         </div>
-        <div className="mt-2 flex items-baseline gap-2">
-          <span
-            className={`text-2xl font-black tabular-nums ${
-              totalPnLINR > 0
-                ? "text-emerald-600 dark:text-emerald-400"
-                : totalPnLINR < 0
-                ? "text-rose-600 dark:text-rose-400"
-                : "text-foreground"
-            }`}
-          >
+        <div className="mt-1 flex items-baseline gap-1.5">
+          <span className="text-xl  font-black tabular-nums text-foreground">
             {totalPnLINR >= 0 ? "+" : ""}₹{totalPnLINR.toFixed(2)}
           </span>
-          <span
-            className={`text-xs font-bold tabular-nums ${
-              totalPnLINR > 0
-                ? "text-emerald-600/75 dark:text-emerald-400/75"
-                : totalPnLINR < 0
-                ? "text-rose-600/75 dark:text-rose-400/75"
-                : "text-foreground/50"
-            }`}
-          >
+          <span className="text-[11px]  tabular-nums text-foreground/60">
             ({pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(2)}%)
           </span>
         </div>
-        <div className="mt-2 pt-2 border-t border-surface-border flex justify-between text-[11px] text-foreground/50">
-          <span>Real-Time MTM</span>
-          <span className="font-bold text-foreground">{usedSlots} Active Slots</span>
+        <div className="mt-1.5 pt-1.5 border-t border-surface-border/50 flex justify-between text-[10px] text-foreground/50">
+          <span>MTM Exposure</span>
+          <span className=" font-bold text-foreground">₹{totalGrossExposure.toLocaleString("en-IN")}</span>
         </div>
       </div>
 
-      {/* 2. Capital & Margin Pool */}
-      <div className="bg-surface border border-surface-border rounded-xl p-4 flex flex-col justify-between shadow-sm">
+      {/* 2. Margin Utilization */}
+      <div className="bg-surface border border-surface-border rounded-xl p-3 flex flex-col justify-between shadow-xs">
         <div className="flex items-center justify-between">
-          <span className="font-bold text-foreground/50 uppercase tracking-wider text-[11px]">
-            Margin Utilization
+          <span className=" text-[10px] font-bold text-foreground/50 uppercase tracking-wider">
+            Margin Utilized
           </span>
-          <span className="font-bold px-2 py-0.5 rounded bg-surface-muted border border-surface-border text-foreground">
-            {usedSlots} / 5 Slots
+          <span className="text-[10px]  text-foreground/40">
+            ₹10k/SLOT
           </span>
         </div>
-        <div className="mt-2 text-2xl font-black text-foreground">
+        <div className="mt-1 text-xl  font-black tabular-nums text-foreground">
           ₹{totalMarginUsed.toLocaleString("en-IN")}{" "}
-          <span className="text-sm font-normal text-foreground/40">/ ₹{totalCapitalPool.toLocaleString("en-IN")}</span>
+          <span className="text-xs font-normal text-foreground/40 ">/ ₹{totalCapitalPool.toLocaleString("en-IN")}</span>
         </div>
-        <div className="mt-2 pt-2 border-t border-surface-border flex flex-col gap-1">
-          <div className="w-full bg-surface-muted h-1.5 rounded-full overflow-hidden">
-            <div className="bg-foreground h-full rounded-full transition-all" style={{ width: `${(usedSlots / 5) * 100}%` }} />
+        <div className="mt-1.5 pt-1.5 border-t border-surface-border/50 flex flex-col gap-1">
+          <div className="w-full bg-surface-muted h-1 rounded-full overflow-hidden">
+            <div
+              className="bg-foreground h-full rounded-full transition-all duration-300"
+              style={{ width: `${(usedSlots / 5) * 100}%` }}
+            />
           </div>
           <div className="flex justify-between text-[10px] text-foreground/50">
-            <span>₹10,000 / Slot</span>
             <span>{availableSlots} Available</span>
+            <span>5x Max Power</span>
           </div>
         </div>
       </div>
 
-      {/* 3. Leverage & Gross Power */}
-      <div className="bg-surface border border-surface-border rounded-xl p-4 flex flex-col justify-between shadow-sm">
+      {/* 3. Gross Exposure & Max Risk Floor */}
+      <div className="bg-surface border border-surface-border rounded-xl p-3 flex flex-col justify-between shadow-xs">
         <div className="flex items-center justify-between">
-          <span className="font-bold text-foreground/50 uppercase tracking-wider text-[11px]">
-            Gross MIS Exposure
+          <span className=" text-[10px] font-bold text-foreground/50 uppercase tracking-wider">
+            Gross Leverage
           </span>
-          <span className="font-bold px-1.5 py-0.5 rounded bg-surface-muted border border-surface-border text-foreground/80">
-            5x LEVERAGE
+          <span className="text-[10px]  px-1 py-0.2 rounded bg-surface-muted border border-surface-border text-foreground/60">
+            5x MIS
           </span>
         </div>
-        <div className="mt-2 text-2xl font-black text-foreground">
+        <div className="mt-1 text-xl  font-black tabular-nums text-foreground">
           ₹{totalGrossExposure.toLocaleString("en-IN")}{" "}
-          <span className="text-sm font-normal text-foreground/40">/ ₹2,50,000 Max</span>
+          <span className="text-xs font-normal text-foreground/40 ">/ ₹2,50,000</span>
         </div>
-        <div className="mt-2 pt-2 border-t border-surface-border flex justify-between text-[11px] text-foreground/50">
-          <span>Risk Floor</span>
-          <span className="font-bold text-foreground">-₹750 SL (-1.5%)</span>
+        <div className="mt-1.5 pt-1.5 border-t border-surface-border/50 flex justify-between text-[10px] text-foreground/50">
+          <span>Stop Floor</span>
+          <span className=" font-bold text-foreground">1.00% MAE (-₹500)</span>
         </div>
       </div>
 
-      {/* 4. Live Execution & Broker Sync */}
-      <div className="bg-surface border border-surface-border rounded-xl p-4 flex flex-col justify-between shadow-sm">
+      {/* 4. Broker Connectivity & Execution Mode */}
+      <div className="bg-surface border border-surface-border rounded-xl p-3 flex flex-col justify-between shadow-xs">
         <div className="flex items-center justify-between">
-          <span className="font-bold text-foreground/50 uppercase tracking-wider text-[11px]">
-            Broker & Stream
+          <span className=" text-[10px] font-bold text-foreground/50 uppercase tracking-wider">
+            Broker Gateway
           </span>
-          <button onClick={onRefresh} className="p-1 rounded hover:bg-surface-hover text-foreground/50 hover:text-foreground transition" title="Force Re-sync">
-            <RefreshCw className="w-3.5 h-3.5" />
+          <button
+            onClick={onRefresh}
+            className="p-1 rounded text-foreground/40 hover:text-foreground hover:bg-surface-hover transition cursor-pointer"
+            title="Force Re-sync"
+          >
+            <RefreshCw className="w-3 h-3" />
           </button>
         </div>
-        <div className="mt-2 flex items-center gap-2">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-foreground opacity-40" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-foreground" />
+        <div className="mt-1 flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-40 ${isConnected ? "bg-foreground" : "bg-foreground/20"}`} />
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? "bg-foreground" : "bg-foreground/30"}`} />
           </span>
-          <span className="text-base font-black text-foreground">{isConnected ? "ZERODHA CONNECTED" : "OFFLINE"}</span>
+          <span className="text-sm  font-bold text-foreground uppercase tracking-tight">
+            {isConnected ? "ZERODHA LIVE" : "DISCONNECTED"}
+          </span>
         </div>
-        <div className="mt-2 pt-2 border-t border-surface-border flex justify-between text-[11px] text-foreground/50">
-          <span>Market Protection</span>
-          <span className="font-bold text-foreground">-1 (Zero Collar)</span>
+        <div className="mt-1.5 pt-1.5 border-t border-surface-border/50 flex justify-between text-[10px] text-foreground/50">
+          <span>Execution</span>
+          <span className=" font-bold text-foreground">Zero-Collar Trigger</span>
         </div>
       </div>
     </div>
