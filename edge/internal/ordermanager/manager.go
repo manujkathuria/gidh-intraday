@@ -31,6 +31,8 @@ type Manager struct {
 	latestMu    sync.RWMutex
 	latestTicks map[uint32]tickValue
 	lastPersist map[string]time.Time
+	tripMu      sync.Mutex
+	orderTimes  []time.Time
 }
 
 type tickValue struct {
@@ -85,6 +87,63 @@ func (m *Manager) ListOrders(ctx context.Context) ([]*ManagedOrder, error) {
 	return m.store.ListOrders(ctx)
 }
 
+func (m *Manager) ListClosedPositions(ctx context.Context, date string) ([]*ClosedPosition, error) {
+	return m.store.ListClosedPositions(ctx, date)
+}
+
+func (m *Manager) RiskState(ctx context.Context) (*RiskState, error) {
+	return m.store.RiskState(ctx)
+}
+
+func (m *Manager) ResetTripwire(ctx context.Context) error {
+	m.tripMu.Lock()
+	m.orderTimes = nil
+	m.tripMu.Unlock()
+	log.Println("[ORDER MANAGER] Tripwire fuse manually reset. Order execution re-enabled.")
+	if m.store != nil {
+		return m.store.SetRiskState(ctx, &RiskState{
+			KillSwitch:    false,
+			CircuitBroken: false,
+			Reason:        "",
+		})
+	}
+	return nil
+}
+
+func (m *Manager) checkAndTripwire(ctx context.Context) error {
+	now := time.Now()
+	cutoff := now.Add(-3 * time.Second)
+
+	m.tripMu.Lock()
+	defer m.tripMu.Unlock()
+
+	valid := make([]time.Time, 0, len(m.orderTimes))
+	for _, t := range m.orderTimes {
+		if t.After(cutoff) {
+			valid = append(valid, t)
+		}
+	}
+
+	// Tripwire Fuse Rule: Disable order manager if there are more than 5 orders within 3 seconds
+	if len(valid) >= 5 {
+		m.orderTimes = valid
+		reason := "TRIPWIRE FUSE TRIPPED: Rate limit exceeded (>5 orders placed within 3 seconds). Order manager disabled for safety."
+		log.Printf("[TRIPWIRE FUSE ALERT] 🚨 %s", reason)
+		if m.store != nil {
+			_ = m.store.SetRiskState(ctx, &RiskState{
+				KillSwitch:    true,
+				CircuitBroken: true,
+				Reason:        reason,
+			})
+		}
+		return fmt.Errorf("%s", reason)
+	}
+
+	valid = append(valid, now)
+	m.orderTimes = valid
+	return nil
+}
+
 func (m *Manager) validateBase(ctx context.Context, input PlaceMarketInput) (Instrument, error) {
 	input.Symbol = strings.ToUpper(strings.TrimSpace(input.Symbol))
 	if input.ClientOrderID == "" || input.Symbol == "" || input.MarginINR <= 0 || input.Invalidation == "" {
@@ -100,6 +159,9 @@ func (m *Manager) validateBase(ctx context.Context, input PlaceMarketInput) (Ins
 	if risk.KillSwitch || risk.CircuitBroken {
 		return Instrument{}, fmt.Errorf("order kill switch is active: %s", risk.Reason)
 	}
+	if err := m.checkAndTripwire(ctx); err != nil {
+		return Instrument{}, err
+	}
 	if m.config.LiveExecution && !withinMarketSession(time.Now()) {
 		return Instrument{}, fmt.Errorf("live orders are allowed only during the NSE cash session")
 	}
@@ -111,27 +173,30 @@ func (m *Manager) validateBase(ctx context.Context, input PlaceMarketInput) (Ins
 	if err != nil {
 		return Instrument{}, err
 	}
-	for _, position := range positions {
-		if position.Symbol == instrument.Symbol {
-			return Instrument{}, fmt.Errorf("position for %s is already active", instrument.Symbol)
-		}
-	}
 	orders, err := m.store.ListOrders(ctx)
 	if err != nil {
 		return Instrument{}, err
 	}
-	reserved := len(positions)
+	// Count distinct active symbols across positions and pending orders
+	activeSymbols := make(map[string]struct{})
+	for _, position := range positions {
+		activeSymbols[position.Symbol] = struct{}{}
+		// If position already exists, prevent conflicting opposite side entry without square-off
+		if position.Symbol == instrument.Symbol && position.Side != input.Side {
+			return Instrument{}, fmt.Errorf("position for %s is currently %s; square off before reversing direction", instrument.Symbol, position.Side)
+		}
+	}
 	for _, order := range orders {
 		if order.IsExit || terminal(order.Status) {
 			continue
 		}
-		reserved++
-		if order.Symbol == instrument.Symbol {
-			return Instrument{}, fmt.Errorf("entry order for %s is already active", instrument.Symbol)
-		}
+		activeSymbols[order.Symbol] = struct{}{}
 	}
-	if reserved >= m.config.MaxSlots {
-		return Instrument{}, fmt.Errorf("max concurrent slots reached (%d/%d)", reserved, m.config.MaxSlots)
+	// If this is a new symbol, ensure we have slot capacity
+	if _, exists := activeSymbols[instrument.Symbol]; !exists {
+		if len(activeSymbols) >= m.config.MaxSlots {
+			return Instrument{}, fmt.Errorf("max concurrent symbol slots reached (%d/%d)", len(activeSymbols), m.config.MaxSlots)
+		}
 	}
 	return instrument, nil
 }
@@ -163,13 +228,18 @@ func (m *Manager) newOrder(input PlaceMarketInput, instrument Instrument, orderT
 		quantity = 1
 	}
 	id := newID("ord")
-	stop, target := fixedLevels(input.Side, qtyPrice)
+	var stop, target float64
+	// AI tactics attach automated MAE / 2R levels; manual / chart orders remain open-ended
+	if input.Tactic == "QUANT_BRAIN" || input.Tactic == "AUTO_AI" || input.Tactic == "MACRO_AI" {
+		stop, target = fixedLevels(input.Side, qtyPrice)
+		stop, target = roundPrice(stop), roundPrice(target)
+	}
 	return &ManagedOrder{
 		ID: id, ClientOrderID: input.ClientOrderID, BrokerTag: brokerTag(id),
 		OrderType: orderType, Symbol: instrument.Symbol, InstrumentToken: instrument.Token,
 		Exchange: instrument.Exchange, Side: input.Side, Quantity: quantity,
 		MarginINR: input.MarginINR, LimitPrice: limitPrice, ReferencePrice: referencePrice,
-		ExpectedStopPrice: roundPrice(stop), ExpectedTargetPrice: roundPrice(target),
+		ExpectedStopPrice: stop, ExpectedTargetPrice: target,
 		Tactic: input.Tactic, Invalidation: input.Invalidation, InitiatedBy: input.InitiatedBy,
 		Revision: 1, CreatedAt: time.Now(), UpdatedAt: time.Now(),
 	}

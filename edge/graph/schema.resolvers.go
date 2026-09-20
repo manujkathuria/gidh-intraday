@@ -63,6 +63,17 @@ func (r *mutationResolver) SquareOffPosition(ctx context.Context, symbol string,
 	return managedOrderModel(order), err
 }
 
+// ResetTripwire is the resolver for the resetTripwire field.
+func (r *mutationResolver) ResetTripwire(ctx context.Context) (bool, error) {
+	if r.Orders == nil {
+		return false, fmt.Errorf("order manager is unavailable")
+	}
+	if err := r.Orders.ResetTripwire(ctx); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // Health resolver
 func (r *queryResolver) Health(ctx context.Context) (string, error) {
 	if r.DB != nil && r.DB.Pool != nil {
@@ -696,6 +707,152 @@ func (r *queryResolver) OperatingSchedule(ctx context.Context) ([]*model.Operati
 	return []*model.OperatingScheduleItem{}, nil
 }
 
+// BrainSession resolver queries quant.brain_sessions
+func (r *queryResolver) BrainSession(ctx context.Context, date *string, brainID *string) (*model.BrainSessionRecord, error) {
+	sql := `
+		SELECT session_date::text, brain_id, ai_thesis, decisions::text, 
+		       sensory_features::text, outcomes::text, forensics, created_at::text
+		FROM quant.brain_sessions
+		WHERE 1=1
+	`
+	args := []interface{}{}
+	argIdx := 1
+
+	if date != nil && *date != "" {
+		sql += fmt.Sprintf(" AND session_date = $%d", argIdx)
+		args = append(args, *date)
+		argIdx++
+	}
+	if brainID != nil && *brainID != "" {
+		sql += fmt.Sprintf(" AND brain_id = $%d", argIdx)
+		args = append(args, *brainID)
+		argIdx++
+	}
+
+	sql += " ORDER BY session_date DESC, created_at DESC LIMIT 1"
+
+	var sDate, bID, aiThesis, decisions string
+	var sensory, outcomes, forensics *string
+	var createdAt string
+
+	err := r.DB.Pool.QueryRow(ctx, sql, args...).Scan(
+		&sDate, &bID, &aiThesis, &decisions, &sensory, &outcomes, &forensics, &createdAt,
+	)
+	if err != nil {
+		return nil, nil
+	}
+
+	return &model.BrainSessionRecord{
+		SessionDate:         sDate,
+		BrainID:             bID,
+		AiThesis:            aiThesis,
+		DecisionsJSON:       decisions,
+		SensoryFeaturesJSON: sensory,
+		OutcomesJSON:        outcomes,
+		Forensics:           forensics,
+		CreatedAt:           createdAt,
+	}, nil
+}
+
+// BrainSessions resolver queries recent sessions from quant.brain_sessions
+func (r *queryResolver) BrainSessions(ctx context.Context, brainID *string, limit *int) ([]*model.BrainSessionRecord, error) {
+	lim := 20
+	if limit != nil && *limit > 0 {
+		lim = *limit
+	}
+
+	sql := `
+		SELECT session_date::text, brain_id, ai_thesis, decisions::text, 
+		       sensory_features::text, outcomes::text, forensics, created_at::text
+		FROM quant.brain_sessions
+		WHERE 1=1
+	`
+	args := []interface{}{}
+	argIdx := 1
+
+	if brainID != nil && *brainID != "" {
+		sql += fmt.Sprintf(" AND brain_id = $%d", argIdx)
+		args = append(args, *brainID)
+		argIdx++
+	}
+
+	sql += fmt.Sprintf(" ORDER BY session_date DESC, created_at DESC LIMIT $%d", argIdx)
+	args = append(args, lim)
+
+	rows, err := r.DB.Pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	records := []*model.BrainSessionRecord{}
+	for rows.Next() {
+		var sDate, bID, aiThesis, decisions string
+		var sensory, outcomes, forensics *string
+		var createdAt string
+
+		if err := rows.Scan(&sDate, &bID, &aiThesis, &decisions, &sensory, &outcomes, &forensics, &createdAt); err != nil {
+			return nil, err
+		}
+
+		records = append(records, &model.BrainSessionRecord{
+			SessionDate:         sDate,
+			BrainID:             bID,
+			AiThesis:            aiThesis,
+			DecisionsJSON:       decisions,
+			SensoryFeaturesJSON: sensory,
+			OutcomesJSON:        outcomes,
+			Forensics:           forensics,
+			CreatedAt:           createdAt,
+		})
+	}
+	return records, nil
+}
+
+// BrainMemory resolver queries cognitive memory from quant.brain_memory
+func (r *queryResolver) BrainMemory(ctx context.Context, brainID string) (*model.BrainMemoryRecord, error) {
+	sql := `
+		SELECT brain_id, memory_state::text, updated_at::text
+		FROM quant.brain_memory
+		WHERE brain_id = $1
+		LIMIT 1
+	`
+	var bID, memJSON, updatedAt string
+	err := r.DB.Pool.QueryRow(ctx, sql, brainID).Scan(&bID, &memJSON, &updatedAt)
+	if err != nil {
+		return nil, nil
+	}
+
+	return &model.BrainMemoryRecord{
+		BrainID:         bID,
+		MemoryStateJSON: memJSON,
+		UpdatedAt:       updatedAt,
+	}, nil
+}
+
+// BrainAvailableDates resolver lists distinct dates in quant.brain_sessions
+func (r *queryResolver) BrainAvailableDates(ctx context.Context) ([]string, error) {
+	sql := `
+		SELECT DISTINCT session_date::text
+		FROM quant.brain_sessions
+		ORDER BY session_date DESC
+	`
+	rows, err := r.DB.Pool.Query(ctx, sql)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	dates := []string{}
+	for rows.Next() {
+		var d string
+		if err := rows.Scan(&d); err == nil {
+			dates = append(dates, d)
+		}
+	}
+	return dates, nil
+}
+
 // LivePositions resolver
 func (r *queryResolver) LivePositions(ctx context.Context) ([]*model.ActivePosition, error) {
 	if r.Orders == nil {
@@ -706,6 +863,22 @@ func (r *queryResolver) LivePositions(ctx context.Context) ([]*model.ActivePosit
 		return nil, err
 	}
 	return activePositionModels(positions), nil
+}
+
+// ClosedPositions is the resolver for the closedPositions field.
+func (r *queryResolver) ClosedPositions(ctx context.Context, date *string) ([]*model.ClosedPosition, error) {
+	if r.Orders == nil {
+		return []*model.ClosedPosition{}, nil
+	}
+	queryDate := ""
+	if date != nil {
+		queryDate = *date
+	}
+	closed, err := r.Orders.ListClosedPositions(ctx, queryDate)
+	if err != nil {
+		return nil, err
+	}
+	return closedPositionModels(closed), nil
 }
 
 // ManagedOrders is the resolver for the managedOrders field.
@@ -722,6 +895,29 @@ func (r *queryResolver) ManagedOrders(ctx context.Context) ([]*model.ManagedOrde
 		result = append(result, managedOrderModel(order))
 	}
 	return result, nil
+}
+
+// RiskState is the resolver for the riskState field.
+func (r *queryResolver) RiskState(ctx context.Context) (*model.RiskState, error) {
+	if r.Orders == nil {
+		return &model.RiskState{KillSwitch: false, CircuitBroken: false}, nil
+	}
+	state, err := r.Orders.RiskState(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if state == nil {
+		return &model.RiskState{KillSwitch: false, CircuitBroken: false}, nil
+	}
+	var reason *string
+	if state.Reason != "" {
+		reason = &state.Reason
+	}
+	return &model.RiskState{
+		KillSwitch:    state.KillSwitch,
+		CircuitBroken: state.CircuitBroken,
+		Reason:        reason,
+	}, nil
 }
 
 // MarketTicks subscription (WebSocket)

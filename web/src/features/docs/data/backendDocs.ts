@@ -1,6 +1,9 @@
 import { DocArticle } from "./types";
+import { DATABASE_SCHEMA_DOC } from "./databaseSchemaDoc";
 
 export const BACKEND_DOCS: DocArticle[] = [
+  DATABASE_SCHEMA_DOC,
+
   {
     id: "backend-architecture",
     title: "Real-Time Streaming Pipeline",
@@ -206,6 +209,110 @@ At every completed minute (\`:00\` seconds), the backend flushes 1-minute candle
 `
   },
   {
+    id: "backend-order-manager",
+    title: "Edge Order Manager & Execution Engine",
+    shortTitle: "Edge Order Manager",
+    description: "In-memory Go edge order manager: synthetic limit orders, atomic Redis state store, Zerodha MIS market execution, 1.0% MAE brackets, and selective ticker subscriptions.",
+    category: "backend",
+    readTime: "4 min read",
+    content: `
+# Edge Order Manager & Execution Engine
+
+The **Gidh Edge Order Manager** (\`edge/internal/ordermanager\`) is an ultra-low latency, thread-safe Go execution engine responsible for the complete lifecycle of live trading positions and synthetic limit orders.
+
+---
+
+## 1. Execution Architecture Topology
+
+\`\`\`mermaid
+flowchart TD
+    subgraph Client [Web Cockpit & Brain Terminal]
+        UI["Web Terminal UI<br/>(Positions, Charts, Brain)"]
+        Mut["GraphQL Mutation<br/>(placeLimitOrder / placeMarketOrder)"]
+    end
+
+    subgraph EdgeService [Go Edge Order Manager Engine]
+        Resolver["schema.resolvers.go<br/>Input Validation & Auth"]
+        Mgr["Manager.go<br/>Lifecycle Orchestrator"]
+        SubIndex["SubscriptionIndex<br/>Selective Token Tracker"]
+        Trigger["trigger.go<br/>Tick Trigger & 1.0% Bracket Engine"]
+        Exits["exits.go<br/>Stop, Target & MIS Square-Off"]
+        Reconcile["reconcile.go<br/>Background Broker Sync Loop"]
+    end
+
+    subgraph RedisStore [Redis In-Memory State Layer]
+        RPending["gidh:orders:pending<br/>(Synthetic Limit Orders Hash)"]
+        RActive["gidh:positions:active<br/>(Authoritative Active Positions)"]
+        RClosed["gidh:positions:closed:YYYY-MM-DD<br/>(Daily Closed History)"]
+        REvents["gidh:live:stream:orders<br/>(Realtime WebSocket PubSub)"]
+    end
+
+    subgraph Broker [Zerodha Kite Connect]
+        Ticker["Selective Kite Ticker<br/>(Only Interested Tokens)"]
+        KiteAPI["Kite REST API<br/>(MIS MARKET Only)"]
+    end
+
+    UI --> Mut
+    Mut --> Resolver
+    Resolver --> Mgr
+    Mgr --> RPending
+    Mgr --> SubIndex
+    SubIndex -.->|Subscribes Interested Tokens| Ticker
+    Ticker -->|Realtime Price Ticks| Trigger
+    Trigger -->|Synthetic Limit Touched| KiteAPI
+    KiteAPI -->|Fill Confirmation & Avg Price| Mgr
+    Mgr --> RActive
+    Mgr --> REvents
+    REvents --> UI
+    Trigger -->|1.0% Stop / 2.0R Target Hit| Exits
+    Exits -->|Square-Off Market Order| KiteAPI
+    KiteAPI -->|Exit Fill| RClosed
+    Reconcile -.->|Syncs Stale States| KiteAPI
+\`\`\`
+
+---
+
+## 2. Core Operational Invariants
+
+| Rule | Specification |
+| :--- | :--- |
+| **Synthetic Limit Orders** | Zerodha receives **only MIS MARKET orders**. Limit orders are held synthetically inside Redis (\`gidh:orders:pending\`) until the market price reaches the trigger level. |
+| **Fixed 1.0% MAE Risk Bracket** | Every filled entry automatically attaches fixed risk levels from actual broker fill price:<br>• **LONG**: \`Stop = Fill × 0.99\` \| \`Target 1 (2.0R) = Fill × 1.02\`<br>• **SHORT**: \`Stop = Fill × 1.01\` \| \`Target 1 (2.0R) = Fill × 0.98\` |
+| **Selective Ticker Subscriptions** | The Kite Ticker subscribes dynamically **only** to tokens with pending limit orders or active open positions, avoiding full-universe WebSocket overhead. |
+| **Idempotent Trigger Claim** | Trigger evaluation utilizes atomic Redis operations to prevent duplicate broker order submission during high-frequency tick bursts. |
+| **Zero-Allocation PnL Updates** | Real-time Unrealized P&L and MFE/MAE are calculated in-memory on incoming ticks and streamed over isolated WebSocket channels. |
+| **Automated MIS Square-Off** | All active positions are unconditionally squared off at 15:15 PM IST before exchange cutoff. |
+
+---
+
+## 3. Package Ownership Structure
+
+\`\`\`text
+edge/internal/ordermanager/
+  manager.go         Main orchestrator, mutex locks & lifecycle API
+  market_order.go    Immediate market entry submission & validation
+  limit_order.go     Synthetic limit order creation & cancellation
+  trigger.go         Real-time tick evaluation & level triggers
+  exits.go           Stop-loss, target & manual square-off handlers
+  reconcile.go       Background broker order & position reconciliation
+  redis_store.go     Redis atomic hash persistence & serialization
+  subscriptions.go   Dynamic interested-token reference counter
+  types.go           Data contracts (ManagedOrder, ActivePosition, TradeSide)
+\`\`\`
+
+---
+
+## 4. Redis Key Schema
+
+| Key Pattern | Redis Type | Purpose |
+| :--- | :--- | :--- |
+| \`gidh:orders:pending\` | \`HASH\` | Pending synthetic limit orders awaiting tick price activation. |
+| \`gidh:positions:active\` | \`HASH\` | Live active trading positions with stop/target price brackets. |
+| \`gidh:positions:closed:{YYYY-MM-DD}\` | \`LIST\` | Chronological history of completed trades for the session. |
+| \`gidh:live:stream:orders\` | \`Pub/Sub\` | Instant push channel broadcasting fills and PnL updates to UI. |
+`
+  },
+  {
     id: "backend-eod-batch",
     title: "EOD Pipeline & Data Integrity Jobs",
     shortTitle: "EOD Integrity Jobs",
@@ -237,3 +344,4 @@ flowchart TD
 `
   }
 ];
+

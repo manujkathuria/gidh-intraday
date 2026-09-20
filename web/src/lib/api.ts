@@ -275,6 +275,23 @@ export interface ActivePosition {
   updated_at: string;
 }
 
+export interface ClosedPosition {
+  id: string;
+  symbol: string;
+  instrument_token: number;
+  exchange: string;
+  side: "LONG" | "SHORT" | string;
+  quantity: number;
+  entry_price: number;
+  exit_price: number;
+  pnl_inr: number;
+  pnl_pct: number;
+  opened_at: string;
+  closed_at: string;
+  exit_reason: string;
+  broker_order_id?: string;
+}
+
 export interface OrderIntent {
   client_order_id?: string;
   symbol: string;
@@ -364,6 +381,53 @@ export async function fetchLivePositions(): Promise<ActivePosition[]> {
     }
   } catch (err) {
     console.warn("[GraphQL] fetchLivePositions error:", err);
+  }
+  return [];
+}
+
+export async function fetchClosedPositions(date?: string): Promise<ClosedPosition[]> {
+  try {
+    const data = await executeGraphQL<{ closedPositions: any[] }>(`
+      query GetClosedPositions($date: String) {
+        closedPositions(date: $date) {
+          id
+          symbol
+          instrumentToken
+          exchange
+          side
+          quantity
+          entryPrice
+          exitPrice
+          pnlInr
+          pnlPct
+          openedAt
+          closedAt
+          exitReason
+          brokerOrderId
+        }
+      }
+    `, { date: date || null });
+
+    if (data && data.closedPositions) {
+      return data.closedPositions.map((p) => ({
+        id: p.id,
+        symbol: p.symbol,
+        instrument_token: p.instrumentToken,
+        exchange: p.exchange,
+        side: p.side,
+        quantity: p.quantity,
+        entry_price: p.entryPrice,
+        exit_price: p.exitPrice,
+        pnl_inr: p.pnlInr,
+        pnl_pct: p.pnlPct,
+        opened_at: p.openedAt,
+        closed_at: p.closedAt,
+        exit_reason: p.exitReason,
+        broker_order_id: p.brokerOrderId,
+      }));
+    }
+  } catch (err) {
+    console.warn("[GraphQL] fetchClosedPositions error:", err);
   }
   return [];
 }
@@ -495,6 +559,50 @@ export async function cancelLimitOrder(id: string): Promise<ManagedOrder | null>
   return data?.cancelLimitOrder ? mapManagedOrder(data.cancelLimitOrder) : null;
 }
 
+export interface RiskState {
+  kill_switch: boolean;
+  circuit_broken: boolean;
+  reason?: string;
+}
+
+export async function fetchRiskState(): Promise<RiskState> {
+  try {
+    const data = await executeGraphQL<{ riskState: { killSwitch: boolean; circuitBroken: boolean; reason?: string } }>(`
+      query GetRiskState {
+        riskState {
+          killSwitch
+          circuitBroken
+          reason
+        }
+      }
+    `);
+    if (data?.riskState) {
+      return {
+        kill_switch: data.riskState.killSwitch,
+        circuit_broken: data.riskState.circuitBroken,
+        reason: data.riskState.reason ?? undefined,
+      };
+    }
+  } catch (err) {
+    console.warn("[GraphQL] fetchRiskState error:", err);
+  }
+  return { kill_switch: false, circuit_broken: false };
+}
+
+export async function resetTripwire(): Promise<boolean> {
+  try {
+    const data = await executeGraphQL<{ resetTripwire: boolean }>(`
+      mutation ResetTripwire {
+        resetTripwire
+      }
+    `);
+    return !!data?.resetTripwire;
+  } catch (err) {
+    console.error("[GraphQL] resetTripwire error:", err);
+    return false;
+  }
+}
+
 export async function fetchQuantBrainRules(): Promise<any[]> {
   try {
     const data = await executeGraphQL<{ brainRules: any[] }>(`
@@ -594,50 +702,39 @@ export async function fetchFuturesInflow(
       }
     `;
 
-    const res = await fetch("http://127.0.0.1:8080/graphql", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: gql,
-        variables: {
-          date: filter.date || null,
-          minPrice: filter.minPrice !== undefined ? filter.minPrice : null,
-          maxPrice: filter.maxPrice !== undefined && filter.maxPrice < 10000 ? filter.maxPrice : null,
-          minInflow: filter.minInflow !== undefined ? filter.minInflow : null,
-          minOiPct: filter.minOiPct !== undefined ? filter.minOiPct : null,
-        },
-      }),
-      cache: "no-store",
+    const data = await executeGraphQL<{ futuresInflow: any }>(gql, {
+      date: filter.date || null,
+      minPrice: filter.minPrice !== undefined ? filter.minPrice : null,
+      maxPrice: filter.maxPrice !== undefined && filter.maxPrice < 10000 ? filter.maxPrice : null,
+      minInflow: filter.minInflow !== undefined ? filter.minInflow : null,
+      minOiPct: filter.minOiPct !== undefined ? filter.minOiPct : null,
     });
 
-    if (res.ok) {
-      const json = await res.json();
-      if (json.data && json.data.futuresInflow) {
-        const inf = json.data.futuresInflow;
-        // Normalize fields for backward-compat
-        const normalizedData: FuturesInflowItem[] = (inf.data || []).map((d: any) => ({
-          ...d,
-          trading_symbol: d.tradingSymbol || d.trading_symbol,
-          session_date: d.sessionDate || d.session_date,
-          fut_close: d.futClose ?? d.fut_close ?? 0,
-          prev_close: d.prevClose ?? d.prev_close ?? 0,
-          fut_oi: d.futOi ?? d.fut_oi,
-          prev_oi: d.prevOi ?? d.prev_oi,
-          total_notional_cr: d.totalNotionalCr ?? d.total_notional_cr ?? 0,
-          price_1d_pct: d.price1dPct ?? d.price_1d_pct ?? 0,
-          oi_1d_pct: d.oi1dPct ?? d.oi_1d_pct ?? 0,
-          fresh_inflow_1d_cr: d.freshInflow1dCr ?? d.fresh_inflow_1d_cr ?? 0,
-          oi_3d_pct: d.oi3dPct ?? d.oi_3d_pct ?? 0,
-          fresh_inflow_3d_cr: d.freshInflow3dCr ?? d.fresh_inflow_3d_cr ?? 0,
-        }));
+    if (data && data.futuresInflow) {
+      const inf = data.futuresInflow;
+      // Normalize fields for backward-compat
+      const normalizedData: FuturesInflowItem[] = (inf.data || []).map((d: any) => ({
+        ...d,
+        trading_symbol: d.tradingSymbol || d.trading_symbol,
+        session_date: d.sessionDate || d.session_date,
+        fut_close: d.futClose ?? d.fut_close ?? 0,
+        prev_close: d.prevClose ?? d.prev_close ?? 0,
+        fut_oi: d.futOi ?? d.fut_oi,
+        prev_oi: d.prevOi ?? d.prev_oi,
+        total_notional_cr: d.totalNotionalCr ?? d.total_notional_cr ?? 0,
+        price_1d_pct: d.price1dPct ?? d.price_1d_pct ?? 0,
+        oi_1d_pct: d.oi1dPct ?? d.oi_1d_pct ?? 0,
+        fresh_inflow_1d_cr: d.freshInflow1dCr ?? d.fresh_inflow_1d_cr ?? 0,
+        oi_3d_pct: d.oi3dPct ?? d.oi_3d_pct ?? 0,
+        fresh_inflow_3d_cr: d.freshInflow3dCr ?? d.fresh_inflow_3d_cr ?? 0,
+      }));
 
-        return {
-          session_date: inf.sessionDate,
-          available_dates: inf.availableDates,
-          total_count: inf.totalCount,
-          data: normalizedData,
-        };
-      }
+      return {
+        session_date: inf.sessionDate,
+        available_dates: inf.availableDates,
+        total_count: inf.totalCount,
+        data: normalizedData,
+      };
     }
   } catch (err) {
     console.warn("[GraphQL] Fallback to REST API:", err);
@@ -669,3 +766,104 @@ export async function fetchQuantOperatingSchedule(): Promise<any[]> {
     { time: "15:15 PM", title: "MIS Square-Off", desc: "Unconditional intraday exit before 15:20" },
   ];
 }
+
+export interface BrainSessionRecordRaw {
+  sessionDate: string;
+  brainId: string;
+  aiThesis: string;
+  decisionsJson: string;
+  sensoryFeaturesJson?: string;
+  outcomesJson?: string;
+  forensics?: string;
+  createdAt: string;
+}
+
+export interface BrainMemoryRecordRaw {
+  brainId: string;
+  memoryStateJson: string;
+  updatedAt: string;
+}
+
+export async function fetchBrainSession(date?: string, brainId?: string): Promise<BrainSessionRecordRaw | null> {
+  try {
+    const query = `
+      query GetBrainSession($date: String, $brainId: String) {
+        brainSession(date: $date, brainId: $brainId) {
+          sessionDate
+          brainId
+          aiThesis
+          decisionsJson
+          sensoryFeaturesJson
+          outcomesJson
+          forensics
+          createdAt
+        }
+      }
+    `;
+    const res = await executeGraphQL<{ brainSession: BrainSessionRecordRaw | null }>(query, { date, brainId });
+    return res?.brainSession ?? null;
+  } catch (err) {
+    console.error("fetchBrainSession GraphQL error:", err);
+    return null;
+  }
+}
+
+export async function fetchBrainSessions(brainId?: string, limit?: number): Promise<BrainSessionRecordRaw[]> {
+  try {
+    const query = `
+      query GetBrainSessions($brainId: String, $limit: Int) {
+        brainSessions(brainId: $brainId, limit: $limit) {
+          sessionDate
+          brainId
+          aiThesis
+          decisionsJson
+          sensoryFeaturesJson
+          outcomesJson
+          forensics
+          createdAt
+        }
+      }
+    `;
+    const res = await executeGraphQL<{ brainSessions: BrainSessionRecordRaw[] }>(query, { brainId, limit });
+    return res?.brainSessions ?? [];
+  } catch (err) {
+    console.error("fetchBrainSessions GraphQL error:", err);
+    return [];
+  }
+}
+
+export async function fetchBrainMemory(brainId: string): Promise<BrainMemoryRecordRaw | null> {
+  try {
+    const query = `
+      query GetBrainMemory($brainId: String!) {
+        brainMemory(brainId: $brainId) {
+          brainId
+          memoryStateJson
+          updatedAt
+        }
+      }
+    `;
+    const res = await executeGraphQL<{ brainMemory: BrainMemoryRecordRaw | null }>(query, { brainId });
+    return res?.brainMemory ?? null;
+  } catch (err) {
+    console.error("fetchBrainMemory GraphQL error:", err);
+    return null;
+  }
+}
+
+export async function fetchBrainAvailableDates(): Promise<string[]> {
+  try {
+    const query = `
+      query GetBrainAvailableDates {
+        brainAvailableDates
+      }
+    `;
+    const res = await executeGraphQL<{ brainAvailableDates: string[] }>(query);
+    return res?.brainAvailableDates ?? [];
+  } catch (err) {
+    console.error("fetchBrainAvailableDates GraphQL error:", err);
+    return [];
+  }
+}
+
+

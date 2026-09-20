@@ -45,13 +45,13 @@ export const FuturesTable: React.FC<Props> = ({
   return (
     <>
       {/* Mobile Card List View (< md) */}
-      <div className="md:hidden bg-surface border border-surface-border rounded-lg overflow-hidden flex flex-col divide-y divide-surface-border">
+      <div className="md:hidden flex flex-col divide-y divide-surface-border/40">
         {loading ? (
-          <div className="py-16 text-center text-foreground/40 text-xs ">
+          <div className="py-16 text-center text-foreground/40 text-xs">
             Loading futures dynamics...
           </div>
         ) : data.length === 0 ? (
-          <div className="py-16 text-center text-foreground/40 text-xs ">
+          <div className="py-16 text-center text-foreground/40 text-xs">
             No contracts match this filter.
           </div>
         ) : (
@@ -62,10 +62,10 @@ export const FuturesTable: React.FC<Props> = ({
       </div>
 
       {/* Desktop High-Density Table View (md+) */}
-      <div className="hidden md:block bg-surface border border-surface-border rounded-lg overflow-hidden transition-colors">
-        <div className="overflow-x-auto max-h-[calc(100vh-130px)] custom-scrollbar">
+      <div className="hidden md:block w-full">
+        <div className="overflow-x-auto max-h-[calc(100vh-120px)] custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs">
-            <thead className="bg-surface text-foreground/60 uppercase text-[10px] tracking-wider border-b border-surface-border select-none sticky top-0 z-10 shadow-xs">
+            <thead className="bg-background text-foreground/50 uppercase text-[10px] tracking-wider border-b border-surface-border select-none sticky top-0 z-10 backdrop-blur-sm">
               <tr>
                 {COLUMNS.map((col, i) => {
                   const isSortable = !!col.field;
@@ -75,7 +75,7 @@ export const FuturesTable: React.FC<Props> = ({
                     <th
                       key={col.label + i}
                       onClick={() => col.field && onSort(col.field)}
-                      className={`py-3 px-3.5 font-bold bg-surface whitespace-nowrap ${col.width || ""} ${col.hiddenClass || ""} ${col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"
+                      className={`py-2.5 px-3.5 font-bold bg-background whitespace-nowrap ${col.width || ""} ${col.hiddenClass || ""} ${col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"
                         } ${isSortable ? "cursor-pointer hover:text-foreground" : ""}`}
                     >
                       <div
@@ -96,7 +96,7 @@ export const FuturesTable: React.FC<Props> = ({
                 })}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-surface-border/30">
               {loading ? (
                 <tr>
                   <td colSpan={COLUMNS.length} className="py-16 text-center text-foreground/40 text-xs ">

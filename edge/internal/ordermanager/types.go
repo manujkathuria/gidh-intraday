@@ -91,6 +91,23 @@ type ActivePosition struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
+type ClosedPosition struct {
+	ID              string    `json:"id"`
+	Symbol          string    `json:"symbol"`
+	Exchange        string    `json:"exchange"`
+	InstrumentToken uint32    `json:"instrument_token"`
+	Side            TradeSide `json:"side"`
+	Quantity        int       `json:"quantity"`
+	EntryPrice      float64   `json:"entry_price"`
+	ExitPrice       float64   `json:"exit_price"`
+	PnLINR          float64   `json:"pnl_inr"`
+	PnLPct          float64   `json:"pnl_pct"`
+	OpenedAt        time.Time `json:"opened_at"`
+	ClosedAt        time.Time `json:"closed_at"`
+	ExitReason      string    `json:"exit_reason"`
+	BrokerOrderID   string    `json:"broker_order_id,omitempty"`
+}
+
 type PlaceMarketInput struct {
 	ClientOrderID string
 	Symbol        string

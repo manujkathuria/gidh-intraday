@@ -30,6 +30,13 @@ type ActivePosition struct {
 	UpdatedAt       string   `json:"updatedAt"`
 }
 
+// Cognitive Memory from quant.brain_memory
+type BrainMemoryRecord struct {
+	BrainID         string `json:"brainId"`
+	MemoryStateJSON string `json:"memoryStateJson"`
+	UpdatedAt       string `json:"updatedAt"`
+}
+
 // Quant Brain Rule Configuration
 type BrainRuleItem struct {
 	ID           string   `json:"id"`
@@ -41,6 +48,18 @@ type BrainRuleItem struct {
 	Action       string   `json:"action"`
 	Invalidation *string  `json:"invalidation,omitempty"`
 	Notes        *string  `json:"notes,omitempty"`
+}
+
+// AI Brain Session from quant.brain_sessions
+type BrainSessionRecord struct {
+	SessionDate         string  `json:"sessionDate"`
+	BrainID             string  `json:"brainId"`
+	AiThesis            string  `json:"aiThesis"`
+	DecisionsJSON       string  `json:"decisionsJson"`
+	SensoryFeaturesJSON *string `json:"sensoryFeaturesJson,omitempty"`
+	OutcomesJSON        *string `json:"outcomesJson,omitempty"`
+	Forensics           *string `json:"forensics,omitempty"`
+	CreatedAt           string  `json:"createdAt"`
 }
 
 // Historical / Live Intraday Candle
@@ -57,6 +76,23 @@ type Candle struct {
 	VwapUpper2 *float64 `json:"vwapUpper2,omitempty"`
 	VwapLower2 *float64 `json:"vwapLower2,omitempty"`
 	Rvol       *float64 `json:"rvol,omitempty"`
+}
+
+type ClosedPosition struct {
+	ID              string    `json:"id"`
+	Symbol          string    `json:"symbol"`
+	InstrumentToken int       `json:"instrumentToken"`
+	Exchange        string    `json:"exchange"`
+	Side            TradeSide `json:"side"`
+	Quantity        int       `json:"quantity"`
+	EntryPrice      float64   `json:"entryPrice"`
+	ExitPrice       float64   `json:"exitPrice"`
+	PnlInr          float64   `json:"pnlInr"`
+	PnlPct          float64   `json:"pnlPct"`
+	OpenedAt        string    `json:"openedAt"`
+	ClosedAt        string    `json:"closedAt"`
+	ExitReason      string    `json:"exitReason"`
+	BrokerOrderID   *string   `json:"brokerOrderId,omitempty"`
 }
 
 // Macro Futures Institutional Inflow & Money Flow
@@ -219,6 +255,13 @@ type ReplayWeather struct {
 	AboveVwap    int     `json:"aboveVwap"`
 	BelowVwap    int     `json:"belowVwap"`
 	PctAboveVwap float64 `json:"pctAboveVwap"`
+}
+
+// Emergency Tripwire & Risk Status
+type RiskState struct {
+	KillSwitch    bool    `json:"killSwitch"`
+	CircuitBroken bool    `json:"circuitBroken"`
+	Reason        *string `json:"reason,omitempty"`
 }
 
 // Historical Trading Session Date & Pipeline Run

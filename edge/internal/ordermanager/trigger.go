@@ -75,10 +75,12 @@ func (m *Manager) processPositionTick(symbol string, token uint32, ltp float64) 
 		_ = m.store.SavePosition(ctx, position, "POSITION_UPDATED")
 	}
 
-	hitStop := position.Side == SideLong && ltp <= position.StopLossPrice
-	hitStop = hitStop || position.Side == SideShort && ltp >= position.StopLossPrice
-	hitTarget := position.Side == SideLong && ltp >= position.TargetPrice
-	hitTarget = hitTarget || position.Side == SideShort && ltp <= position.TargetPrice
+	hitStop := position.StopLossPrice > 0 && (
+		(position.Side == SideLong && ltp <= position.StopLossPrice) ||
+		(position.Side == SideShort && ltp >= position.StopLossPrice))
+	hitTarget := position.TargetPrice > 0 && (
+		(position.Side == SideLong && ltp >= position.TargetPrice) ||
+		(position.Side == SideShort && ltp <= position.TargetPrice))
 	if !hitStop && !hitTarget {
 		return
 	}

@@ -107,17 +107,38 @@ func (m *Manager) applyEntryFill(ctx context.Context, order *ManagedOrder, broke
 	if quantity <= 0 {
 		quantity = order.Quantity
 	}
-	stop, target := fixedLevels(order.Side, fill)
-	stop, target = roundPrice(stop), roundPrice(target)
-	now := time.Now()
-
-	position := &ActivePosition{
-		Symbol: order.Symbol, InstrumentToken: order.InstrumentToken, Exchange: order.Exchange,
-		Side: order.Side, Quantity: quantity, EntryPrice: fill, CurrentLTP: fill,
-		StopFloorPct: -1, StopLossPrice: stop, TargetPrice: target,
-		Tactic: order.Tactic, Invalidation: order.Invalidation, BrokerOrderID: brokerOrder.OrderID,
-		OpenedAt: now, UpdatedAt: now,
+	var stop, target float64
+	if order.ExpectedStopPrice > 0 || order.ExpectedTargetPrice > 0 {
+		stop, target = fixedLevels(order.Side, fill)
+		stop, target = roundPrice(stop), roundPrice(target)
 	}
+	existingPos, _ := m.store.GetPosition(ctx, order.Symbol)
+	now := time.Now()
+	var position *ActivePosition
+
+	if existingPos != nil && existingPos.Side == order.Side {
+		// Blend weighted average entry price
+		totalQty := existingPos.Quantity + quantity
+		avgEntryPrice := ((existingPos.EntryPrice * float64(existingPos.Quantity)) + (fill * float64(quantity))) / float64(totalQty)
+		avgEntryPrice = roundPrice(avgEntryPrice)
+
+		position = &ActivePosition{
+			Symbol: order.Symbol, InstrumentToken: order.InstrumentToken, Exchange: order.Exchange,
+			Side: order.Side, Quantity: totalQty, EntryPrice: avgEntryPrice, CurrentLTP: fill,
+			StopFloorPct: existingPos.StopFloorPct, StopLossPrice: stop, TargetPrice: target,
+			Tactic: order.Tactic, Invalidation: order.Invalidation, BrokerOrderID: brokerOrder.OrderID,
+			OpenedAt: existingPos.OpenedAt, UpdatedAt: now,
+		}
+	} else {
+		position = &ActivePosition{
+			Symbol: order.Symbol, InstrumentToken: order.InstrumentToken, Exchange: order.Exchange,
+			Side: order.Side, Quantity: quantity, EntryPrice: fill, CurrentLTP: fill,
+			StopFloorPct: -1, StopLossPrice: stop, TargetPrice: target,
+			Tactic: order.Tactic, Invalidation: order.Invalidation, BrokerOrderID: brokerOrder.OrderID,
+			OpenedAt: now, UpdatedAt: now,
+		}
+	}
+
 	updated, err := m.store.FillEntry(ctx, order, position)
 	if err != nil {
 		return nil, err

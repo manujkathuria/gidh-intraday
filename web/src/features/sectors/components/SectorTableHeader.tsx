@@ -27,12 +27,12 @@ export const SectorTableHeader: React.FC<Props> = ({
   };
 
   return (
-    <thead className="bg-surface text-foreground/50 sticky top-0 z-10 border-b border-surface-border select-none text-xs shadow-xs">
+    <thead className="bg-background text-foreground/50 sticky top-0 z-10 border-b border-surface-border select-none text-xs backdrop-blur-sm">
       <tr>
-        <th className="py-2.5 px-3 w-8 bg-surface" />
+        <th className="py-2.5 px-3 w-8 bg-background" />
         <th
           onClick={() => onSort("sector")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-left bg-surface"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-left bg-background"
         >
           <div className="flex items-center gap-1">
             <span>Sector</span>
@@ -41,7 +41,7 @@ export const SectorTableHeader: React.FC<Props> = ({
         </th>
         <th
           onClick={() => onSort("civ_count")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-center bg-surface"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-center bg-background"
         >
           <div className="flex items-center justify-center gap-1">
             <span>Stocks</span>
@@ -50,7 +50,7 @@ export const SectorTableHeader: React.FC<Props> = ({
         </th>
         <th
           onClick={() => onSort("avg_move_pct")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-surface"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-background"
         >
           <div className="flex items-center justify-end gap-1">
             <span>Change</span>
@@ -59,7 +59,7 @@ export const SectorTableHeader: React.FC<Props> = ({
         </th>
         <th
           onClick={() => onSort("pct_above_vwap")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-surface"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-background"
         >
           <div className="flex items-center justify-end gap-1">
             <span>VWAP%</span>
@@ -68,7 +68,7 @@ export const SectorTableHeader: React.FC<Props> = ({
         </th>
         <th
           onClick={() => onSort("avg_rvol")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-surface"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-background"
         >
           <div className="flex items-center justify-end gap-1">
             <span>RVOL</span>
@@ -77,7 +77,7 @@ export const SectorTableHeader: React.FC<Props> = ({
         </th>
         <th
           onClick={() => onSort("advances")}
-          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-surface"
+          className="py-2.5 px-3 font-semibold cursor-pointer group hover:text-foreground text-right bg-background"
         >
           <div className="flex items-center justify-end gap-1">
             <span>Ratio</span>

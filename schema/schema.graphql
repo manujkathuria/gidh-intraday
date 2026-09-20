@@ -283,9 +283,22 @@ type MarketStatus {
   lastTickAgeMs: Int
 }
 
-# ==============================================================================
-# ROOT QUERIES & SUBSCRIPTIONS
-# ==============================================================================
+type ClosedPosition {
+  id: ID!
+  symbol: String!
+  instrumentToken: Int!
+  exchange: String!
+  side: TradeSide!
+  quantity: Int!
+  entryPrice: Float!
+  exitPrice: Float!
+  pnlInr: Float!
+  pnlPct: Float!
+  openedAt: String!
+  closedAt: String!
+  exitReason: String!
+  brokerOrderId: String
+}
 
 type Query {
   # Health check
@@ -314,9 +327,49 @@ type Query {
   brainRules: [BrainRuleItem!]!
   operatingSchedule: [OperatingScheduleItem!]!
 
-  # Live Positions
+  # Quant AI War Room Brain Sessions & Cognitive Memory
+  brainSession(date: String, brainId: String): BrainSessionRecord
+  brainSessions(brainId: String, limit: Int): [BrainSessionRecord!]!
+  brainMemory(brainId: String!): BrainMemoryRecord
+  brainAvailableDates: [String!]!
+
+  # Live Positions & Closed History
   livePositions: [ActivePosition!]!
+  closedPositions(date: String): [ClosedPosition!]!
   managedOrders: [ManagedOrder!]!
+  riskState: RiskState!
+}
+
+"""
+AI Brain Session from quant.brain_sessions
+"""
+type BrainSessionRecord {
+  sessionDate: String!
+  brainId: String!
+  aiThesis: String!
+  decisionsJson: String!
+  sensoryFeaturesJson: String
+  outcomesJson: String
+  forensics: String
+  createdAt: String!
+}
+
+"""
+Cognitive Memory from quant.brain_memory
+"""
+type BrainMemoryRecord {
+  brainId: String!
+  memoryStateJson: String!
+  updatedAt: String!
+}
+
+"""
+Emergency Tripwire & Risk Status
+"""
+type RiskState {
+  killSwitch: Boolean!
+  circuitBroken: Boolean!
+  reason: String
 }
 
 type Mutation {
@@ -324,6 +377,7 @@ type Mutation {
   placeLimitOrder(input: PlaceLimitOrderInput!): ManagedOrder!
   cancelLimitOrder(id: ID!): ManagedOrder!
   squareOffPosition(symbol: String!, reason: String!): ManagedOrder!
+  resetTripwire: Boolean!
 }
 
 type Subscription {

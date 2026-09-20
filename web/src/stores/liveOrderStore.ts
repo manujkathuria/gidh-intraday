@@ -1,9 +1,14 @@
 import { create } from "zustand";
 import {
   ActivePosition,
+  ClosedPosition,
   ManagedOrder,
+  RiskState,
   fetchLivePositions,
+  fetchClosedPositions,
   fetchManagedOrders,
+  fetchRiskState,
+  resetTripwire,
   createLiveOrder,
   cancelLimitOrder,
   squareOffLivePosition,
@@ -28,7 +33,9 @@ const getLiveWsUrl = () => {
 
 interface LiveOrderState {
   activePositions: Record<string, ActivePosition>;
+  closedPositions: ClosedPosition[];
   managedOrders: Record<string, ManagedOrder>;
+  riskState: RiskState | null;
   isConnected: boolean;
   loading: boolean;
   error: string | null;
@@ -37,6 +44,7 @@ interface LiveOrderState {
   // Actions
   initLiveOrders: () => Promise<void>;
   connectLiveWebSocket: () => void;
+  resetTripwireAction: () => Promise<boolean>;
   placeTrade: (intent: OrderIntent) => Promise<boolean>;
   cancelLimit: (id: string) => Promise<boolean>;
   squareOff: (symbol: string, reason?: string) => Promise<boolean>;
@@ -44,7 +52,9 @@ interface LiveOrderState {
 
 export const useLiveOrderStore = create<LiveOrderState>((set, get) => ({
   activePositions: {},
+  closedPositions: [],
   managedOrders: {},
+  riskState: null,
   isConnected: false,
   loading: false,
   error: null,
@@ -86,13 +96,21 @@ export const useLiveOrderStore = create<LiveOrderState>((set, get) => ({
             current[pos.symbol] = pos;
             set({ activePositions: current });
           } else if (ev.type === "POSITION_CLOSED" && ev.payload) {
-            const sym = ev.payload.symbol;
-            delete current[sym];
-            set({ activePositions: current });
+            const closedPos: ClosedPosition = ev.payload;
+            delete current[closedPos.symbol];
+            const existingClosed = get().closedPositions.filter((p) => p.id !== closedPos.id);
+            set({ activePositions: current, closedPositions: [closedPos, ...existingClosed] });
           } else if ((ev.type === "ORDER_CREATED" || ev.type === "ORDER_STATUS_CHANGED") && ev.payload) {
             const order: ManagedOrder = ev.payload;
             orders[order.id] = order;
             set({ managedOrders: orders });
+          } else if (ev.type === "RISK_STATE_CHANGED" && ev.payload) {
+            const risk: RiskState = {
+              kill_switch: !!ev.payload.kill_switch,
+              circuit_broken: !!ev.payload.circuit_broken,
+              reason: ev.payload.reason,
+            };
+            set({ riskState: risk });
           }
         } catch (err) {
           console.error("[LIVE WS] Message parse error:", err);
@@ -117,18 +135,42 @@ export const useLiveOrderStore = create<LiveOrderState>((set, get) => ({
   initLiveOrders: async () => {
     try {
       set({ loading: true });
-      const [positions, orders] = await Promise.all([fetchLivePositions(), fetchManagedOrders()]);
+      const [positions, closed, orders, risk] = await Promise.all([
+        fetchLivePositions(),
+        fetchClosedPositions(),
+        fetchManagedOrders(),
+        fetchRiskState(),
+      ]);
       const posMap: Record<string, ActivePosition> = {};
       for (const p of positions) {
         posMap[p.symbol] = p;
       }
       const orderMap: Record<string, ManagedOrder> = {};
       for (const order of orders) orderMap[order.id] = order;
-      set({ activePositions: posMap, managedOrders: orderMap, loading: false });
+      set({
+        activePositions: posMap,
+        closedPositions: closed,
+        managedOrders: orderMap,
+        riskState: risk,
+        loading: false,
+      });
 
       get().connectLiveWebSocket();
     } catch (err: any) {
       set({ error: err.message, loading: false });
+    }
+  },
+
+  resetTripwireAction: async () => {
+    try {
+      const ok = await resetTripwire();
+      if (ok) {
+        set({ riskState: { kill_switch: false, circuit_broken: false } });
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
   },
 
@@ -169,10 +211,15 @@ export const useLiveOrderStore = create<LiveOrderState>((set, get) => ({
     try {
       const order = await squareOffLivePosition(symbol, reason);
       if (!order) return false;
-      set({ managedOrders: { ...get().managedOrders, [order.id]: order } });
+      const orders = { ...get().managedOrders, [order.id]: order };
+      const current = { ...get().activePositions };
+      delete current[symbol];
+      const closed = await fetchClosedPositions();
+      set({ managedOrders: orders, activePositions: current, closedPositions: closed });
       return true;
     } catch (err) {
       return false;
     }
   },
 }));
+

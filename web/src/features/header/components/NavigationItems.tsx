@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Crosshair, Layers, LineChart, Brain, Briefcase, Activity } from "lucide-react";
+import { Crosshair, Layers, LineChart, Brain, Briefcase, FileText } from "lucide-react";
 
 interface Props {
   activeCount: number;
@@ -16,7 +16,7 @@ export const NavigationItems: React.FC<Props> = ({ activeCount, isCollapsed }) =
   const links = [
     { href: "/", label: "Radar", icon: Crosshair, badge: null },
     { href: "/sectors", label: "Sectors", icon: Layers, badge: null },
-    { href: "/futures", label: "Futures", icon: Activity, badge: null },
+    { href: "/futures", label: "Futures", icon: FileText, badge: null },
     { href: "/chart", label: "Charts", icon: LineChart, badge: null },
     { href: "/brain", label: "Brain", icon: Brain, badge: null },
     { href: "/positions", label: "Positions", icon: Briefcase, badge: `${activeCount}/5` },

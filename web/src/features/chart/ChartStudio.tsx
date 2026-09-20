@@ -29,6 +29,7 @@ export const ChartStudio: React.FC = () => {
     stopLossPrice,
     targetPrice,
     hasActivePosition,
+    activePendingOrder,
     // Order Modal & Limit Dragging
     isOrderModalOpen,
     orderSide,
@@ -44,6 +45,18 @@ export const ChartStudio: React.FC = () => {
 
   const lastClose = chartCandles.length > 0 ? chartCandles[chartCandles.length - 1].close : 0;
   const lastVwap = chartCandles.length > 0 ? chartCandles[chartCandles.length - 1].vwap : 0;
+
+  const displayLimitPrice = isOrderModalOpen && orderType === "LIMIT"
+    ? limitPrice
+    : (activePendingOrder?.limit_price ? activePendingOrder.limit_price : undefined);
+
+  const displayOrderSide = isOrderModalOpen
+    ? orderSide
+    : (activePendingOrder?.side || orderSide);
+
+  const displayOrderType = isOrderModalOpen
+    ? orderType
+    : (activePendingOrder ? "LIMIT" : orderType);
 
   return (
     <div className="flex-1 w-full flex flex-col gap-2 min-h-0 overflow-hidden relative">
@@ -94,14 +107,15 @@ export const ChartStudio: React.FC = () => {
             theme={theme}
             interval={interval}
             selectedDate={selectedDate}
+            currentLtp={currentPrice}
             entryPrice={entryPrice}
             stopLossPrice={stopLossPrice}
             targetPrice={targetPrice}
-            limitPrice={isOrderModalOpen && orderType === "LIMIT" ? limitPrice : undefined}
+            limitPrice={displayLimitPrice}
             isLimitDraggable={isOrderModalOpen && orderType === "LIMIT"}
             onLimitPriceChange={setLimitPrice}
-            orderSide={orderSide}
-            orderType={orderType}
+            orderSide={displayOrderSide}
+            orderType={displayOrderType}
           />
         </div>
       </div>

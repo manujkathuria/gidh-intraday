@@ -60,8 +60,8 @@ export const FuturesFilterBar: React.FC<Props> = ({
             </Listbox>
           </div>
 
-          {/* Desktop 1-Click Segmented Pill Buttons (md+) */}
-          <div className="hidden md:flex items-center bg-surface-muted/60 border border-surface-border rounded-md p-0.5">
+          {/* Desktop Filter Tabs (Institutional Clean) */}
+          <div className="hidden md:flex items-center border-b border-surface-border gap-1 mr-2">
             {PRESETS.map((p) => {
               const Icon = p.icon;
               const isActive = stance === p.id;
@@ -69,12 +69,13 @@ export const FuturesFilterBar: React.FC<Props> = ({
                 <button
                   key={p.id}
                   onClick={() => setStance(p.id)}
-                  className={`px-3 py-1 rounded transition text-xs flex items-center gap-1.5 cursor-pointer shrink-0 ${isActive
-                      ? "bg-surface text-foreground font-extrabold shadow-2xs border border-surface-border"
-                      : "text-foreground/60 hover:text-foreground hover:bg-surface-hover/60 border border-transparent font-medium"
-                    }`}
+                  className={`px-3 py-1.5 transition text-xs flex items-center gap-1.5 cursor-pointer shrink-0 border-b-2 -mb-px font-medium ${
+                    isActive
+                      ? "border-foreground text-foreground font-bold"
+                      : "border-transparent text-foreground/50 hover:text-foreground hover:border-surface-border"
+                  }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? "text-foreground" : "text-foreground/50"}`} />
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? "text-foreground" : "text-foreground/40"}`} />
                   <span>{p.label}</span>
                 </button>
               );
@@ -89,7 +90,7 @@ export const FuturesFilterBar: React.FC<Props> = ({
               placeholder="Search symbol or contract..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="block w-full rounded-md bg-surface pl-8.5 pr-3 py-1.5 text-xs text-foreground placeholder:text-foreground/40 border border-surface-border focus:outline-1 focus:-outline-offset-1 focus:outline-foreground focus:border-foreground "
+              className="block w-full rounded-md bg-background pl-8.5 pr-3 py-1.5 text-xs text-foreground placeholder:text-foreground/40 border border-surface-border focus:outline-none focus:border-foreground/60 transition"
             />
           </div>
 

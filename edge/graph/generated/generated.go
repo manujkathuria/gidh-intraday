@@ -69,6 +69,12 @@ type ComplexityRoot struct {
 		UpdatedAt       func(childComplexity int) int
 	}
 
+	BrainMemoryRecord struct {
+		BrainID         func(childComplexity int) int
+		MemoryStateJSON func(childComplexity int) int
+		UpdatedAt       func(childComplexity int) int
+	}
+
 	BrainRuleItem struct {
 		Action       func(childComplexity int) int
 		Category     func(childComplexity int) int
@@ -79,6 +85,17 @@ type ComplexityRoot struct {
 		Name         func(childComplexity int) int
 		Notes        func(childComplexity int) int
 		TriggerTime  func(childComplexity int) int
+	}
+
+	BrainSessionRecord struct {
+		AiThesis            func(childComplexity int) int
+		BrainID             func(childComplexity int) int
+		CreatedAt           func(childComplexity int) int
+		DecisionsJSON       func(childComplexity int) int
+		Forensics           func(childComplexity int) int
+		OutcomesJSON        func(childComplexity int) int
+		SensoryFeaturesJSON func(childComplexity int) int
+		SessionDate         func(childComplexity int) int
 	}
 
 	Candle struct {
@@ -94,6 +111,23 @@ type ComplexityRoot struct {
 		VwapLower2 func(childComplexity int) int
 		VwapUpper1 func(childComplexity int) int
 		VwapUpper2 func(childComplexity int) int
+	}
+
+	ClosedPosition struct {
+		BrokerOrderID   func(childComplexity int) int
+		ClosedAt        func(childComplexity int) int
+		EntryPrice      func(childComplexity int) int
+		Exchange        func(childComplexity int) int
+		ExitPrice       func(childComplexity int) int
+		ExitReason      func(childComplexity int) int
+		ID              func(childComplexity int) int
+		InstrumentToken func(childComplexity int) int
+		OpenedAt        func(childComplexity int) int
+		PnlInr          func(childComplexity int) int
+		PnlPct          func(childComplexity int) int
+		Quantity        func(childComplexity int) int
+		Side            func(childComplexity int) int
+		Symbol          func(childComplexity int) int
 	}
 
 	FuturesInflowItem struct {
@@ -165,6 +199,7 @@ type ComplexityRoot struct {
 		CancelLimitOrder  func(childComplexity int, id string) int
 		PlaceLimitOrder   func(childComplexity int, input model.PlaceLimitOrderInput) int
 		PlaceMarketOrder  func(childComplexity int, input model.PlaceMarketOrderInput) int
+		ResetTripwire     func(childComplexity int) int
 		SquareOffPosition func(childComplexity int, symbol string, reason string) int
 	}
 
@@ -181,20 +216,26 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		BrainRules        func(childComplexity int) int
-		Candles           func(childComplexity int, symbol string, date string, interval *string) int
-		FuturesInflow     func(childComplexity int, date *string, minPrice *float64, maxPrice *float64, minInflow *float64, minOiPct *float64) int
-		Health            func(childComplexity int) int
-		LivePositions     func(childComplexity int) int
-		ManagedOrders     func(childComplexity int) int
-		MarketSnapshot    func(childComplexity int, date *string) int
-		MarketStatus      func(childComplexity int) int
-		OperatingSchedule func(childComplexity int) int
-		ReplayCandles     func(childComplexity int, sessionDate string, symbol string, toTime *string, interval *string) int
-		ReplaySnapshot    func(childComplexity int, sessionDate string, time *string) int
-		Sectors           func(childComplexity int, date *string) int
-		Sessions          func(childComplexity int) int
-		Universe          func(childComplexity int) int
+		BrainAvailableDates func(childComplexity int) int
+		BrainMemory         func(childComplexity int, brainID string) int
+		BrainRules          func(childComplexity int) int
+		BrainSession        func(childComplexity int, date *string, brainID *string) int
+		BrainSessions       func(childComplexity int, brainID *string, limit *int) int
+		Candles             func(childComplexity int, symbol string, date string, interval *string) int
+		ClosedPositions     func(childComplexity int, date *string) int
+		FuturesInflow       func(childComplexity int, date *string, minPrice *float64, maxPrice *float64, minInflow *float64, minOiPct *float64) int
+		Health              func(childComplexity int) int
+		LivePositions       func(childComplexity int) int
+		ManagedOrders       func(childComplexity int) int
+		MarketSnapshot      func(childComplexity int, date *string) int
+		MarketStatus        func(childComplexity int) int
+		OperatingSchedule   func(childComplexity int) int
+		ReplayCandles       func(childComplexity int, sessionDate string, symbol string, toTime *string, interval *string) int
+		ReplaySnapshot      func(childComplexity int, sessionDate string, time *string) int
+		RiskState           func(childComplexity int) int
+		Sectors             func(childComplexity int, date *string) int
+		Sessions            func(childComplexity int) int
+		Universe            func(childComplexity int) int
 	}
 
 	ReplaySector struct {
@@ -247,6 +288,12 @@ type ComplexityRoot struct {
 		TotalCivs    func(childComplexity int) int
 	}
 
+	RiskState struct {
+		CircuitBroken func(childComplexity int) int
+		KillSwitch    func(childComplexity int) int
+		Reason        func(childComplexity int) int
+	}
+
 	Session struct {
 		Date           func(childComplexity int) int
 		FeatureRunID   func(childComplexity int) int
@@ -278,6 +325,7 @@ type MutationResolver interface {
 	PlaceLimitOrder(ctx context.Context, input model.PlaceLimitOrderInput) (*model.ManagedOrder, error)
 	CancelLimitOrder(ctx context.Context, id string) (*model.ManagedOrder, error)
 	SquareOffPosition(ctx context.Context, symbol string, reason string) (*model.ManagedOrder, error)
+	ResetTripwire(ctx context.Context) (bool, error)
 }
 type QueryResolver interface {
 	Health(ctx context.Context) (string, error)
@@ -292,8 +340,14 @@ type QueryResolver interface {
 	ReplayCandles(ctx context.Context, sessionDate string, symbol string, toTime *string, interval *string) ([]*model.Candle, error)
 	BrainRules(ctx context.Context) ([]*model.BrainRuleItem, error)
 	OperatingSchedule(ctx context.Context) ([]*model.OperatingScheduleItem, error)
+	BrainSession(ctx context.Context, date *string, brainID *string) (*model.BrainSessionRecord, error)
+	BrainSessions(ctx context.Context, brainID *string, limit *int) ([]*model.BrainSessionRecord, error)
+	BrainMemory(ctx context.Context, brainID string) (*model.BrainMemoryRecord, error)
+	BrainAvailableDates(ctx context.Context) ([]string, error)
 	LivePositions(ctx context.Context) ([]*model.ActivePosition, error)
+	ClosedPositions(ctx context.Context, date *string) ([]*model.ClosedPosition, error)
 	ManagedOrders(ctx context.Context) ([]*model.ManagedOrder, error)
+	RiskState(ctx context.Context) (*model.RiskState, error)
 }
 type SubscriptionResolver interface {
 	MarketTicks(ctx context.Context, symbols []string) (<-chan *model.MarketTick, error)
@@ -446,6 +500,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ActivePosition.UpdatedAt(childComplexity), true
 
+	case "BrainMemoryRecord.brainId":
+		if e.complexity.BrainMemoryRecord.BrainID == nil {
+			break
+		}
+
+		return e.complexity.BrainMemoryRecord.BrainID(childComplexity), true
+
+	case "BrainMemoryRecord.memoryStateJson":
+		if e.complexity.BrainMemoryRecord.MemoryStateJSON == nil {
+			break
+		}
+
+		return e.complexity.BrainMemoryRecord.MemoryStateJSON(childComplexity), true
+
+	case "BrainMemoryRecord.updatedAt":
+		if e.complexity.BrainMemoryRecord.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.BrainMemoryRecord.UpdatedAt(childComplexity), true
+
 	case "BrainRuleItem.action":
 		if e.complexity.BrainRuleItem.Action == nil {
 			break
@@ -508,6 +583,62 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.BrainRuleItem.TriggerTime(childComplexity), true
+
+	case "BrainSessionRecord.aiThesis":
+		if e.complexity.BrainSessionRecord.AiThesis == nil {
+			break
+		}
+
+		return e.complexity.BrainSessionRecord.AiThesis(childComplexity), true
+
+	case "BrainSessionRecord.brainId":
+		if e.complexity.BrainSessionRecord.BrainID == nil {
+			break
+		}
+
+		return e.complexity.BrainSessionRecord.BrainID(childComplexity), true
+
+	case "BrainSessionRecord.createdAt":
+		if e.complexity.BrainSessionRecord.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.BrainSessionRecord.CreatedAt(childComplexity), true
+
+	case "BrainSessionRecord.decisionsJson":
+		if e.complexity.BrainSessionRecord.DecisionsJSON == nil {
+			break
+		}
+
+		return e.complexity.BrainSessionRecord.DecisionsJSON(childComplexity), true
+
+	case "BrainSessionRecord.forensics":
+		if e.complexity.BrainSessionRecord.Forensics == nil {
+			break
+		}
+
+		return e.complexity.BrainSessionRecord.Forensics(childComplexity), true
+
+	case "BrainSessionRecord.outcomesJson":
+		if e.complexity.BrainSessionRecord.OutcomesJSON == nil {
+			break
+		}
+
+		return e.complexity.BrainSessionRecord.OutcomesJSON(childComplexity), true
+
+	case "BrainSessionRecord.sensoryFeaturesJson":
+		if e.complexity.BrainSessionRecord.SensoryFeaturesJSON == nil {
+			break
+		}
+
+		return e.complexity.BrainSessionRecord.SensoryFeaturesJSON(childComplexity), true
+
+	case "BrainSessionRecord.sessionDate":
+		if e.complexity.BrainSessionRecord.SessionDate == nil {
+			break
+		}
+
+		return e.complexity.BrainSessionRecord.SessionDate(childComplexity), true
 
 	case "Candle.close":
 		if e.complexity.Candle.Close == nil {
@@ -592,6 +723,104 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Candle.VwapUpper2(childComplexity), true
+
+	case "ClosedPosition.brokerOrderId":
+		if e.complexity.ClosedPosition.BrokerOrderID == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.BrokerOrderID(childComplexity), true
+
+	case "ClosedPosition.closedAt":
+		if e.complexity.ClosedPosition.ClosedAt == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.ClosedAt(childComplexity), true
+
+	case "ClosedPosition.entryPrice":
+		if e.complexity.ClosedPosition.EntryPrice == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.EntryPrice(childComplexity), true
+
+	case "ClosedPosition.exchange":
+		if e.complexity.ClosedPosition.Exchange == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.Exchange(childComplexity), true
+
+	case "ClosedPosition.exitPrice":
+		if e.complexity.ClosedPosition.ExitPrice == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.ExitPrice(childComplexity), true
+
+	case "ClosedPosition.exitReason":
+		if e.complexity.ClosedPosition.ExitReason == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.ExitReason(childComplexity), true
+
+	case "ClosedPosition.id":
+		if e.complexity.ClosedPosition.ID == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.ID(childComplexity), true
+
+	case "ClosedPosition.instrumentToken":
+		if e.complexity.ClosedPosition.InstrumentToken == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.InstrumentToken(childComplexity), true
+
+	case "ClosedPosition.openedAt":
+		if e.complexity.ClosedPosition.OpenedAt == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.OpenedAt(childComplexity), true
+
+	case "ClosedPosition.pnlInr":
+		if e.complexity.ClosedPosition.PnlInr == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.PnlInr(childComplexity), true
+
+	case "ClosedPosition.pnlPct":
+		if e.complexity.ClosedPosition.PnlPct == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.PnlPct(childComplexity), true
+
+	case "ClosedPosition.quantity":
+		if e.complexity.ClosedPosition.Quantity == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.Quantity(childComplexity), true
+
+	case "ClosedPosition.side":
+		if e.complexity.ClosedPosition.Side == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.Side(childComplexity), true
+
+	case "ClosedPosition.symbol":
+		if e.complexity.ClosedPosition.Symbol == nil {
+			break
+		}
+
+		return e.complexity.ClosedPosition.Symbol(childComplexity), true
 
 	case "FuturesInflowItem.freshInflow1dCr":
 		if e.complexity.FuturesInflowItem.FreshInflow1dCr == nil {
@@ -979,6 +1208,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.PlaceMarketOrder(childComplexity, args["input"].(model.PlaceMarketOrderInput)), true
 
+	case "Mutation.resetTripwire":
+		if e.complexity.Mutation.ResetTripwire == nil {
+			break
+		}
+
+		return e.complexity.Mutation.ResetTripwire(childComplexity), true
+
 	case "Mutation.squareOffPosition":
 		if e.complexity.Mutation.SquareOffPosition == nil {
 			break
@@ -1054,12 +1290,55 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.OperatingScheduleItem.TriggerEvent(childComplexity), true
 
+	case "Query.brainAvailableDates":
+		if e.complexity.Query.BrainAvailableDates == nil {
+			break
+		}
+
+		return e.complexity.Query.BrainAvailableDates(childComplexity), true
+
+	case "Query.brainMemory":
+		if e.complexity.Query.BrainMemory == nil {
+			break
+		}
+
+		args, err := ec.field_Query_brainMemory_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.BrainMemory(childComplexity, args["brainId"].(string)), true
+
 	case "Query.brainRules":
 		if e.complexity.Query.BrainRules == nil {
 			break
 		}
 
 		return e.complexity.Query.BrainRules(childComplexity), true
+
+	case "Query.brainSession":
+		if e.complexity.Query.BrainSession == nil {
+			break
+		}
+
+		args, err := ec.field_Query_brainSession_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.BrainSession(childComplexity, args["date"].(*string), args["brainId"].(*string)), true
+
+	case "Query.brainSessions":
+		if e.complexity.Query.BrainSessions == nil {
+			break
+		}
+
+		args, err := ec.field_Query_brainSessions_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.BrainSessions(childComplexity, args["brainId"].(*string), args["limit"].(*int)), true
 
 	case "Query.candles":
 		if e.complexity.Query.Candles == nil {
@@ -1072,6 +1351,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Candles(childComplexity, args["symbol"].(string), args["date"].(string), args["interval"].(*string)), true
+
+	case "Query.closedPositions":
+		if e.complexity.Query.ClosedPositions == nil {
+			break
+		}
+
+		args, err := ec.field_Query_closedPositions_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ClosedPositions(childComplexity, args["date"].(*string)), true
 
 	case "Query.futuresInflow":
 		if e.complexity.Query.FuturesInflow == nil {
@@ -1155,6 +1446,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.ReplaySnapshot(childComplexity, args["sessionDate"].(string), args["time"].(*string)), true
+
+	case "Query.riskState":
+		if e.complexity.Query.RiskState == nil {
+			break
+		}
+
+		return e.complexity.Query.RiskState(childComplexity), true
 
 	case "Query.sectors":
 		if e.complexity.Query.Sectors == nil {
@@ -1426,6 +1724,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ReplayWeather.TotalCivs(childComplexity), true
+
+	case "RiskState.circuitBroken":
+		if e.complexity.RiskState.CircuitBroken == nil {
+			break
+		}
+
+		return e.complexity.RiskState.CircuitBroken(childComplexity), true
+
+	case "RiskState.killSwitch":
+		if e.complexity.RiskState.KillSwitch == nil {
+			break
+		}
+
+		return e.complexity.RiskState.KillSwitch(childComplexity), true
+
+	case "RiskState.reason":
+		if e.complexity.RiskState.Reason == nil {
+			break
+		}
+
+		return e.complexity.RiskState.Reason(childComplexity), true
 
 	case "Session.date":
 		if e.complexity.Session.Date == nil {
@@ -1958,9 +2277,22 @@ type MarketStatus {
   lastTickAgeMs: Int
 }
 
-# ==============================================================================
-# ROOT QUERIES & SUBSCRIPTIONS
-# ==============================================================================
+type ClosedPosition {
+  id: ID!
+  symbol: String!
+  instrumentToken: Int!
+  exchange: String!
+  side: TradeSide!
+  quantity: Int!
+  entryPrice: Float!
+  exitPrice: Float!
+  pnlInr: Float!
+  pnlPct: Float!
+  openedAt: String!
+  closedAt: String!
+  exitReason: String!
+  brokerOrderId: String
+}
 
 type Query {
   # Health check
@@ -1989,9 +2321,49 @@ type Query {
   brainRules: [BrainRuleItem!]!
   operatingSchedule: [OperatingScheduleItem!]!
 
-  # Live Positions
+  # Quant AI War Room Brain Sessions & Cognitive Memory
+  brainSession(date: String, brainId: String): BrainSessionRecord
+  brainSessions(brainId: String, limit: Int): [BrainSessionRecord!]!
+  brainMemory(brainId: String!): BrainMemoryRecord
+  brainAvailableDates: [String!]!
+
+  # Live Positions & Closed History
   livePositions: [ActivePosition!]!
+  closedPositions(date: String): [ClosedPosition!]!
   managedOrders: [ManagedOrder!]!
+  riskState: RiskState!
+}
+
+"""
+AI Brain Session from quant.brain_sessions
+"""
+type BrainSessionRecord {
+  sessionDate: String!
+  brainId: String!
+  aiThesis: String!
+  decisionsJson: String!
+  sensoryFeaturesJson: String
+  outcomesJson: String
+  forensics: String
+  createdAt: String!
+}
+
+"""
+Cognitive Memory from quant.brain_memory
+"""
+type BrainMemoryRecord {
+  brainId: String!
+  memoryStateJson: String!
+  updatedAt: String!
+}
+
+"""
+Emergency Tripwire & Risk Status
+"""
+type RiskState {
+  killSwitch: Boolean!
+  circuitBroken: Boolean!
+  reason: String
 }
 
 type Mutation {
@@ -1999,6 +2371,7 @@ type Mutation {
   placeLimitOrder(input: PlaceLimitOrderInput!): ManagedOrder!
   cancelLimitOrder(id: ID!): ManagedOrder!
   squareOffPosition(symbol: String!, reason: String!): ManagedOrder!
+  resetTripwire: Boolean!
 }
 
 type Subscription {
@@ -2182,6 +2555,136 @@ func (ec *executionContext) field_Query___type_argsName(
 	return zeroVal, nil
 }
 
+func (ec *executionContext) field_Query_brainMemory_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_brainMemory_argsBrainID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["brainId"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Query_brainMemory_argsBrainID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["brainId"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("brainId"))
+	if tmp, ok := rawArgs["brainId"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_brainSession_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_brainSession_argsDate(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["date"] = arg0
+	arg1, err := ec.field_Query_brainSession_argsBrainID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["brainId"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Query_brainSession_argsDate(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*string, error) {
+	if _, ok := rawArgs["date"]; !ok {
+		var zeroVal *string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("date"))
+	if tmp, ok := rawArgs["date"]; ok {
+		return ec.unmarshalOString2ᚖstring(ctx, tmp)
+	}
+
+	var zeroVal *string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_brainSession_argsBrainID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*string, error) {
+	if _, ok := rawArgs["brainId"]; !ok {
+		var zeroVal *string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("brainId"))
+	if tmp, ok := rawArgs["brainId"]; ok {
+		return ec.unmarshalOString2ᚖstring(ctx, tmp)
+	}
+
+	var zeroVal *string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_brainSessions_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_brainSessions_argsBrainID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["brainId"] = arg0
+	arg1, err := ec.field_Query_brainSessions_argsLimit(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Query_brainSessions_argsBrainID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*string, error) {
+	if _, ok := rawArgs["brainId"]; !ok {
+		var zeroVal *string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("brainId"))
+	if tmp, ok := rawArgs["brainId"]; ok {
+		return ec.unmarshalOString2ᚖstring(ctx, tmp)
+	}
+
+	var zeroVal *string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_brainSessions_argsLimit(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*int, error) {
+	if _, ok := rawArgs["limit"]; !ok {
+		var zeroVal *int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+	if tmp, ok := rawArgs["limit"]; ok {
+		return ec.unmarshalOInt2ᚖint(ctx, tmp)
+	}
+
+	var zeroVal *int
+	return zeroVal, nil
+}
+
 func (ec *executionContext) field_Query_candles_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -2249,6 +2752,34 @@ func (ec *executionContext) field_Query_candles_argsInterval(
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("interval"))
 	if tmp, ok := rawArgs["interval"]; ok {
+		return ec.unmarshalOString2ᚖstring(ctx, tmp)
+	}
+
+	var zeroVal *string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_closedPositions_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_closedPositions_argsDate(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["date"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Query_closedPositions_argsDate(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*string, error) {
+	if _, ok := rawArgs["date"]; !ok {
+		var zeroVal *string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("date"))
+	if tmp, ok := rawArgs["date"]; ok {
 		return ec.unmarshalOString2ᚖstring(ctx, tmp)
 	}
 
@@ -3556,6 +4087,138 @@ func (ec *executionContext) fieldContext_ActivePosition_updatedAt(_ context.Cont
 	return fc, nil
 }
 
+func (ec *executionContext) _BrainMemoryRecord_brainId(ctx context.Context, field graphql.CollectedField, obj *model.BrainMemoryRecord) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrainMemoryRecord_brainId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BrainID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrainMemoryRecord_brainId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrainMemoryRecord",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrainMemoryRecord_memoryStateJson(ctx context.Context, field graphql.CollectedField, obj *model.BrainMemoryRecord) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrainMemoryRecord_memoryStateJson(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MemoryStateJSON, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrainMemoryRecord_memoryStateJson(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrainMemoryRecord",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrainMemoryRecord_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.BrainMemoryRecord) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrainMemoryRecord_updatedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrainMemoryRecord_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrainMemoryRecord",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _BrainRuleItem_id(ctx context.Context, field graphql.CollectedField, obj *model.BrainRuleItem) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_BrainRuleItem_id(ctx, field)
 	if err != nil {
@@ -3933,6 +4596,349 @@ func (ec *executionContext) _BrainRuleItem_notes(ctx context.Context, field grap
 func (ec *executionContext) fieldContext_BrainRuleItem_notes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "BrainRuleItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrainSessionRecord_sessionDate(ctx context.Context, field graphql.CollectedField, obj *model.BrainSessionRecord) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrainSessionRecord_sessionDate(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SessionDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrainSessionRecord_sessionDate(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrainSessionRecord",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrainSessionRecord_brainId(ctx context.Context, field graphql.CollectedField, obj *model.BrainSessionRecord) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrainSessionRecord_brainId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BrainID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrainSessionRecord_brainId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrainSessionRecord",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrainSessionRecord_aiThesis(ctx context.Context, field graphql.CollectedField, obj *model.BrainSessionRecord) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrainSessionRecord_aiThesis(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AiThesis, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrainSessionRecord_aiThesis(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrainSessionRecord",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrainSessionRecord_decisionsJson(ctx context.Context, field graphql.CollectedField, obj *model.BrainSessionRecord) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrainSessionRecord_decisionsJson(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DecisionsJSON, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrainSessionRecord_decisionsJson(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrainSessionRecord",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrainSessionRecord_sensoryFeaturesJson(ctx context.Context, field graphql.CollectedField, obj *model.BrainSessionRecord) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrainSessionRecord_sensoryFeaturesJson(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SensoryFeaturesJSON, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrainSessionRecord_sensoryFeaturesJson(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrainSessionRecord",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrainSessionRecord_outcomesJson(ctx context.Context, field graphql.CollectedField, obj *model.BrainSessionRecord) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrainSessionRecord_outcomesJson(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.OutcomesJSON, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrainSessionRecord_outcomesJson(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrainSessionRecord",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrainSessionRecord_forensics(ctx context.Context, field graphql.CollectedField, obj *model.BrainSessionRecord) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrainSessionRecord_forensics(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Forensics, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrainSessionRecord_forensics(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrainSessionRecord",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BrainSessionRecord_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.BrainSessionRecord) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BrainSessionRecord_createdAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BrainSessionRecord_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BrainSessionRecord",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -4451,6 +5457,619 @@ func (ec *executionContext) fieldContext_Candle_rvol(_ context.Context, field gr
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_id(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_symbol(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_symbol(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Symbol, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_symbol(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_instrumentToken(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_instrumentToken(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.InstrumentToken, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_instrumentToken(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_exchange(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_exchange(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Exchange, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_exchange(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_side(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_side(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Side, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.TradeSide)
+	fc.Result = res
+	return ec.marshalNTradeSide2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐTradeSide(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_side(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type TradeSide does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_quantity(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_quantity(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Quantity, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_quantity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_entryPrice(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_entryPrice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EntryPrice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_entryPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_exitPrice(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_exitPrice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExitPrice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_exitPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_pnlInr(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_pnlInr(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PnlInr, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_pnlInr(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_pnlPct(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_pnlPct(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PnlPct, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_pnlPct(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_openedAt(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_openedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.OpenedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_openedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_closedAt(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_closedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ClosedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_closedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_exitReason(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_exitReason(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExitReason, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_exitReason(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ClosedPosition_brokerOrderId(ctx context.Context, field graphql.CollectedField, obj *model.ClosedPosition) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ClosedPosition_brokerOrderId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BrokerOrderID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ClosedPosition_brokerOrderId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ClosedPosition",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -7042,6 +8661,50 @@ func (ec *executionContext) fieldContext_Mutation_squareOffPosition(ctx context.
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_resetTripwire(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_resetTripwire(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().ResetTripwire(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_resetTripwire(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _OperatingScheduleItem_id(ctx context.Context, field graphql.CollectedField, obj *model.OperatingScheduleItem) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_OperatingScheduleItem_id(ctx, field)
 	if err != nil {
@@ -8212,6 +9875,253 @@ func (ec *executionContext) fieldContext_Query_operatingSchedule(_ context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_brainSession(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_brainSession(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().BrainSession(rctx, fc.Args["date"].(*string), fc.Args["brainId"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.BrainSessionRecord)
+	fc.Result = res
+	return ec.marshalOBrainSessionRecord2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐBrainSessionRecord(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_brainSession(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "sessionDate":
+				return ec.fieldContext_BrainSessionRecord_sessionDate(ctx, field)
+			case "brainId":
+				return ec.fieldContext_BrainSessionRecord_brainId(ctx, field)
+			case "aiThesis":
+				return ec.fieldContext_BrainSessionRecord_aiThesis(ctx, field)
+			case "decisionsJson":
+				return ec.fieldContext_BrainSessionRecord_decisionsJson(ctx, field)
+			case "sensoryFeaturesJson":
+				return ec.fieldContext_BrainSessionRecord_sensoryFeaturesJson(ctx, field)
+			case "outcomesJson":
+				return ec.fieldContext_BrainSessionRecord_outcomesJson(ctx, field)
+			case "forensics":
+				return ec.fieldContext_BrainSessionRecord_forensics(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_BrainSessionRecord_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BrainSessionRecord", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_brainSession_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_brainSessions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_brainSessions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().BrainSessions(rctx, fc.Args["brainId"].(*string), fc.Args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.BrainSessionRecord)
+	fc.Result = res
+	return ec.marshalNBrainSessionRecord2ᚕᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐBrainSessionRecordᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_brainSessions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "sessionDate":
+				return ec.fieldContext_BrainSessionRecord_sessionDate(ctx, field)
+			case "brainId":
+				return ec.fieldContext_BrainSessionRecord_brainId(ctx, field)
+			case "aiThesis":
+				return ec.fieldContext_BrainSessionRecord_aiThesis(ctx, field)
+			case "decisionsJson":
+				return ec.fieldContext_BrainSessionRecord_decisionsJson(ctx, field)
+			case "sensoryFeaturesJson":
+				return ec.fieldContext_BrainSessionRecord_sensoryFeaturesJson(ctx, field)
+			case "outcomesJson":
+				return ec.fieldContext_BrainSessionRecord_outcomesJson(ctx, field)
+			case "forensics":
+				return ec.fieldContext_BrainSessionRecord_forensics(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_BrainSessionRecord_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BrainSessionRecord", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_brainSessions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_brainMemory(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_brainMemory(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().BrainMemory(rctx, fc.Args["brainId"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.BrainMemoryRecord)
+	fc.Result = res
+	return ec.marshalOBrainMemoryRecord2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐBrainMemoryRecord(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_brainMemory(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "brainId":
+				return ec.fieldContext_BrainMemoryRecord_brainId(ctx, field)
+			case "memoryStateJson":
+				return ec.fieldContext_BrainMemoryRecord_memoryStateJson(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_BrainMemoryRecord_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BrainMemoryRecord", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_brainMemory_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_brainAvailableDates(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_brainAvailableDates(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().BrainAvailableDates(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_brainAvailableDates(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_livePositions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_livePositions(ctx, field)
 	if err != nil {
@@ -8290,6 +10200,91 @@ func (ec *executionContext) fieldContext_Query_livePositions(_ context.Context, 
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ActivePosition", field.Name)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_closedPositions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_closedPositions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ClosedPositions(rctx, fc.Args["date"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.ClosedPosition)
+	fc.Result = res
+	return ec.marshalNClosedPosition2ᚕᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐClosedPositionᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_closedPositions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ClosedPosition_id(ctx, field)
+			case "symbol":
+				return ec.fieldContext_ClosedPosition_symbol(ctx, field)
+			case "instrumentToken":
+				return ec.fieldContext_ClosedPosition_instrumentToken(ctx, field)
+			case "exchange":
+				return ec.fieldContext_ClosedPosition_exchange(ctx, field)
+			case "side":
+				return ec.fieldContext_ClosedPosition_side(ctx, field)
+			case "quantity":
+				return ec.fieldContext_ClosedPosition_quantity(ctx, field)
+			case "entryPrice":
+				return ec.fieldContext_ClosedPosition_entryPrice(ctx, field)
+			case "exitPrice":
+				return ec.fieldContext_ClosedPosition_exitPrice(ctx, field)
+			case "pnlInr":
+				return ec.fieldContext_ClosedPosition_pnlInr(ctx, field)
+			case "pnlPct":
+				return ec.fieldContext_ClosedPosition_pnlPct(ctx, field)
+			case "openedAt":
+				return ec.fieldContext_ClosedPosition_openedAt(ctx, field)
+			case "closedAt":
+				return ec.fieldContext_ClosedPosition_closedAt(ctx, field)
+			case "exitReason":
+				return ec.fieldContext_ClosedPosition_exitReason(ctx, field)
+			case "brokerOrderId":
+				return ec.fieldContext_ClosedPosition_brokerOrderId(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ClosedPosition", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_closedPositions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -8375,6 +10370,58 @@ func (ec *executionContext) fieldContext_Query_managedOrders(_ context.Context, 
 				return ec.fieldContext_ManagedOrder_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ManagedOrder", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_riskState(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_riskState(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().RiskState(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.RiskState)
+	fc.Result = res
+	return ec.marshalNRiskState2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐRiskState(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_riskState(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "killSwitch":
+				return ec.fieldContext_RiskState_killSwitch(ctx, field)
+			case "circuitBroken":
+				return ec.fieldContext_RiskState_circuitBroken(ctx, field)
+			case "reason":
+				return ec.fieldContext_RiskState_reason(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RiskState", field.Name)
 		},
 	}
 	return fc, nil
@@ -10112,6 +12159,135 @@ func (ec *executionContext) fieldContext_ReplayWeather_pctAboveVwap(_ context.Co
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RiskState_killSwitch(ctx context.Context, field graphql.CollectedField, obj *model.RiskState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_RiskState_killSwitch(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.KillSwitch, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_RiskState_killSwitch(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RiskState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RiskState_circuitBroken(ctx context.Context, field graphql.CollectedField, obj *model.RiskState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_RiskState_circuitBroken(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CircuitBroken, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_RiskState_circuitBroken(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RiskState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RiskState_reason(ctx context.Context, field graphql.CollectedField, obj *model.RiskState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_RiskState_reason(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Reason, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_RiskState_reason(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RiskState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -13170,6 +15346,55 @@ func (ec *executionContext) _ActivePosition(ctx context.Context, sel ast.Selecti
 	return out
 }
 
+var brainMemoryRecordImplementors = []string{"BrainMemoryRecord"}
+
+func (ec *executionContext) _BrainMemoryRecord(ctx context.Context, sel ast.SelectionSet, obj *model.BrainMemoryRecord) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, brainMemoryRecordImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("BrainMemoryRecord")
+		case "brainId":
+			out.Values[i] = ec._BrainMemoryRecord_brainId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "memoryStateJson":
+			out.Values[i] = ec._BrainMemoryRecord_memoryStateJson(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._BrainMemoryRecord_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var brainRuleItemImplementors = []string{"BrainRuleItem"}
 
 func (ec *executionContext) _BrainRuleItem(ctx context.Context, sel ast.SelectionSet, obj *model.BrainRuleItem) graphql.Marshaler {
@@ -13217,6 +15442,71 @@ func (ec *executionContext) _BrainRuleItem(ctx context.Context, sel ast.Selectio
 			out.Values[i] = ec._BrainRuleItem_invalidation(ctx, field, obj)
 		case "notes":
 			out.Values[i] = ec._BrainRuleItem_notes(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var brainSessionRecordImplementors = []string{"BrainSessionRecord"}
+
+func (ec *executionContext) _BrainSessionRecord(ctx context.Context, sel ast.SelectionSet, obj *model.BrainSessionRecord) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, brainSessionRecordImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("BrainSessionRecord")
+		case "sessionDate":
+			out.Values[i] = ec._BrainSessionRecord_sessionDate(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "brainId":
+			out.Values[i] = ec._BrainSessionRecord_brainId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "aiThesis":
+			out.Values[i] = ec._BrainSessionRecord_aiThesis(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "decisionsJson":
+			out.Values[i] = ec._BrainSessionRecord_decisionsJson(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sensoryFeaturesJson":
+			out.Values[i] = ec._BrainSessionRecord_sensoryFeaturesJson(ctx, field, obj)
+		case "outcomesJson":
+			out.Values[i] = ec._BrainSessionRecord_outcomesJson(ctx, field, obj)
+		case "forensics":
+			out.Values[i] = ec._BrainSessionRecord_forensics(ctx, field, obj)
+		case "createdAt":
+			out.Values[i] = ec._BrainSessionRecord_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -13296,6 +15586,107 @@ func (ec *executionContext) _Candle(ctx context.Context, sel ast.SelectionSet, o
 			out.Values[i] = ec._Candle_vwapLower2(ctx, field, obj)
 		case "rvol":
 			out.Values[i] = ec._Candle_rvol(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var closedPositionImplementors = []string{"ClosedPosition"}
+
+func (ec *executionContext) _ClosedPosition(ctx context.Context, sel ast.SelectionSet, obj *model.ClosedPosition) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, closedPositionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ClosedPosition")
+		case "id":
+			out.Values[i] = ec._ClosedPosition_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "symbol":
+			out.Values[i] = ec._ClosedPosition_symbol(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "instrumentToken":
+			out.Values[i] = ec._ClosedPosition_instrumentToken(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "exchange":
+			out.Values[i] = ec._ClosedPosition_exchange(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "side":
+			out.Values[i] = ec._ClosedPosition_side(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "quantity":
+			out.Values[i] = ec._ClosedPosition_quantity(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "entryPrice":
+			out.Values[i] = ec._ClosedPosition_entryPrice(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "exitPrice":
+			out.Values[i] = ec._ClosedPosition_exitPrice(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pnlInr":
+			out.Values[i] = ec._ClosedPosition_pnlInr(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pnlPct":
+			out.Values[i] = ec._ClosedPosition_pnlPct(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "openedAt":
+			out.Values[i] = ec._ClosedPosition_openedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "closedAt":
+			out.Values[i] = ec._ClosedPosition_closedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "exitReason":
+			out.Values[i] = ec._ClosedPosition_exitReason(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "brokerOrderId":
+			out.Values[i] = ec._ClosedPosition_brokerOrderId(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -13756,6 +16147,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "resetTripwire":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_resetTripwire(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -14141,6 +16539,88 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "brainSession":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_brainSession(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "brainSessions":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_brainSessions(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "brainMemory":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_brainMemory(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "brainAvailableDates":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_brainAvailableDates(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "livePositions":
 			field := field
 
@@ -14163,6 +16643,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "closedPositions":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_closedPositions(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "managedOrders":
 			field := field
 
@@ -14173,6 +16675,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_managedOrders(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "riskState":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_riskState(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -14538,6 +17062,52 @@ func (ec *executionContext) _ReplayWeather(ctx context.Context, sel ast.Selectio
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var riskStateImplementors = []string{"RiskState"}
+
+func (ec *executionContext) _RiskState(ctx context.Context, sel ast.SelectionSet, obj *model.RiskState) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, riskStateImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RiskState")
+		case "killSwitch":
+			out.Values[i] = ec._RiskState_killSwitch(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "circuitBroken":
+			out.Values[i] = ec._RiskState_circuitBroken(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "reason":
+			out.Values[i] = ec._RiskState_reason(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -15180,6 +17750,60 @@ func (ec *executionContext) marshalNBrainRuleItem2ᚖgidhᚑintradayᚋedgeᚋgr
 	return ec._BrainRuleItem(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNBrainSessionRecord2ᚕᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐBrainSessionRecordᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.BrainSessionRecord) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNBrainSessionRecord2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐBrainSessionRecord(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNBrainSessionRecord2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐBrainSessionRecord(ctx context.Context, sel ast.SelectionSet, v *model.BrainSessionRecord) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._BrainSessionRecord(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNCandle2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐCandle(ctx context.Context, sel ast.SelectionSet, v model.Candle) graphql.Marshaler {
 	return ec._Candle(ctx, sel, &v)
 }
@@ -15236,6 +17860,60 @@ func (ec *executionContext) marshalNCandle2ᚖgidhᚑintradayᚋedgeᚋgraphᚋm
 		return graphql.Null
 	}
 	return ec._Candle(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNClosedPosition2ᚕᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐClosedPositionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ClosedPosition) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNClosedPosition2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐClosedPosition(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNClosedPosition2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐClosedPosition(ctx context.Context, sel ast.SelectionSet, v *model.ClosedPosition) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ClosedPosition(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNFloat2float64(ctx context.Context, v any) (float64, error) {
@@ -15707,6 +18385,20 @@ func (ec *executionContext) marshalNReplayWeather2ᚖgidhᚑintradayᚋedgeᚋgr
 	return ec._ReplayWeather(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNRiskState2gidhᚑintradayᚋedgeᚋgraphᚋmodelᚐRiskState(ctx context.Context, sel ast.SelectionSet, v model.RiskState) graphql.Marshaler {
+	return ec._RiskState(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRiskState2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐRiskState(ctx context.Context, sel ast.SelectionSet, v *model.RiskState) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RiskState(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNSession2ᚕᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐSessionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Session) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -16149,6 +18841,20 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOBrainMemoryRecord2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐBrainMemoryRecord(ctx context.Context, sel ast.SelectionSet, v *model.BrainMemoryRecord) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._BrainMemoryRecord(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOBrainSessionRecord2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐBrainSessionRecord(ctx context.Context, sel ast.SelectionSet, v *model.BrainSessionRecord) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._BrainSessionRecord(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOFloat2ᚖfloat64(ctx context.Context, v any) (*float64, error) {

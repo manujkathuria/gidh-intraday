@@ -20,6 +20,7 @@ const (
 	KeyLiveEvents       = "gidh-intraday:live:events"
 	KeyRiskState        = "gidh-intraday:live:risk"
 	KeyPositionExits    = "gidh-intraday:live:position-exits"
+	KeyClosedPositionsPrefix = "gidh-intraday:live:closed-positions:"
 	legacyPositionsKey  = "gidh-intraday:live:positions:active"
 	legacyOrdersKey     = "gidh-intraday:live:orders:active"
 )
@@ -327,14 +328,48 @@ func (s *Store) ClosePosition(ctx context.Context, current *ManagedOrder, positi
 	if err != nil {
 		return nil, err
 	}
+
+	diff := fillPrice - position.EntryPrice
+	if position.Side == SideShort {
+		diff = -diff
+	}
+	pnlInr := diff * float64(position.Quantity)
+	pnlPct := 0.0
+	if position.EntryPrice > 0 {
+		pnlPct = diff / position.EntryPrice * 100
+	}
+	closedPos := &ClosedPosition{
+		ID:              current.ID,
+		Symbol:          position.Symbol,
+		Exchange:        position.Exchange,
+		InstrumentToken: position.InstrumentToken,
+		Side:            position.Side,
+		Quantity:        position.Quantity,
+		EntryPrice:      position.EntryPrice,
+		ExitPrice:       fillPrice,
+		PnLINR:          pnlInr,
+		PnLPct:          pnlPct,
+		OpenedAt:        position.OpenedAt,
+		ClosedAt:        now,
+		ExitReason:      current.Invalidation,
+		BrokerOrderID:   current.BrokerOrderID,
+	}
+	closedData, err := json.Marshal(closedPos)
+	if err != nil {
+		return nil, err
+	}
+
 	orderEvent, err := eventJSON("ORDER_STATUS_CHANGED", &next)
 	if err != nil {
 		return nil, err
 	}
-	positionEvent, err := eventJSON("POSITION_CLOSED", payload)
+	positionEvent, err := eventJSON("POSITION_CLOSED", closedPos)
 	if err != nil {
 		return nil, err
 	}
+
+	dateKey := KeyClosedPositionsPrefix + now.Format("2006-01-02")
+
 	script := redis.NewScript(`
 local raw = redis.call('HGET', KEYS[1], ARGV[1])
 if not raw then return 0 end
@@ -343,6 +378,8 @@ if current.status ~= ARGV[2] or tonumber(current.revision) ~= tonumber(ARGV[3]) 
 redis.call('HSET', KEYS[1], ARGV[1], ARGV[4])
 redis.call('HDEL', KEYS[2], ARGV[5])
 redis.call('HDEL', KEYS[3], ARGV[5])
+redis.call('HSET', KEYS[6], ARGV[8], ARGV[9])
+redis.call('EXPIRE', KEYS[6], 172800)
 redis.call('XADD', KEYS[4], '*', 'event', ARGV[6])
 redis.call('XADD', KEYS[4], '*', 'event', ARGV[7])
 redis.call('PUBLISH', KEYS[5], ARGV[6])
@@ -350,8 +387,8 @@ redis.call('PUBLISH', KEYS[5], ARGV[7])
 return 1
 `)
 	result, err := script.Run(ctx, s.client,
-		[]string{KeyOrders, KeyPositions, KeyPositionExits, KeyOrderEvents, KeyLiveEvents},
-		current.ID, string(current.Status), current.Revision, orderData, position.Symbol, orderEvent, positionEvent,
+		[]string{KeyOrders, KeyPositions, KeyPositionExits, KeyOrderEvents, KeyLiveEvents, dateKey},
+		current.ID, string(current.Status), current.Revision, orderData, position.Symbol, orderEvent, positionEvent, closedPos.ID, closedData,
 	).Int()
 	if err != nil {
 		return nil, err
@@ -360,6 +397,28 @@ return 1
 		return nil, ErrTransitionConflict
 	}
 	return &next, nil
+}
+
+func (s *Store) ListClosedPositions(ctx context.Context, date string) ([]*ClosedPosition, error) {
+	if date == "" {
+		date = time.Now().Format("2006-01-02")
+	}
+	key := KeyClosedPositionsPrefix + date
+	values, err := s.client.HGetAll(ctx, key).Result()
+	if err != nil {
+		return nil, err
+	}
+	list := make([]*ClosedPosition, 0, len(values))
+	for _, raw := range values {
+		var cp ClosedPosition
+		if json.Unmarshal([]byte(raw), &cp) == nil {
+			list = append(list, &cp)
+		}
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].ClosedAt.After(list[j].ClosedAt)
+	})
+	return list, nil
 }
 
 func (s *Store) ClaimPositionExit(ctx context.Context, symbol, orderID string) (bool, error) {
@@ -397,6 +456,17 @@ func (s *Store) RiskState(ctx context.Context) (*RiskState, error) {
 		return nil, err
 	}
 	return &state, nil
+}
+
+func (s *Store) SetRiskState(ctx context.Context, state *RiskState) error {
+	data, err := json.Marshal(state)
+	if err != nil {
+		return err
+	}
+	if err := s.client.Set(ctx, KeyRiskState, data, 0).Err(); err != nil {
+		return err
+	}
+	return s.PublishEvent(ctx, "RISK_STATE_CHANGED", state)
 }
 
 func (s *Store) PublishEvent(ctx context.Context, eventType string, payload any) error {

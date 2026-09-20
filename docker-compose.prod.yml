@@ -62,7 +62,7 @@ services:
       - KITE_TOTP_SECRET=${KITE_TOTP_SECRET:-}
       - FIREBASE_CREDENTIALS_B64=${FIREBASE_CREDENTIALS_B64:-}
       - ORDER_AUTHORIZED_EMAILS=${ORDER_AUTHORIZED_EMAILS:-kathuria.manuj@gmail.com,sylviachadha@gmail.com}
-      - ORDER_LIVE_ENABLED=${ORDER_LIVE_ENABLED:-false}
+      - ORDER_LIVE_ENABLED=${ORDER_LIVE_ENABLED:-true}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://gidh.tech,https://www.gidh.tech}
       - PORT=8080
       - ENV=production
@@ -72,6 +72,8 @@ services:
       - "8080:8080"
     networks:
       - gidh-net
+
+
 
 networks:
   gidh-net:

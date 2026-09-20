@@ -122,7 +122,8 @@ func (s *SelectiveTicker) Close() {
 	defer s.opMu.Unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.ticker != nil {
+	if s.ticker != nil && s.connected {
+		defer func() { _ = recover() }()
 		s.ticker.Close()
 	}
 	s.connected = false

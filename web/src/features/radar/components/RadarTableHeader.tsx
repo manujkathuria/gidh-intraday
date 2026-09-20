@@ -25,13 +25,13 @@ export const RadarTableHeader: React.FC<Props> = ({
   };
 
   return (
-    <thead className="bg-surface text-foreground/60 uppercase text-[10px] tracking-wider border-b border-surface-border select-none sticky top-0 z-10 shadow-xs">
+    <thead className="bg-background text-foreground/50 uppercase text-[10px] tracking-wider border-b border-surface-border select-none sticky top-0 z-10 backdrop-blur-sm">
       <tr>
-        <th className="py-3 px-3.5 text-center w-10 font-bold bg-surface hidden sm:table-cell">#</th>
+        <th className="py-2.5 px-3.5 text-center w-10 font-bold bg-background hidden sm:table-cell">#</th>
 
         <th
           onClick={() => onSort("symbol")}
-          className="py-3 px-3.5 cursor-pointer hover:text-foreground font-bold bg-surface"
+          className="py-2.5 px-3.5 cursor-pointer hover:text-foreground font-bold bg-background"
         >
           <div className="flex items-center gap-1.5">
             <span>Symbol</span>
@@ -41,7 +41,7 @@ export const RadarTableHeader: React.FC<Props> = ({
 
         <th
           onClick={() => onSort("sector")}
-          className="py-3 px-3.5 cursor-pointer hover:text-foreground font-bold bg-surface hidden lg:table-cell"
+          className="py-2.5 px-3.5 cursor-pointer hover:text-foreground font-bold bg-background hidden lg:table-cell"
         >
           <div className="flex items-center gap-1.5">
             <span>Sector</span>
@@ -51,7 +51,7 @@ export const RadarTableHeader: React.FC<Props> = ({
 
         <th
           onClick={() => onSort("price")}
-          className="py-3 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface"
+          className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-background"
         >
           <div className="flex items-center justify-end gap-1.5">
             <span>Price</span>
@@ -61,7 +61,7 @@ export const RadarTableHeader: React.FC<Props> = ({
 
         <th
           onClick={() => onSort("move_pct")}
-          className="py-3 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface"
+          className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-background"
         >
           <div className="flex items-center justify-end gap-1.5">
             <span>Change</span>
@@ -71,7 +71,7 @@ export const RadarTableHeader: React.FC<Props> = ({
 
         <th
           onClick={() => onSort("rvol")}
-          className="py-3 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface"
+          className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-background"
         >
           <div className="flex items-center justify-end gap-1.5">
             <span>RVOL</span>
@@ -81,7 +81,7 @@ export const RadarTableHeader: React.FC<Props> = ({
 
         <th
           onClick={() => onSort("vwap_dist_pct")}
-          className="py-3 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-surface hidden md:table-cell"
+          className="py-2.5 px-3.5 text-right cursor-pointer hover:text-foreground font-bold bg-background hidden md:table-cell"
         >
           <div className="flex items-center justify-end gap-1.5">
             <span>VWAP</span>
@@ -89,7 +89,7 @@ export const RadarTableHeader: React.FC<Props> = ({
           </div>
         </th>
 
-        <th className="py-3 px-3.5 text-center font-bold bg-surface">
+        <th className="py-2.5 px-3.5 text-center font-bold bg-background">
           Action
         </th>
       </tr>

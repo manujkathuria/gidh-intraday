@@ -14,6 +14,9 @@ import {
   Gauge,
   Binary,
   Database,
+  ShieldCheck,
+  Zap,
+  HardDrive,
   LucideIcon,
 } from "lucide-react";
 
@@ -21,12 +24,16 @@ const DOC_ICONS: Record<string, LucideIcon> = {
   "quant-architecture": Brain,
   "quant-brain-protocol": Code2,
   "quant-brain-1-macro": TrendingUp,
+  "quant-micro-protocol": Zap,
+  "backend-database-schema": HardDrive,
+  "backend-order-manager": ShieldCheck,
   "backend-architecture": Activity,
   "backend-auth-service": KeyRound,
   "backend-live-engine": Gauge,
   "backend-feature-calculator": Binary,
   "backend-eod-batch": Database,
 };
+
 
 export const DocsView: React.FC = () => {
   const [selectedArticleId, setSelectedArticleId] = useState<string>(ALL_DOCS[0].id);

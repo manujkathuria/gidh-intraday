@@ -19,6 +19,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
   theme = "dark",
   interval = "1m",
   selectedDate = "",
+  currentLtp,
   entryPrice,
   stopLossPrice,
   targetPrice,
@@ -413,7 +414,18 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
 
       const price = candleSeriesRef.current.coordinateToPrice(clientY);
       if (price !== null && !isNaN(price) && price > 0) {
-        const roundedPrice = Math.round(price / 0.05) * 0.05;
+        let roundedPrice = Math.round(price / 0.05) * 0.05;
+
+        // Basic check: Long limit cannot go above LTP; Short limit cannot go below LTP
+        const ltp = currentLtp || (candles.length > 0 ? candles[candles.length - 1].close : 0);
+        if (ltp > 0) {
+          if (orderSide === "LONG") {
+            roundedPrice = Math.min(roundedPrice, ltp);
+          } else if (orderSide === "SHORT") {
+            roundedPrice = Math.max(roundedPrice, ltp);
+          }
+        }
+
         if (onLimitPriceChange) {
           onLimitPriceChange(parseFloat(roundedPrice.toFixed(2)));
         }
@@ -430,7 +442,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isLimitDraggable, onLimitPriceChange]);
+  }, [isLimitDraggable, onLimitPriceChange, currentLtp, orderSide, candles]);
 
   return (
     <div className="w-full h-full relative select-none">

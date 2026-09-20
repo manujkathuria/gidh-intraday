@@ -13,7 +13,7 @@ interface Props {
   setOrderType: (type: "MARKET" | "LIMIT") => void;
   limitPrice: number;
   setLimitPrice: (price: number) => void;
-  onDispatchOrder: (side: "LONG" | "SHORT", orderType: "MARKET" | "LIMIT", limitPrice?: number) => Promise<boolean>;
+  onDispatchOrder: (side: "LONG" | "SHORT", orderType: "MARKET" | "LIMIT", limitPrice?: number, marginInr?: number) => Promise<boolean>;
 }
 
 export const ChartOrderModal: React.FC<Props> = ({
@@ -30,6 +30,7 @@ export const ChartOrderModal: React.FC<Props> = ({
 }) => {
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [customQty, setCustomQty] = useState<number>(0);
 
   // Draggable Ref & State
   const modalRef = useRef<HTMLDivElement>(null);
@@ -45,9 +46,11 @@ export const ChartOrderModal: React.FC<Props> = ({
   const prevOpenRef = useRef(false);
   const prevSymbolRef = useRef(symbol);
 
+  const effectivePrice = orderType === "LIMIT" && limitPrice > 0 ? limitPrice : currentPrice;
+  const isLong = orderSide === "LONG";
+
   useEffect(() => {
     setConfirming(false);
-    // Reset position ONLY when opening the modal fresh or changing to a new symbol
     const isFreshOpen = isOpen && !prevOpenRef.current;
     const isSymbolChange = symbol !== prevSymbolRef.current;
     
@@ -56,11 +59,14 @@ export const ChartOrderModal: React.FC<Props> = ({
       if (modalRef.current) {
         modalRef.current.style.transform = `translate(0px, 0px)`;
       }
+      // Initialize default 10k slot quantity
+      const defaultQty = effectivePrice > 0 ? Math.floor(50000 / effectivePrice) : 1;
+      setCustomQty(defaultQty);
     }
     
     prevOpenRef.current = isOpen;
     prevSymbolRef.current = symbol;
-  }, [isOpen, symbol]);
+  }, [isOpen, symbol, effectivePrice]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("input")) return;
@@ -100,10 +106,10 @@ export const ChartOrderModal: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
-  const effectivePrice = orderType === "LIMIT" && limitPrice > 0 ? limitPrice : currentPrice;
-  const grossPower = 50000; // ₹10,000 margin * 5x leverage
-  const qty = effectivePrice > 0 ? Math.floor(grossPower / effectivePrice) : 0;
-  const isLong = orderSide === "LONG";
+  const defaultQty = effectivePrice > 0 ? Math.max(1, Math.floor(50000 / effectivePrice)) : 1;
+  const qty = customQty > 0 ? customQty : defaultQty;
+  const grossExposure = qty * effectivePrice;
+  const marginInr = Math.max(1, Math.ceil(grossExposure / 5));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,7 +121,8 @@ export const ChartOrderModal: React.FC<Props> = ({
     const success = await onDispatchOrder(
       orderSide,
       orderType,
-      orderType === "LIMIT" ? limitPrice : undefined
+      orderType === "LIMIT" ? limitPrice : undefined,
+      marginInr
     );
     setSubmitting(false);
     if (success) {
@@ -130,7 +137,7 @@ export const ChartOrderModal: React.FC<Props> = ({
         transform: `translate(${dragPosRef.current.x}px, ${dragPosRef.current.y}px)`,
         willChange: "transform",
       }}
-      className="absolute top-3 left-3 z-40 w-76 bg-surface border border-surface-border rounded-xl shadow-2xl overflow-hidden flex flex-col select-none"
+      className="absolute top-3 left-3 z-40 w-80 bg-surface border border-surface-border rounded-xl shadow-2xl overflow-hidden flex flex-col select-none"
     >
       {/* 1. Header with Drag Handle */}
       <div
@@ -204,12 +211,33 @@ export const ChartOrderModal: React.FC<Props> = ({
         <div className="grid grid-cols-2 gap-2">
           {/* Quantity */}
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold text-foreground/50 uppercase tracking-wider">
-              Quantity
-            </span>
-            <div className="w-full bg-surface-muted border border-surface-border rounded-lg px-2.5 py-1.5 text-xs font-bold tabular-nums text-foreground">
-              {qty} <span className="text-[10px] font-normal text-foreground/40">shares</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-foreground/50 uppercase tracking-wider">
+                Quantity
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomQty(defaultQty);
+                }}
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-surface border border-surface-border text-foreground/70 hover:text-foreground transition cursor-pointer shadow-2xs"
+                title="Reset to standard 10k margin slot"
+              >
+                10k Slot
+              </button>
             </div>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={qty || ""}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                setCustomQty(isNaN(val) ? 0 : Math.max(1, val));
+              }}
+              className="w-full bg-surface border border-surface-border rounded-lg px-2.5 py-1.5 text-xs font-bold tabular-nums text-foreground focus:outline-none focus:border-foreground transition"
+              placeholder="Shares"
+            />
           </div>
 
           {/* Price */}
@@ -238,11 +266,27 @@ export const ChartOrderModal: React.FC<Props> = ({
                 type="number"
                 step="0.05"
                 value={limitPrice || currentPrice}
-                onChange={(e) => setLimitPrice(parseFloat(e.target.value) || currentPrice)}
+                onChange={(e) => {
+                  let val = parseFloat(e.target.value) || currentPrice;
+                  if (currentPrice > 0) {
+                    if (orderSide === "LONG") {
+                      val = Math.min(val, currentPrice);
+                    } else if (orderSide === "SHORT") {
+                      val = Math.max(val, currentPrice);
+                    }
+                  }
+                  setLimitPrice(parseFloat(val.toFixed(2)));
+                }}
                 className="w-full bg-surface border border-surface-border rounded-lg px-2.5 py-1.5 text-xs font-bold tabular-nums text-foreground focus:outline-none focus:border-foreground transition"
               />
             )}
           </div>
+        </div>
+
+        {/* Dynamic Margin & Exposure HUD */}
+        <div className="flex items-center justify-between px-1 py-0.5 text-[11px] text-foreground/60 tabular-nums">
+          <span>Margin: <strong className="text-foreground font-bold">₹{marginInr.toLocaleString()}</strong></span>
+          <span>Exposure: <strong className="text-foreground font-bold">₹{grossExposure.toFixed(0)}</strong></span>
         </div>
 
         {/* Action Button */}
@@ -267,12 +311,12 @@ export const ChartOrderModal: React.FC<Props> = ({
           ) : confirming ? (
             <>
               <AlertCircle className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Confirm {isLong ? "BUY" : "SELL"} @ ₹{effectivePrice.toFixed(2)}?</span>
+              <span>Confirm {isLong ? "BUY" : "SELL"} {qty} sh @ ₹{effectivePrice.toFixed(2)}?</span>
             </>
           ) : (
             <>
               <Zap className="w-3.5 h-3.5 fill-current" />
-              <span>{isLong ? "Buy / Long" : "Sell / Short"}</span>
+              <span>{isLong ? "Buy / Long" : "Sell / Short"} {qty} shares</span>
             </>
           )}
         </button>
@@ -280,3 +324,5 @@ export const ChartOrderModal: React.FC<Props> = ({
     </div>
   );
 };
+
+

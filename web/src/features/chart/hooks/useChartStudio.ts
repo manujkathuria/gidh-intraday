@@ -22,6 +22,7 @@ export function useChartStudio() {
 
   const {
     activePositions,
+    managedOrders,
     initLiveOrders,
     placeTrade,
   } = useLiveOrderStore();
@@ -132,6 +133,10 @@ export function useChartStudio() {
   }, [allSymbols, searchTerm]);
 
   const activePosition = activePositions[activeSymbol];
+  const pendingOrdersList = Object.values(managedOrders);
+  const activePendingOrder = pendingOrdersList.find(
+    (o) => o.symbol === activeSymbol && (o.status === "PENDING" || o.status === "TRIGGERING" || o.status === "SUBMITTED")
+  );
   const lastClose = chartCandles.length > 0 ? chartCandles[chartCandles.length - 1].close : 0;
   const currentPrice = lastClose > 0 ? lastClose : (stockInfo?.price || 0);
 
@@ -199,7 +204,10 @@ export function useChartStudio() {
   // Open the modal and initialize Limit price at current LTP
   const handleOpenOrderModal = useCallback((side: "LONG" | "SHORT") => {
     setOrderSide(side);
-    setLimitPrice(currentPrice);
+    const initialPrice = currentPrice > 0
+      ? (side === "LONG" ? Math.max(0.05, currentPrice - 0.10) : currentPrice + 0.10)
+      : currentPrice;
+    setLimitPrice(parseFloat(initialPrice.toFixed(2)));
     setIsOrderModalOpen(true);
   }, [currentPrice]);
 
@@ -207,25 +215,35 @@ export function useChartStudio() {
     setIsOrderModalOpen(false);
   }, []);
 
-    const dispatchOrder = useCallback(
+  const dispatchOrder = useCallback(
     async (
       side: "LONG" | "SHORT",
       type: "MARKET" | "LIMIT" = "MARKET",
-      customLimitPrice?: number
+      customLimitPrice?: number,
+      customMarginInr?: number
     ): Promise<boolean> => {
+      let targetEntryPrice = type === "LIMIT" && customLimitPrice && customLimitPrice > 0 ? customLimitPrice : (type === "LIMIT" ? limitPrice : undefined);
+      if (type === "LIMIT" && targetEntryPrice && targetEntryPrice > 0 && currentPrice > 0) {
+        if (side === "LONG") {
+          targetEntryPrice = Math.min(targetEntryPrice, currentPrice);
+        } else if (side === "SHORT") {
+          targetEntryPrice = Math.max(targetEntryPrice, currentPrice);
+        }
+      }
+
       const intent: OrderIntent = {
         symbol: activeSymbol,
         side: side,
         order_type: type,
-        margin_inr: 10000,
-        target_entry_price: type === "LIMIT" && customLimitPrice && customLimitPrice > 0 ? customLimitPrice : undefined,
+        margin_inr: customMarginInr && customMarginInr > 0 ? customMarginInr : 10000,
+        target_entry_price: targetEntryPrice,
         tactic: "CHART_INSTANT",
         invalidation: "15M_VWAP_CROSS",
       };
 
       return await placeTrade(intent);
     },
-    [activeSymbol, placeTrade]
+    [activeSymbol, currentPrice, limitPrice, placeTrade]
   );
 
   return {
@@ -250,6 +268,8 @@ export function useChartStudio() {
     stopLossPrice,
     targetPrice,
     hasActivePosition: !!activePosition,
+    // Pending Order on Symbol
+    activePendingOrder,
     // Order Modal & Limit Slider
     isOrderModalOpen,
     orderSide,

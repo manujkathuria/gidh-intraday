@@ -17,6 +17,7 @@ export interface ChartProps {
   height?: number;
   interval?: ChartInterval;
   selectedDate?: string;
+  currentLtp?: number;
   entryPrice?: number;
   stopLossPrice?: number;
   targetPrice?: number;
@@ -28,3 +29,4 @@ export interface ChartProps {
   orderType?: "MARKET" | "LIMIT";
   onChangeLevels?: (sl?: number, tp?: number) => void;
 }
+

@@ -46,6 +46,30 @@ func activePositionModels(positions []*ordermanager.ActivePosition) []*model.Act
 	return result
 }
 
+func closedPositionModels(positions []*ordermanager.ClosedPosition) []*model.ClosedPosition {
+	result := make([]*model.ClosedPosition, 0, len(positions))
+	for _, p := range positions {
+		brokerID := p.BrokerOrderID
+		result = append(result, &model.ClosedPosition{
+			ID:              p.ID,
+			Symbol:          p.Symbol,
+			InstrumentToken: int(p.InstrumentToken),
+			Exchange:        p.Exchange,
+			Side:            model.TradeSide(p.Side),
+			Quantity:        p.Quantity,
+			EntryPrice:      p.EntryPrice,
+			ExitPrice:       p.ExitPrice,
+			PnlInr:          p.PnLINR,
+			PnlPct:          p.PnLPct,
+			OpenedAt:        p.OpenedAt.Format("2006-01-02T15:04:05Z07:00"),
+			ClosedAt:        p.ClosedAt.Format("2006-01-02T15:04:05Z07:00"),
+			ExitReason:      p.ExitReason,
+			BrokerOrderID:   optionalNonEmpty(brokerID),
+		})
+	}
+	return result
+}
+
 func optionalString(value *string) string {
 	if value == nil {
 		return ""

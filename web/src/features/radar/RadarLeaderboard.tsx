@@ -47,8 +47,8 @@ export const RadarLeaderboard: React.FC = () => {
         totalCount={stocks.length}
       />
 
-      {/* 2. Mobile View: Thumb-Friendly Spectator Stock Cards (< md) */}
-      <div className="md:hidden bg-surface border border-surface-border rounded-lg overflow-hidden flex flex-col divide-y divide-surface-border">
+      {/* 2. Mobile View: Flat list (< md) */}
+      <div className="md:hidden flex flex-col divide-y divide-surface-border/40">
         {filteredAndSorted.length === 0 ? (
           <div className="py-12 text-center text-foreground/40 text-xs">
             No stocks match this filter.
@@ -66,16 +66,16 @@ export const RadarLeaderboard: React.FC = () => {
         )}
       </div>
 
-      {/* 3. iPad / Desktop View: High-Density Table (hidden on mobile, visible md+) */}
-      <div className="hidden md:block bg-surface border border-surface-border rounded-lg overflow-hidden transition-colors">
-        <div className="overflow-x-auto max-h-[calc(100vh-130px)] custom-scrollbar">
+      {/* 3. iPad / Desktop View: High-Density Flat Table (hidden on mobile, visible md+) */}
+      <div className="hidden md:block w-full">
+        <div className="overflow-x-auto max-h-[calc(100vh-120px)] custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs">
             <RadarTableHeader
               sortField={sortField}
               sortAsc={sortAsc}
               onSort={handleSort}
             />
-            <tbody>
+            <tbody className="divide-y divide-surface-border/30">
               {filteredAndSorted.length === 0 ? (
                 <tr>
                   <td

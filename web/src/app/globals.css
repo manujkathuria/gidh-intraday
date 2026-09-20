@@ -36,19 +36,19 @@
 
 [data-theme="dark"],
 .dark {
-  /* Institutional Dark Mode (Soft Carbon/Obsidian) */
-  --background: 17 19 23;
-  --foreground: 219 224 233;
+  /* Ultra-clean Deep Dark Theme (Pure seamless canvas, no gray cards) */
+  --background: 13 15 18;
+  --foreground: 226 232 240;
 
-  --surface: 24 27 33;
-  --surface-muted: 33 37 45;
-  --surface-hover: 44 49 58;
-  --surface-border: 48 54 64;
+  --surface: 13 15 18;
+  --surface-muted: 20 23 28;
+  --surface-hover: 26 30 37;
+  --surface-border: 33 38 46;
 
-  --primary: 226 232 240;
-  --primary-foreground: 15 23 42;
-  --primary-hover: 241 245 249;
-  --primary-subtle: 30 35 44;
+  --primary: 241 245 249;
+  --primary-foreground: 13 15 18;
+  --primary-hover: 255 255 255;
+  --primary-subtle: 22 26 32;
 }
 
 body {

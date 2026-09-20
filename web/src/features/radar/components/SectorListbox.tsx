@@ -96,7 +96,7 @@ export const SectorListbox: React.FC<Props> = ({
       onChange={(opt: SectorOption) => setSelectedSector(opt.sector)}
     >
       <div className="relative min-w-[190px] text-xs">
-        <ListboxButton className="grid w-full cursor-pointer grid-cols-1 rounded-md bg-surface py-1.5 pr-2.5 pl-3 text-left text-foreground border border-surface-border focus:outline-1 focus:-outline-offset-1 focus:outline-foreground transition">
+        <ListboxButton className="grid w-full cursor-pointer grid-cols-1 rounded-md bg-background py-1.5 pr-2.5 pl-3 text-left text-foreground border border-surface-border focus:outline-none focus:border-foreground/60 transition">
           <span className="col-start-1 row-start-1 truncate pr-6 font-medium">
             {currentOption.label}{" "}
             {currentOption.count !== undefined ? `(${currentOption.count})` : ""}
@@ -109,7 +109,7 @@ export const SectorListbox: React.FC<Props> = ({
 
         <ListboxOptions
           transition
-          className="absolute z-50 mt-1 min-w-[280px] max-h-80 w-max overflow-auto rounded-md bg-surface border border-surface-border py-1 text-xs shadow-2xl outline-hidden data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 custom-scrollbar divide-y divide-surface-border"
+          className="absolute z-50 mt-1 min-w-[280px] max-h-80 w-max overflow-auto rounded-lg bg-background border border-surface-border py-1 text-xs shadow-2xl outline-hidden data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 custom-scrollbar divide-y divide-surface-border/40"
         >
           {/* 1. All Sectors */}
           <div className="py-1">
