@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useMarketStore } from "@/stores/marketStore";
-import { getStreamWsUrl } from "@/lib/api";
+import { getStreamWsUrl, getStreamWsUrlWithAuth } from "@/lib/api";
 import { SectorSortField, SectorItemWithStocks, SectorPreset } from "../types";
 
 export function useSectorFormations() {
@@ -13,18 +13,24 @@ export function useSectorFormations() {
   useEffect(() => {
     let ws: WebSocket | null = null;
     let isMounted = true;
-    try {
-      ws = new WebSocket(getStreamWsUrl("/v1/stream/sectors"));
-      ws.onopen = () => { if (isMounted) setWsConnected(true); };
-      ws.onmessage = (e) => {
-        try {
-          const d = JSON.parse(e.data);
-          if (d?.sectors || d?.stocks || d?.weather) applyLiveSnapshot(d);
-        } catch {}
-      };
-      ws.onclose = () => { if (isMounted) setWsConnected(false); };
-      ws.onerror = () => { if (isMounted) setWsConnected(false); };
-    } catch {}
+    async function connect() {
+      try {
+        const url = await getStreamWsUrlWithAuth("/v1/stream/sectors");
+        if (!isMounted) return;
+        ws = new WebSocket(url);
+        ws.onopen = () => { if (isMounted) setWsConnected(true); };
+        ws.onmessage = (e) => {
+          try {
+            const d = JSON.parse(e.data);
+            if (d?.sectors || d?.stocks || d?.weather) applyLiveSnapshot(d);
+          } catch {}
+        };
+        ws.onclose = () => { if (isMounted) setWsConnected(false); };
+        ws.onerror = () => { if (isMounted) setWsConnected(false); };
+      } catch {}
+    }
+
+    connect();
 
     return () => {
       isMounted = false;

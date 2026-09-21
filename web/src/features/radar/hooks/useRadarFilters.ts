@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useMarketStore } from "@/stores/marketStore";
-import { getStreamWsUrl } from "@/lib/api";
+import { getStreamWsUrl, getStreamWsUrlWithAuth } from "@/lib/api";
 import { SortField, RadarPreset, SectorOption } from "../types";
 
 export function useRadarFilters() {
@@ -23,35 +23,40 @@ export function useRadarFilters() {
     let ws: WebSocket | null = null;
     let isMounted = true;
 
-    try {
-      const url = getStreamWsUrl("/v1/stream/radar");
-      ws = new WebSocket(url);
+    async function connect() {
+      try {
+        const url = await getStreamWsUrlWithAuth("/v1/stream/radar");
+        if (!isMounted) return;
+        ws = new WebSocket(url);
 
-      ws.onopen = () => {
-        if (isMounted) setWsConnected(true);
-      };
+        ws.onopen = () => {
+          if (isMounted) setWsConnected(true);
+        };
 
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data && (data.stocks || data.weather || data.sectors)) {
-            applyLiveSnapshot(data);
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data && (data.stocks || data.weather || data.sectors)) {
+              applyLiveSnapshot(data);
+            }
+          } catch (e) {
+            // ignore non-json messages (e.g. heartbeat/status)
           }
-        } catch (e) {
-          // ignore non-json messages (e.g. heartbeat/status)
-        }
-      };
+        };
 
-      ws.onclose = () => {
-        if (isMounted) setWsConnected(false);
-      };
+        ws.onclose = () => {
+          if (isMounted) setWsConnected(false);
+        };
 
-      ws.onerror = () => {
-        if (isMounted) setWsConnected(false);
-      };
-    } catch (e) {
-      console.warn("[Radar WS] connection failed:", e);
+        ws.onerror = () => {
+          if (isMounted) setWsConnected(false);
+        };
+      } catch (e) {
+        console.warn("[Radar WS] connection failed:", e);
+      }
     }
+
+    connect();
 
     return () => {
       isMounted = false;

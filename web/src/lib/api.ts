@@ -1,4 +1,5 @@
 import { executeGraphQL } from "./graphql";
+import { auth } from "./firebase";
 
 export const getApiBase = (): string => {
   if (process.env.NEXT_PUBLIC_API_URL) {
@@ -29,6 +30,20 @@ export const getStreamWsUrl = (path: string): string => {
     return `${proto}//${window.location.host}${path}`;
   }
   return `ws://127.0.0.1:8080${path}`;
+};
+
+export const getStreamWsUrlWithAuth = async (path: string): Promise<string> => {
+  const baseUrl = getStreamWsUrl(path);
+  try {
+    const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+    if (token) {
+      const sep = baseUrl.includes("?") ? "&" : "?";
+      return `${baseUrl}${sep}auth=${encodeURIComponent(token)}`;
+    }
+  } catch (e) {
+    // fallback to unauthenticated URL
+  }
+  return baseUrl;
 };
 
 export interface SessionInfo {

@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useMarketStore } from "@/stores/marketStore";
 import { useLiveOrderStore } from "@/stores/liveOrderStore";
-import { fetchMultiIntervalCandles, Candle, getStreamWsUrl, OrderIntent } from "@/lib/api";
+import { fetchMultiIntervalCandles, Candle, getStreamWsUrl, getStreamWsUrlWithAuth, OrderIntent } from "@/lib/api";
 import { StockSummaryItem } from "../types";
 import { ChartInterval } from "../components/candleAggregator";
 
@@ -159,34 +159,39 @@ export function useChartStudio() {
     let ws: WebSocket | null = null;
     let isMounted = true;
 
-    try {
-      const wsUrl = getStreamWsUrl("/v1/stream/chart");
-      ws = new WebSocket(wsUrl);
-
-      ws.onmessage = (event) => {
+    async function connect() {
+      try {
+        const wsUrl = await getStreamWsUrlWithAuth("/v1/stream/chart");
         if (!isMounted) return;
-        try {
-          const tick = JSON.parse(event.data);
-          if (tick && tick.symbol === activeSymbol) {
-            setChartCandles((prev) => {
-              if (prev.length === 0) return prev;
-              const last = prev[prev.length - 1];
-              const updated = {
-                ...last,
-                close: tick.price,
-                high: Math.max(last.high, tick.price),
-                low: Math.min(last.low, tick.price),
-              };
-              return [...prev.slice(0, -1), updated];
-            });
+        ws = new WebSocket(wsUrl);
+
+        ws.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            const tick = JSON.parse(event.data);
+            if (tick && tick.symbol === activeSymbol) {
+              setChartCandles((prev) => {
+                if (prev.length === 0) return prev;
+                const last = prev[prev.length - 1];
+                const updated = {
+                  ...last,
+                  close: tick.price,
+                  high: Math.max(last.high, tick.price),
+                  low: Math.min(last.low, tick.price),
+                };
+                return [...prev.slice(0, -1), updated];
+              });
+            }
+          } catch {
+            // ignore malformed tick
           }
-        } catch {
-          // ignore malformed tick
-        }
-      };
-    } catch (e) {
-      console.warn("WebSocket stream connection error:", e);
+        };
+      } catch (e) {
+        console.warn("WebSocket stream connection error:", e);
+      }
     }
+
+    connect();
 
     return () => {
       isMounted = false;
