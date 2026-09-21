@@ -64,22 +64,40 @@ func (m *Middleware) Wrap(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+
+		// Public telemetry streams and GraphQL query access (order mutations will verify auth in resolver)
+		isPublicStream := strings.HasPrefix(r.URL.Path, "/v1/stream/radar") ||
+			strings.HasPrefix(r.URL.Path, "/v1/stream/sectors") ||
+			strings.HasPrefix(r.URL.Path, "/v1/stream/chart") ||
+			strings.HasPrefix(r.URL.Path, "/v1/live/market/ws") ||
+			strings.HasPrefix(r.URL.Path, "/v1/replay/ws")
+
 		token := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
 		if token == "" {
 			token = strings.TrimSpace(r.URL.Query().Get("auth"))
 		}
+
 		if token == "" {
+			if isPublicStream {
+				next.ServeHTTP(w, r)
+				return
+			}
 			http.Error(w, `{"error":"authentication required"}`, http.StatusUnauthorized)
 			return
 		}
+
 		verified, err := m.client.VerifyIDToken(r.Context(), token)
 		if err != nil {
+			if isPublicStream {
+				next.ServeHTTP(w, r)
+				return
+			}
 			http.Error(w, `{"error":"invalid authentication token"}`, http.StatusUnauthorized)
 			return
 		}
 		email, _ := verified.Claims["email"].(string)
 		email = strings.ToLower(strings.TrimSpace(email))
-		if _, ok := m.allowed[email]; !ok {
+		if _, ok := m.allowed[email]; !ok && !isPublicStream {
 			http.Error(w, `{"error":"not authorised for live operations"}`, http.StatusForbidden)
 			return
 		}
