@@ -2,6 +2,7 @@ package marketdata
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"time"
 
@@ -22,8 +23,60 @@ func (e *UniverseStreamEngine) Start(ctx context.Context) error {
 	e.isRunning = true
 	go e.runMarketLifecycle(ctx)
 	go e.runMinuteFlusher(ctx)
-	log.Println("[UNIVERSE ENGINE] Lifecycle scheduler and 47-feature calculator ACTIVE.")
+	go e.runRedisPublisher(ctx)
+	log.Println("[UNIVERSE ENGINE] Lifecycle scheduler, minute flusher, and 1Hz Redis broadcaster ACTIVE.")
 	return nil
+}
+
+func (e *UniverseStreamEngine) runRedisPublisher(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			e.publishLiveSnapshots(ctx)
+		}
+	}
+}
+
+func (e *UniverseStreamEngine) publishLiveSnapshots(ctx context.Context) {
+	e.mu.RLock()
+	rc := e.redisClient
+	e.mu.RUnlock()
+
+	if rc == nil {
+		return
+	}
+
+	snapRaw, ok := e.LiveSnapshot()
+	if !ok || snapRaw == nil {
+		return
+	}
+
+	snap, ok := snapRaw.(*LiveSnapshot)
+	if !ok || snap == nil {
+		return
+	}
+
+	// 1. Mark live session as active in Redis
+	_ = rc.Set(ctx, "gidh:live:active", "true", 5*time.Second).Err()
+	_ = rc.Set(ctx, "gidh:live:session_date", snap.SessionDate, 24*time.Hour).Err()
+
+	// 2. Publish radar payload to gidh:radar
+	if radarBytes, err := json.Marshal(snap); err == nil {
+		_ = rc.Publish(ctx, "gidh:radar", string(radarBytes)).Err()
+		_ = rc.Set(ctx, "gidh:radar:latest", string(radarBytes), 5*time.Minute).Err()
+	}
+
+	// 3. Publish sectors payload to gidh:sectors
+	if len(snap.Sectors) > 0 {
+		if secBytes, err := json.Marshal(snap.Sectors); err == nil {
+			_ = rc.Publish(ctx, "gidh:sectors", string(secBytes)).Err()
+		}
+	}
 }
 
 func (e *UniverseStreamEngine) runMarketLifecycle(ctx context.Context) {

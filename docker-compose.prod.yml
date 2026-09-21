@@ -75,7 +75,38 @@ services:
 
 
 
+  # 4. Backend Universe Market Data Streamer (210 stocks Kite WebSocket -> Redis + TimescaleDB)
+  backend:
+    image: gidh-intraday-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gidh-backend
+    restart: unless-stopped
+    environment:
+      - DB_HOST=gidh-timescaledb
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-gidh_intraday}
+      - DB_SSLMODE=disable
+      - REDIS_ADDR=gidh-redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - KITE_API_KEY=${KITE_API_KEY:-}
+      - KITE_API_SECRET=${KITE_API_SECRET:-}
+      - KITE_ACCESS_TOKEN=${KITE_ACCESS_TOKEN:-}
+      - KITE_USER_ID=${KITE_USER_ID:-}
+      - KITE_PASSWORD=${KITE_PASSWORD:-}
+      - KITE_TOTP_SECRET=${KITE_TOTP_SECRET:-}
+      - PORT=8081
+      - ENV=production
+    volumes:
+      - ./.env:/app/.env
+    networks:
+      - gidh-net
+
 networks:
   gidh-net:
     name: gidh-net
     external: true
+

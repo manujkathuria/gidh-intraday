@@ -6,6 +6,7 @@ import (
 
 	"gidh-intraday/backend/internal/store"
 
+	"github.com/redis/go-redis/v9"
 	kitemodels "github.com/zerodha/gokiteconnect/v4/models"
 	kiteticker "github.com/zerodha/gokiteconnect/v4/ticker"
 )
@@ -59,6 +60,7 @@ type UniverseStreamEngine struct {
 	instrumentRepo   *store.MarketInstrumentRepo
 	candleRepo       *store.MarketCandleRepo
 	dailyFeatureRepo *store.DailyFeatureRepo
+	redisClient      *redis.Client
 
 	ticker        *kiteticker.Ticker
 	mu            sync.RWMutex
@@ -94,4 +96,10 @@ func NewUniverseStreamEngine(
 		symbolToToken:    make(map[string]uint32),
 		loc:              loc,
 	}
+}
+
+func (e *UniverseStreamEngine) SetRedisClient(client *redis.Client) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.redisClient = client
 }
