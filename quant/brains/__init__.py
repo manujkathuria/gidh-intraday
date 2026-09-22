@@ -1,3 +1,0 @@
-"""
-🏛️ GIDH QUANT BRAINS PACKAGE
-"""
