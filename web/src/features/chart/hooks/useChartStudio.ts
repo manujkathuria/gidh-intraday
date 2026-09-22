@@ -43,6 +43,10 @@ export function useChartStudio() {
   const [orderType, setOrderType] = useState<"MARKET" | "LIMIT">("MARKET");
   const [limitPrice, setLimitPrice] = useState<number>(0);
 
+  // Active Position SL/TP Edit Mode State
+  const [editingLevelType, setEditingLevelType] = useState<"SL" | "TP" | null>(null);
+  const [draftLevelPrice, setDraftLevelPrice] = useState<number>(0);
+
   useEffect(() => {
     init();
     initLiveOrders();
@@ -283,6 +287,10 @@ export function useChartStudio() {
     hasActivePosition: !!activePosition,
     positionSide: (activePosition?.side as "LONG" | "SHORT") || "LONG",
     updatePositionLevels,
+    editingLevelType,
+    setEditingLevelType,
+    draftLevelPrice,
+    setDraftLevelPrice,
     // Pending Order on Symbol
     activePendingOrder,
     // Order Modal & Limit Slider

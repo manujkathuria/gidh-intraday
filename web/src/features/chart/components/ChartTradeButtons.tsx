@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { ShieldAlert, Target, X, Check } from "lucide-react";
 
 interface Props {
@@ -13,6 +13,10 @@ interface Props {
   entryPrice?: number;
   stopLossPrice?: number;
   targetPrice?: number;
+  editingLevelType?: "SL" | "TP" | null;
+  onSetEditingLevelType?: (type: "SL" | "TP" | null) => void;
+  draftLevelPrice?: number;
+  onDraftLevelPriceChange?: (price: number) => void;
   onUpdateLevels?: (symbol: string, sl?: number | null, tp?: number | null) => Promise<boolean>;
 }
 
@@ -26,68 +30,71 @@ export const ChartTradeButtons: React.FC<Props> = ({
   entryPrice,
   stopLossPrice,
   targetPrice,
+  editingLevelType = null,
+  onSetEditingLevelType,
+  draftLevelPrice = 0,
+  onDraftLevelPriceChange,
   onUpdateLevels,
 }) => {
-  const [editingType, setEditingType] = useState<"SL" | "TP" | null>(null);
-  const [inputValue, setInputValue] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close popover on outside click
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setEditingType(null);
+        onSetEditingLevelType?.(null);
       }
     };
-    if (editingType) {
+    if (editingLevelType) {
       document.addEventListener("mousedown", handleOutsideClick);
     }
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
-  }, [editingType]);
+  }, [editingLevelType, onSetEditingLevelType]);
 
   const handleOpenEdit = (type: "SL" | "TP") => {
-    setEditingType(type);
+    if (editingLevelType === type) {
+      onSetEditingLevelType?.(null);
+      return;
+    }
+    onSetEditingLevelType?.(type);
+
+    let initialPrice = 0;
     if (type === "SL") {
-      setInputValue(stopLossPrice && stopLossPrice > 0 ? stopLossPrice.toFixed(2) : "");
+      initialPrice = stopLossPrice && stopLossPrice > 0
+        ? stopLossPrice
+        : (entryPrice ? (positionSide === "LONG" ? entryPrice * 0.99 : entryPrice * 1.01) : 0);
     } else {
-      setInputValue(targetPrice && targetPrice > 0 ? targetPrice.toFixed(2) : "");
+      initialPrice = targetPrice && targetPrice > 0
+        ? targetPrice
+        : (entryPrice ? (positionSide === "LONG" ? entryPrice * 1.02 : entryPrice * 0.98) : 0);
+    }
+    if (initialPrice > 0) {
+      onDraftLevelPriceChange?.(parseFloat(initialPrice.toFixed(2)));
     }
   };
 
   const handleSave = async () => {
     if (!onUpdateLevels) return;
-    setIsSubmitting(true);
-    const num = parseFloat(inputValue);
-    const validNum = !isNaN(num) && num > 0 ? num : null;
+    const priceToSave = draftLevelPrice > 0 ? draftLevelPrice : null;
 
-    try {
-      if (editingType === "SL") {
-        await onUpdateLevels(symbol, validNum, undefined);
-      } else if (editingType === "TP") {
-        await onUpdateLevels(symbol, undefined, validNum);
-      }
-      setEditingType(null);
-    } finally {
-      setIsSubmitting(false);
+    if (editingLevelType === "SL") {
+      await onUpdateLevels(symbol, priceToSave, undefined);
+    } else if (editingLevelType === "TP") {
+      await onUpdateLevels(symbol, undefined, priceToSave);
     }
+    onSetEditingLevelType?.(null);
   };
 
   const handleClear = async () => {
     if (!onUpdateLevels) return;
-    setIsSubmitting(true);
-    try {
-      if (editingType === "SL") {
-        await onUpdateLevels(symbol, null, undefined);
-      } else if (editingType === "TP") {
-        await onUpdateLevels(symbol, undefined, null);
-      }
-      setEditingType(null);
-    } finally {
-      setIsSubmitting(false);
+    if (editingLevelType === "SL") {
+      await onUpdateLevels(symbol, null, undefined);
+    } else if (editingLevelType === "TP") {
+      await onUpdateLevels(symbol, undefined, null);
     }
+    onSetEditingLevelType?.(null);
   };
 
   const hasSL = typeof stopLossPrice === "number" && stopLossPrice > 0;
@@ -98,7 +105,10 @@ export const ChartTradeButtons: React.FC<Props> = ({
       {/* 1. LONG Button (4 characters) */}
       <button
         type="button"
-        onClick={() => onOpenOrderModal("LONG")}
+        onClick={() => {
+          onSetEditingLevelType?.(null);
+          onOpenOrderModal("LONG");
+        }}
         className={`h-7 px-2.5 rounded font-black text-xs flex items-center gap-1 transition cursor-pointer border ${
           isOrderModalOpen && activeOrderSide === "LONG"
             ? "bg-emerald-600 text-white border-emerald-500 shadow-xs"
@@ -112,7 +122,10 @@ export const ChartTradeButtons: React.FC<Props> = ({
       {/* 2. SHRT Button (4 characters) */}
       <button
         type="button"
-        onClick={() => onOpenOrderModal("SHORT")}
+        onClick={() => {
+          onSetEditingLevelType?.(null);
+          onOpenOrderModal("SHORT");
+        }}
         className={`h-7 px-2.5 rounded font-black text-xs flex items-center gap-1 transition cursor-pointer border ${
           isOrderModalOpen && activeOrderSide === "SHORT"
             ? "bg-rose-600 text-white border-rose-500 shadow-xs"
@@ -133,13 +146,15 @@ export const ChartTradeButtons: React.FC<Props> = ({
             type="button"
             onClick={() => handleOpenEdit("SL")}
             className={`h-7 px-2 rounded font-black text-xs flex items-center gap-1 transition cursor-pointer border ${
-              hasSL
+              editingLevelType === "SL"
+                ? "bg-rose-600 text-white border-rose-500 shadow-xs ring-1 ring-rose-500"
+                : hasSL
                 ? "bg-rose-500/10 text-rose-500 border-rose-500/30 hover:bg-rose-500/20"
                 : "bg-surface border-surface-border text-foreground/60 hover:text-rose-500 hover:border-rose-500/40 hover:bg-surface-hover"
-            } ${editingType === "SL" ? "ring-1 ring-rose-500" : ""}`}
-            title={hasSL ? `Stop Loss: ₹${stopLossPrice?.toFixed(2)} (Click to edit)` : "Set Stop Loss"}
+            }`}
+            title={hasSL ? `Stop Loss: ₹${stopLossPrice?.toFixed(2)} (Click to drag & edit)` : "Click to drag & set Stop Loss"}
           >
-            <ShieldAlert className="w-3 h-3 text-rose-500" />
+            <ShieldAlert className={`w-3 h-3 ${editingLevelType === "SL" ? "text-white" : "text-rose-500"}`} />
             <span>{hasSL ? `SL: ₹${stopLossPrice?.toFixed(2)}` : "+ SL"}</span>
           </button>
 
@@ -148,57 +163,57 @@ export const ChartTradeButtons: React.FC<Props> = ({
             type="button"
             onClick={() => handleOpenEdit("TP")}
             className={`h-7 px-2 rounded font-black text-xs flex items-center gap-1 transition cursor-pointer border ${
-              hasTP
+              editingLevelType === "TP"
+                ? "bg-emerald-600 text-white border-emerald-500 shadow-xs ring-1 ring-emerald-500"
+                : hasTP
                 ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20"
                 : "bg-surface border-surface-border text-foreground/60 hover:text-emerald-500 hover:border-emerald-500/40 hover:bg-surface-hover"
-            } ${editingType === "TP" ? "ring-1 ring-emerald-500" : ""}`}
-            title={hasTP ? `Target Price: ₹${targetPrice?.toFixed(2)} (Click to edit)` : "Set Target Price"}
+            }`}
+            title={hasTP ? `Target Price: ₹${targetPrice?.toFixed(2)} (Click to drag & edit)` : "Click to drag & set Target Price"}
           >
-            <Target className="w-3 h-3 text-emerald-500" />
+            <Target className={`w-3 h-3 ${editingLevelType === "TP" ? "text-white" : "text-emerald-500"}`} />
             <span>{hasTP ? `TP: ₹${targetPrice?.toFixed(2)}` : "+ TP"}</span>
           </button>
         </>
       )}
 
-      {/* Compact Popover for SL/TP input */}
-      {editingType && (
+      {/* Compact Popover for SL/TP input and Drag Indicator */}
+      {editingLevelType && (
         <div
           ref={popoverRef}
-          className="absolute top-9 left-24 z-50 bg-surface border border-surface-border shadow-2xl rounded-lg p-3 w-56 flex flex-col gap-2 backdrop-blur-md animate-in fade-in zoom-in-95 duration-100"
+          className="absolute top-9 left-24 z-50 bg-surface border border-surface-border shadow-2xl rounded-lg p-3 w-60 flex flex-col gap-2 backdrop-blur-md animate-in fade-in zoom-in-95 duration-100"
         >
           <div className="flex items-center justify-between text-[11px] font-bold text-foreground/70">
             <span className="flex items-center gap-1">
-              {editingType === "SL" ? (
+              {editingLevelType === "SL" ? (
                 <>
                   <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
-                  <span>Stop Loss ({positionSide})</span>
+                  <span>Adjust Stop Loss ({positionSide})</span>
                 </>
               ) : (
                 <>
                   <Target className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>Target Price ({positionSide})</span>
+                  <span>Adjust Target ({positionSide})</span>
                 </>
               )}
             </span>
             <button
               type="button"
-              onClick={() => setEditingType(null)}
+              onClick={() => onSetEditingLevelType?.(null)}
               className="text-foreground/40 hover:text-foreground cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {entryPrice && entryPrice > 0 && (
-            <div className="text-[10px] text-foreground/50 flex justify-between">
-              <span>Entry: ₹{entryPrice.toFixed(2)}</span>
-              {inputValue && !isNaN(parseFloat(inputValue)) && (
-                <span>
-                  Diff: {(((parseFloat(inputValue) - entryPrice) / entryPrice) * 100).toFixed(2)}%
-                </span>
-              )}
-            </div>
-          )}
+          <div className="text-[10px] text-foreground/60 flex items-center justify-between">
+            <span>Entry: ₹{entryPrice?.toFixed(2) || "0.00"}</span>
+            {draftLevelPrice > 0 && entryPrice && (
+              <span className="font-bold">
+                Diff: {(((draftLevelPrice - entryPrice) / entryPrice) * 100).toFixed(2)}%
+              </span>
+            )}
+          </div>
 
           <div className="flex items-center gap-1.5">
             <div className="relative flex-1">
@@ -208,34 +223,39 @@ export const ChartTradeButtons: React.FC<Props> = ({
                 step="0.05"
                 autoFocus
                 placeholder="0.00"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                value={draftLevelPrice > 0 ? draftLevelPrice : ""}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  onDraftLevelPriceChange?.(isNaN(val) ? 0 : val);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSave();
-                  if (e.key === "Escape") setEditingType(null);
+                  if (e.key === "Escape") onSetEditingLevelType?.(null);
                 }}
                 className="w-full h-8 pl-5 pr-2 bg-surface-hover border border-surface-border rounded text-xs font-bold text-foreground focus:outline-hidden focus:border-foreground/50 tabular-nums"
               />
             </div>
           </div>
 
+          <p className="text-[10px] text-foreground/50 italic">
+            💡 Drag the {editingLevelType === "SL" ? "red" : "green"} line on the chart, or type exact price above.
+          </p>
+
           <div className="flex items-center gap-1.5 pt-1">
             <button
               type="button"
-              disabled={isSubmitting}
               onClick={handleSave}
               className={`flex-1 h-7 rounded text-[11px] font-black flex items-center justify-center gap-1 text-white cursor-pointer transition ${
-                editingType === "SL" ? "bg-rose-600 hover:bg-rose-500" : "bg-emerald-600 hover:bg-emerald-500"
+                editingLevelType === "SL" ? "bg-rose-600 hover:bg-rose-500" : "bg-emerald-600 hover:bg-emerald-500"
               }`}
             >
               <Check className="w-3 h-3" />
-              <span>Save</span>
+              <span>Confirm & Save</span>
             </button>
 
-            {(editingType === "SL" ? hasSL : hasTP) && (
+            {(editingLevelType === "SL" ? hasSL : hasTP) && (
               <button
                 type="button"
-                disabled={isSubmitting}
                 onClick={handleClear}
                 className="h-7 px-2 rounded text-[11px] font-bold bg-surface-muted hover:bg-surface-hover border border-surface-border text-foreground/70 cursor-pointer"
                 title="Remove Level"

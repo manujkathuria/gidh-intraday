@@ -28,6 +28,10 @@ interface Props {
   entryPrice?: number;
   stopLossPrice?: number;
   targetPrice?: number;
+  editingLevelType?: "SL" | "TP" | null;
+  onSetEditingLevelType?: (type: "SL" | "TP" | null) => void;
+  draftLevelPrice?: number;
+  onDraftLevelPriceChange?: (price: number) => void;
   onUpdateLevels?: (symbol: string, sl?: number | null, tp?: number | null) => Promise<boolean>;
 }
 
@@ -48,6 +52,10 @@ export const StockHeaderMetrics: React.FC<Props> = ({
   entryPrice,
   stopLossPrice,
   targetPrice,
+  editingLevelType,
+  onSetEditingLevelType,
+  draftLevelPrice,
+  onDraftLevelPriceChange,
   onUpdateLevels,
 }) => {
   const price = stockInfo?.price || lastClosePrice;
@@ -83,6 +91,10 @@ export const StockHeaderMetrics: React.FC<Props> = ({
               entryPrice={entryPrice}
               stopLossPrice={stopLossPrice}
               targetPrice={targetPrice}
+              editingLevelType={editingLevelType}
+              onSetEditingLevelType={onSetEditingLevelType}
+              draftLevelPrice={draftLevelPrice}
+              onDraftLevelPriceChange={onDraftLevelPriceChange}
               onUpdateLevels={onUpdateLevels}
             />
           </>

@@ -31,6 +31,10 @@ export const ChartStudio: React.FC = () => {
     hasActivePosition,
     positionSide,
     updatePositionLevels,
+    editingLevelType,
+    setEditingLevelType,
+    draftLevelPrice,
+    setDraftLevelPrice,
     activePendingOrder,
     // Order Modal & Limit Dragging
     isOrderModalOpen,
@@ -82,6 +86,10 @@ export const ChartStudio: React.FC = () => {
         entryPrice={entryPrice}
         stopLossPrice={stopLossPrice}
         targetPrice={targetPrice}
+        editingLevelType={editingLevelType}
+        onSetEditingLevelType={setEditingLevelType}
+        draftLevelPrice={draftLevelPrice}
+        onDraftLevelPriceChange={setDraftLevelPrice}
         onUpdateLevels={updatePositionLevels}
       />
 
@@ -126,6 +134,9 @@ export const ChartStudio: React.FC = () => {
             orderType={displayOrderType}
             hasActivePosition={hasActivePosition}
             positionSide={positionSide}
+            editingLevelType={editingLevelType}
+            draftLevelPrice={draftLevelPrice}
+            onDraftLevelPriceChange={setDraftLevelPrice}
             onUpdateLevels={updatePositionLevels}
           />
         </div>

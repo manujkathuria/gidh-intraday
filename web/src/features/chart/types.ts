@@ -29,6 +29,9 @@ export interface ChartProps {
   orderType?: "MARKET" | "LIMIT";
   hasActivePosition?: boolean;
   positionSide?: "LONG" | "SHORT";
+  editingLevelType?: "SL" | "TP" | null;
+  draftLevelPrice?: number;
+  onDraftLevelPriceChange?: (price: number) => void;
   onUpdateLevels?: (symbol: string, sl?: number | null, tp?: number | null) => Promise<boolean>;
 }
 
