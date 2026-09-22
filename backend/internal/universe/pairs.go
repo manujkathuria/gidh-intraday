@@ -20,7 +20,7 @@ func BuildPairs(instruments kiteconnect.Instruments, now time.Time) ([]store.Uni
 	}
 	futures := make(map[string]future)
 	for _, instrument := range instruments {
-		if instrument.Segment != "NFO-FUT" || instrument.InstrumentType != "FUT" {
+		if instrument.Segment != "NFO-FUT" || (instrument.InstrumentType != "FUT" && instrument.InstrumentType != "FUTIDX") {
 			continue
 		}
 		expiry := instrument.Expiry.Time
@@ -38,10 +38,20 @@ func BuildPairs(instruments kiteconnect.Instruments, now time.Time) ([]store.Uni
 
 	pairs := make([]store.UniversePair, 0, len(futures))
 	for _, instrument := range instruments {
-		if instrument.Segment != "NSE" || instrument.InstrumentType != "EQ" {
+		isEquity := instrument.Segment == "NSE" && instrument.InstrumentType == "EQ"
+		isIndex := instrument.Segment == "INDICES" && (instrument.Tradingsymbol == "NIFTY 50" || instrument.Tradingsymbol == "NIFTY BANK")
+		if !isEquity && !isIndex {
 			continue
 		}
-		future, exists := futures[instrument.Tradingsymbol]
+
+		futureLookupKey := instrument.Tradingsymbol
+		if instrument.Tradingsymbol == "NIFTY 50" {
+			futureLookupKey = "NIFTY"
+		} else if instrument.Tradingsymbol == "NIFTY BANK" {
+			futureLookupKey = "BANKNIFTY"
+		}
+
+		future, exists := futures[futureLookupKey]
 		if !exists || future.lotSize <= 0 {
 			continue
 		}

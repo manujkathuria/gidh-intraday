@@ -15,7 +15,7 @@ import (
 
 func syncInstruments(args []string) {
 	flags := flag.NewFlagSet("instruments sync", flag.ExitOnError)
-	expectedCount := flags.Int("expected-count", 210, "required active cash/future pair count")
+	expectedCount := flags.Int("expected-count", 212, "required active cash/future pair count")
 	_ = flags.Parse(args)
 
 	ctx := context.Background()
