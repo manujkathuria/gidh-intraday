@@ -27,12 +27,12 @@ else
     exit 1
 fi
 
-# 2. Recreate edge so Compose reloads the refreshed token from .env.
-echo "[2/3] Recreating gidh-edge with refreshed credentials..." >> "${LOG_FILE}"
-docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate edge >> "${LOG_FILE}" 2>&1
+# 2. Recreate edge and backend so Compose reloads the refreshed token from .env.
+echo "[2/3] Recreating gidh-edge and gidh-backend with refreshed credentials..." >> "${LOG_FILE}"
+docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate edge backend >> "${LOG_FILE}" 2>&1
 
 # 3. Health check verification loop (up to 20s)
-echo "[3/3] Verifying edge health..." >> "${LOG_FILE}"
+echo "[3/3] Verifying edge & backend health..." >> "${LOG_FILE}"
 HEALTHY=false
 for i in {1..10}; do
     sleep 2
@@ -48,6 +48,14 @@ if [ "$HEALTHY" = false ]; then
     docker logs --tail 25 gidh-edge >> "${LOG_FILE}" 2>&1
     exit 1
 fi
+
+# Verify gidh-backend container is running
+if ! docker ps --filter "name=gidh-backend" --filter "status=running" | grep -q gidh-backend; then
+    echo "[HEALTH ERROR] Backend container is not running! Dumping logs:" >> "${LOG_FILE}"
+    docker logs --tail 25 gidh-backend >> "${LOG_FILE}" 2>&1
+    exit 1
+fi
+echo "[HEALTH OK] Backend is up and running!" >> "${LOG_FILE}"
 
 echo "================================================================" >> "${LOG_FILE}"
 echo " [MORNING CRON COMPLETED SUCCESSFULLY] $(date)" >> "${LOG_FILE}"

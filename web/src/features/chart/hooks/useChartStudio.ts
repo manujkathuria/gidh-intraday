@@ -161,15 +161,21 @@ export function useChartStudio() {
 
     async function connect() {
       try {
-        const wsUrl = await getStreamWsUrlWithAuth("/v1/stream/chart");
+        const wsUrl = await getStreamWsUrlWithAuth(`/v1/stream/chart?symbol=${encodeURIComponent(activeSymbol)}`);
         if (!isMounted) return;
         ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ action: "SUBSCRIBE_SYMBOL", symbol: activeSymbol }));
+          }
+        };
 
         ws.onmessage = (event) => {
           if (!isMounted) return;
           try {
             const tick = JSON.parse(event.data);
-            if (tick && tick.symbol === activeSymbol) {
+            if (tick && tick.symbol === activeSymbol && typeof tick.price === "number") {
               setChartCandles((prev) => {
                 if (prev.length === 0) return prev;
                 const last = prev[prev.length - 1];
@@ -178,6 +184,7 @@ export function useChartStudio() {
                   close: tick.price,
                   high: Math.max(last.high, tick.price),
                   low: Math.min(last.low, tick.price),
+                  vwap: tick.vwap && tick.vwap > 0 ? tick.vwap : last.vwap,
                 };
                 return [...prev.slice(0, -1), updated];
               });
