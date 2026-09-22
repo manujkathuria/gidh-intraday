@@ -38,12 +38,21 @@ export const ChartTradeButtons: React.FC<Props> = ({
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // Close popover on outside click
+  // Close popover on outside click (ignore clicks on chart canvas or drag handles)
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        onSetEditingLevelType?.(null);
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      // Do not close if clicking inside popover, on trade buttons, or on the chart canvas / drag handles
+      if (
+        popoverRef.current?.contains(target) ||
+        target.closest("[data-chart-interactive]") ||
+        target.closest("canvas") ||
+        target.closest(".chart-drag-handle")
+      ) {
+        return;
       }
+      onSetEditingLevelType?.(null);
     };
     if (editingLevelType) {
       document.addEventListener("mousedown", handleOutsideClick);

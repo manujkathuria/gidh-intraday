@@ -489,7 +489,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
   ]);
 
   return (
-    <div className="w-full h-full relative select-none">
+    <div className="w-full h-full relative select-none" data-chart-interactive="true">
       <div ref={chartContainerRef} className="w-full h-full" />
 
       {/* 1. Interactive Limit Drag Handle (Only when Limit Order Modal is Open) */}
@@ -497,8 +497,9 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
         <div
           onMouseDown={handleLimitMouseDown}
           style={{ top: `${dragLimitY - 10}px` }}
-          className="absolute left-0 right-14 h-5 z-20 flex items-center cursor-ns-resize group"
+          className="chart-drag-handle absolute left-0 right-14 h-5 z-20 flex items-center cursor-ns-resize group"
           title="Drag up/down to adjust limit entry price"
+          data-chart-interactive="true"
         >
           <div className="w-full h-[2px] bg-foreground/40 group-hover:bg-foreground transition" />
           <div className="px-2 py-0.5 rounded bg-surface border border-surface-border text-[10px] font-black text-foreground shadow-md shrink-0 flex items-center gap-1 group-hover:border-foreground/60 transition">
@@ -512,8 +513,9 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
         <div
           onMouseDown={handleLevelMouseDown}
           style={{ top: `${dragLevelY - 10}px` }}
-          className="absolute left-0 right-14 h-5 z-20 flex items-center cursor-ns-resize group animate-in fade-in duration-150"
+          className="chart-drag-handle absolute left-0 right-14 h-5 z-20 flex items-center cursor-ns-resize group animate-in fade-in duration-150"
           title={`Drag up/down to adjust ${editingLevelType === "SL" ? "Stop Loss" : "Target Price"}`}
+          data-chart-interactive="true"
         >
           <div
             className={`w-full h-[2px] transition ${
