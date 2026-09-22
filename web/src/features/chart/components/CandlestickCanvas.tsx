@@ -274,10 +274,10 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
     }
 
     if (candleData.length > 0) {
-      chartRef.current.priceScale("right").applyOptions({ autoScale: true });
       const currentKey = `${symbol}_${interval}_${selectedDate}`;
       if (lastKeyRef.current !== currentKey) {
         lastKeyRef.current = currentKey;
+        chartRef.current.priceScale("right").applyOptions({ autoScale: true });
         const ts = chartRef.current.timeScale();
         ts.resetTimeScale();
         if (candleData.length <= 40) {
