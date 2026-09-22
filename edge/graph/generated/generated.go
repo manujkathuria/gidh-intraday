@@ -196,11 +196,12 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CancelLimitOrder  func(childComplexity int, id string) int
-		PlaceLimitOrder   func(childComplexity int, input model.PlaceLimitOrderInput) int
-		PlaceMarketOrder  func(childComplexity int, input model.PlaceMarketOrderInput) int
-		ResetTripwire     func(childComplexity int) int
-		SquareOffPosition func(childComplexity int, symbol string, reason string) int
+		CancelLimitOrder     func(childComplexity int, id string) int
+		PlaceLimitOrder      func(childComplexity int, input model.PlaceLimitOrderInput) int
+		PlaceMarketOrder     func(childComplexity int, input model.PlaceMarketOrderInput) int
+		ResetTripwire        func(childComplexity int) int
+		SquareOffPosition    func(childComplexity int, symbol string, reason string) int
+		UpdatePositionLevels func(childComplexity int, symbol string, stopLossPrice *float64, targetPrice *float64) int
 	}
 
 	OperatingScheduleItem struct {
@@ -325,6 +326,7 @@ type MutationResolver interface {
 	PlaceLimitOrder(ctx context.Context, input model.PlaceLimitOrderInput) (*model.ManagedOrder, error)
 	CancelLimitOrder(ctx context.Context, id string) (*model.ManagedOrder, error)
 	SquareOffPosition(ctx context.Context, symbol string, reason string) (*model.ManagedOrder, error)
+	UpdatePositionLevels(ctx context.Context, symbol string, stopLossPrice *float64, targetPrice *float64) (*model.ActivePosition, error)
 	ResetTripwire(ctx context.Context) (bool, error)
 }
 type QueryResolver interface {
@@ -1226,6 +1228,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SquareOffPosition(childComplexity, args["symbol"].(string), args["reason"].(string)), true
+
+	case "Mutation.updatePositionLevels":
+		if e.complexity.Mutation.UpdatePositionLevels == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updatePositionLevels_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdatePositionLevels(childComplexity, args["symbol"].(string), args["stopLossPrice"].(*float64), args["targetPrice"].(*float64)), true
 
 	case "OperatingScheduleItem.desc":
 		if e.complexity.OperatingScheduleItem.Desc == nil {
@@ -2371,6 +2385,7 @@ type Mutation {
   placeLimitOrder(input: PlaceLimitOrderInput!): ManagedOrder!
   cancelLimitOrder(id: ID!): ManagedOrder!
   squareOffPosition(symbol: String!, reason: String!): ManagedOrder!
+  updatePositionLevels(symbol: String!, stopLossPrice: Float, targetPrice: Float): ActivePosition!
   resetTripwire: Boolean!
 }
 
@@ -2524,6 +2539,80 @@ func (ec *executionContext) field_Mutation_squareOffPosition_argsReason(
 	}
 
 	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_updatePositionLevels_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_updatePositionLevels_argsSymbol(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["symbol"] = arg0
+	arg1, err := ec.field_Mutation_updatePositionLevels_argsStopLossPrice(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["stopLossPrice"] = arg1
+	arg2, err := ec.field_Mutation_updatePositionLevels_argsTargetPrice(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["targetPrice"] = arg2
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_updatePositionLevels_argsSymbol(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["symbol"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("symbol"))
+	if tmp, ok := rawArgs["symbol"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_updatePositionLevels_argsStopLossPrice(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*float64, error) {
+	if _, ok := rawArgs["stopLossPrice"]; !ok {
+		var zeroVal *float64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("stopLossPrice"))
+	if tmp, ok := rawArgs["stopLossPrice"]; ok {
+		return ec.unmarshalOFloat2ᚖfloat64(ctx, tmp)
+	}
+
+	var zeroVal *float64
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_updatePositionLevels_argsTargetPrice(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*float64, error) {
+	if _, ok := rawArgs["targetPrice"]; !ok {
+		var zeroVal *float64
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("targetPrice"))
+	if tmp, ok := rawArgs["targetPrice"]; ok {
+		return ec.unmarshalOFloat2ᚖfloat64(ctx, tmp)
+	}
+
+	var zeroVal *float64
 	return zeroVal, nil
 }
 
@@ -8655,6 +8744,99 @@ func (ec *executionContext) fieldContext_Mutation_squareOffPosition(ctx context.
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_squareOffPosition_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updatePositionLevels(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updatePositionLevels(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdatePositionLevels(rctx, fc.Args["symbol"].(string), fc.Args["stopLossPrice"].(*float64), fc.Args["targetPrice"].(*float64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.ActivePosition)
+	fc.Result = res
+	return ec.marshalNActivePosition2ᚖgidhᚑintradayᚋedgeᚋgraphᚋmodelᚐActivePosition(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updatePositionLevels(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "symbol":
+				return ec.fieldContext_ActivePosition_symbol(ctx, field)
+			case "instrumentToken":
+				return ec.fieldContext_ActivePosition_instrumentToken(ctx, field)
+			case "exchange":
+				return ec.fieldContext_ActivePosition_exchange(ctx, field)
+			case "side":
+				return ec.fieldContext_ActivePosition_side(ctx, field)
+			case "quantity":
+				return ec.fieldContext_ActivePosition_quantity(ctx, field)
+			case "entryPrice":
+				return ec.fieldContext_ActivePosition_entryPrice(ctx, field)
+			case "currentLtp":
+				return ec.fieldContext_ActivePosition_currentLtp(ctx, field)
+			case "pnlInr":
+				return ec.fieldContext_ActivePosition_pnlInr(ctx, field)
+			case "pnlPct":
+				return ec.fieldContext_ActivePosition_pnlPct(ctx, field)
+			case "mfePct":
+				return ec.fieldContext_ActivePosition_mfePct(ctx, field)
+			case "stopFloorPct":
+				return ec.fieldContext_ActivePosition_stopFloorPct(ctx, field)
+			case "stopLossPrice":
+				return ec.fieldContext_ActivePosition_stopLossPrice(ctx, field)
+			case "targetPrice":
+				return ec.fieldContext_ActivePosition_targetPrice(ctx, field)
+			case "tactic":
+				return ec.fieldContext_ActivePosition_tactic(ctx, field)
+			case "invalidation":
+				return ec.fieldContext_ActivePosition_invalidation(ctx, field)
+			case "brokerOrderId":
+				return ec.fieldContext_ActivePosition_brokerOrderId(ctx, field)
+			case "openedAt":
+				return ec.fieldContext_ActivePosition_openedAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ActivePosition_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ActivePosition", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updatePositionLevels_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -16143,6 +16325,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "squareOffPosition":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_squareOffPosition(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatePositionLevels":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updatePositionLevels(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

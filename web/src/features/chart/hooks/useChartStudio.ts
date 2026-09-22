@@ -25,6 +25,7 @@ export function useChartStudio() {
     managedOrders,
     initLiveOrders,
     placeTrade,
+    updatePositionLevels,
   } = useLiveOrderStore();
 
   const [activeSymbol, setActiveSymbol] = useState<string>(
@@ -280,6 +281,8 @@ export function useChartStudio() {
     stopLossPrice,
     targetPrice,
     hasActivePosition: !!activePosition,
+    positionSide: (activePosition?.side as "LONG" | "SHORT") || "LONG",
+    updatePositionLevels,
     // Pending Order on Symbol
     activePendingOrder,
     // Order Modal & Limit Slider

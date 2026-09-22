@@ -29,6 +29,8 @@ export const ChartStudio: React.FC = () => {
     stopLossPrice,
     targetPrice,
     hasActivePosition,
+    positionSide,
+    updatePositionLevels,
     activePendingOrder,
     // Order Modal & Limit Dragging
     isOrderModalOpen,
@@ -60,7 +62,7 @@ export const ChartStudio: React.FC = () => {
 
   return (
     <div className="flex-1 w-full flex flex-col gap-2 min-h-0 overflow-hidden relative">
-      {/* 1. Header Metrics with Stock Search Combobox, Intervals & LONG / SHRT buttons */}
+      {/* 1. Header Metrics with Stock Search Combobox, Intervals & LONG / SHRT / SL / TP buttons */}
       <StockHeaderMetrics
         activeSymbol={activeSymbol}
         stockInfo={stockInfo}
@@ -75,6 +77,12 @@ export const ChartStudio: React.FC = () => {
         onOpenOrderModal={handleOpenOrderModal}
         isOrderModalOpen={isOrderModalOpen}
         activeOrderSide={orderSide}
+        hasActivePosition={hasActivePosition}
+        positionSide={positionSide}
+        entryPrice={entryPrice}
+        stopLossPrice={stopLossPrice}
+        targetPrice={targetPrice}
+        onUpdateLevels={updatePositionLevels}
       />
 
       {/* 2. Edge-to-Edge Candlestick Studio with Entry, SL, TP, and Interactive Draggable Limit Lines */}

@@ -22,7 +22,6 @@ TimescaleDB is the evidence store for Gidh. Database names, columns, and migrati
 - `market.feature_runs`: immutable batch publication record, including input cutoff, version, completeness, and error state.
 - `market.daily_features`: one batch-derived baseline row per active instrument, keyed by `feature_run_id`.
 - `market.intraday_features_1m`: neutral one-minute market state keyed to the daily run whose baseline it uses. It contains current/session price geometry, VWAP and explicit sigma bands, participation, volatility, opening-range, futures, and OI facts; it never contains an AI side, score, or order instruction.
-- `market.preopen_snapshots`: auction/pre-open observations when that feed is added.
 - `market.data_readiness`: backend-owned integrity and publication record for a session, with its `feature_run_id`. AI does not interpret this table; backend exposes only the feature data it has approved.
 
 ## Live selection handoff

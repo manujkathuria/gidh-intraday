@@ -563,6 +563,70 @@ export async function squareOffLivePosition(
   }
 }
 
+export async function updateLivePositionLevels(
+  symbol: string,
+  stopLossPrice?: number | null,
+  targetPrice?: number | null
+): Promise<ActivePosition | null> {
+  try {
+    const data = await executeGraphQL<{ updatePositionLevels: any }>(`
+      mutation UpdatePositionLevels($symbol: String!, $stopLossPrice: Float, $targetPrice: Float) {
+        updatePositionLevels(symbol: $symbol, stopLossPrice: $stopLossPrice, targetPrice: $targetPrice) {
+          symbol
+          instrumentToken
+          exchange
+          side
+          quantity
+          entryPrice
+          currentLtp
+          pnlInr
+          pnlPct
+          mfePct
+          stopFloorPct
+          stopLossPrice
+          targetPrice
+          tactic
+          invalidation
+          brokerOrderId
+          openedAt
+          updatedAt
+        }
+      }
+    `, {
+      symbol,
+      stopLossPrice: stopLossPrice !== undefined && stopLossPrice !== null ? stopLossPrice : null,
+      targetPrice: targetPrice !== undefined && targetPrice !== null ? targetPrice : null,
+    });
+    if (data?.updatePositionLevels) {
+      const p = data.updatePositionLevels;
+      return {
+        symbol: p.symbol,
+        instrument_token: p.instrumentToken,
+        exchange: p.exchange,
+        side: p.side,
+        quantity: p.quantity,
+        entry_price: p.entryPrice,
+        current_ltp: p.currentLtp,
+        pnl_inr: p.pnlInr,
+        pnl_pct: p.pnlPct,
+        mfe_pct: p.mfePct,
+        stop_floor_pct: p.stopFloorPct,
+        stop_loss_price: p.stopLossPrice,
+        target_price: p.targetPrice,
+        tactic: p.tactic,
+        invalidation: p.invalidation,
+        broker_order_id: p.brokerOrderId,
+        opened_at: p.openedAt,
+        updated_at: p.updatedAt,
+      };
+    }
+  } catch (err) {
+    console.error("Failed to update position levels:", err);
+    throw err;
+  }
+  return null;
+}
+
 export async function cancelLimitOrder(id: string): Promise<ManagedOrder | null> {
   const data = await executeGraphQL<{ cancelLimitOrder: any }>(`
     mutation CancelLimitOrder($id: ID!) {

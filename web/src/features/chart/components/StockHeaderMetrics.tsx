@@ -22,6 +22,13 @@ interface Props {
   onOpenOrderModal?: (side: "LONG" | "SHORT") => void;
   isOrderModalOpen?: boolean;
   activeOrderSide?: "LONG" | "SHORT";
+  // Position SL/TP
+  hasActivePosition?: boolean;
+  positionSide?: "LONG" | "SHORT";
+  entryPrice?: number;
+  stopLossPrice?: number;
+  targetPrice?: number;
+  onUpdateLevels?: (symbol: string, sl?: number | null, tp?: number | null) => Promise<boolean>;
 }
 
 export const StockHeaderMetrics: React.FC<Props> = ({
@@ -36,6 +43,12 @@ export const StockHeaderMetrics: React.FC<Props> = ({
   onOpenOrderModal,
   isOrderModalOpen,
   activeOrderSide,
+  hasActivePosition,
+  positionSide,
+  entryPrice,
+  stopLossPrice,
+  targetPrice,
+  onUpdateLevels,
 }) => {
   const price = stockInfo?.price || lastClosePrice;
   const movePct = stockInfo?.move_pct || 0;
@@ -65,6 +78,12 @@ export const StockHeaderMetrics: React.FC<Props> = ({
               onOpenOrderModal={onOpenOrderModal}
               isOrderModalOpen={isOrderModalOpen}
               activeOrderSide={activeOrderSide}
+              hasActivePosition={hasActivePosition}
+              positionSide={positionSide}
+              entryPrice={entryPrice}
+              stopLossPrice={stopLossPrice}
+              targetPrice={targetPrice}
+              onUpdateLevels={onUpdateLevels}
             />
           </>
         )}

@@ -377,6 +377,7 @@ type Mutation {
   placeLimitOrder(input: PlaceLimitOrderInput!): ManagedOrder!
   cancelLimitOrder(id: ID!): ManagedOrder!
   squareOffPosition(symbol: String!, reason: String!): ManagedOrder!
+  updatePositionLevels(symbol: String!, stopLossPrice: Float, targetPrice: Float): ActivePosition!
   resetTripwire: Boolean!
 }
 

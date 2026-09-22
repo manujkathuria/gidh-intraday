@@ -63,6 +63,22 @@ func (r *mutationResolver) SquareOffPosition(ctx context.Context, symbol string,
 	return managedOrderModel(order), err
 }
 
+// UpdatePositionLevels is the resolver for the updatePositionLevels field.
+func (r *mutationResolver) UpdatePositionLevels(ctx context.Context, symbol string, stopLossPrice *float64, targetPrice *float64) (*model.ActivePosition, error) {
+	if r.Orders == nil {
+		return nil, fmt.Errorf("order manager is unavailable")
+	}
+	position, err := r.Orders.UpdatePositionLevels(ctx, symbol, stopLossPrice, targetPrice)
+	if err != nil {
+		return nil, err
+	}
+	models := activePositionModels([]*ordermanager.ActivePosition{position})
+	if len(models) == 0 {
+		return nil, fmt.Errorf("failed to map position model")
+	}
+	return models[0], nil
+}
+
 // ResetTripwire is the resolver for the resetTripwire field.
 func (r *mutationResolver) ResetTripwire(ctx context.Context) (bool, error) {
 	if r.Orders == nil {

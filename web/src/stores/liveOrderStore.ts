@@ -12,6 +12,7 @@ import {
   createLiveOrder,
   cancelLimitOrder,
   squareOffLivePosition,
+  updateLivePositionLevels,
   OrderIntent,
 } from "@/lib/api";
 import { auth } from "@/lib/firebase";
@@ -48,6 +49,7 @@ interface LiveOrderState {
   placeTrade: (intent: OrderIntent) => Promise<boolean>;
   cancelLimit: (id: string) => Promise<boolean>;
   squareOff: (symbol: string, reason?: string) => Promise<boolean>;
+  updatePositionLevels: (symbol: string, stopLossPrice?: number | null, targetPrice?: number | null) => Promise<boolean>;
 }
 
 export const useLiveOrderStore = create<LiveOrderState>((set, get) => ({
@@ -218,6 +220,19 @@ export const useLiveOrderStore = create<LiveOrderState>((set, get) => ({
       set({ managedOrders: orders, activePositions: current, closedPositions: closed });
       return true;
     } catch (err) {
+      return false;
+    }
+  },
+
+  updatePositionLevels: async (symbol: string, stopLossPrice?: number | null, targetPrice?: number | null) => {
+    try {
+      const pos = await updateLivePositionLevels(symbol, stopLossPrice, targetPrice);
+      if (!pos) return false;
+      const current = { ...get().activePositions, [pos.symbol]: pos };
+      set({ activePositions: current });
+      return true;
+    } catch (err: any) {
+      alert(`Update SL/TP Failed: ${err.message}`);
       return false;
     }
   },
