@@ -28,7 +28,9 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
   onLimitPriceChange,
   orderSide = "LONG",
   orderType = "MARKET",
-  onChangeLevels,
+  hasActivePosition = false,
+  positionSide = "LONG",
+  onUpdateLevels,
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -46,11 +48,33 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
   const targetLineRef = useRef<any>(null);
   const limitLineRef = useRef<any>(null);
 
-  const [dragY, setDragY] = useState<number | null>(null);
-  const isDraggingRef = useRef<boolean>(false);
+  // Drag coordinates state
+  const [dragLimitY, setDragLimitY] = useState<number | null>(null);
+  const [dragStopY, setDragStopY] = useState<number | null>(null);
+  const [dragTargetY, setDragTargetY] = useState<number | null>(null);
+
+  // Active dragging ref: null | "LIMIT" | "STOP" | "TARGET"
+  const activeDragRef = useRef<"LIMIT" | "STOP" | "TARGET" | null>(null);
+
+  // Local dragged price states during active drag
+  const [tempStopPrice, setTempStopPrice] = useState<number | undefined>(stopLossPrice);
+  const [tempTargetPrice, setTempTargetPrice] = useState<number | undefined>(targetPrice);
 
   const isDark = theme === "dark";
   const isIntraday = interval === "1m" || interval === "5m" || interval === "15m";
+
+  // Sync temp prices when props change (if not actively dragging)
+  useEffect(() => {
+    if (activeDragRef.current !== "STOP") {
+      setTempStopPrice(stopLossPrice);
+    }
+  }, [stopLossPrice]);
+
+  useEffect(() => {
+    if (activeDragRef.current !== "TARGET") {
+      setTempTargetPrice(targetPrice);
+    }
+  }, [targetPrice]);
 
   // 1. Initialize Chart Canvas ONCE on mount
   useEffect(() => {
@@ -75,8 +99,9 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
     const vwapSeries = chart.addSeries(LineSeries, {
       color: colors.vwapColor,
       lineWidth: 2,
+      lineStyle: LineStyle.Solid,
       priceLineVisible: false,
-      lastValueVisible: true,
+      lastValueVisible: false,
       title: "VWAP",
     });
 
@@ -86,6 +111,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: false,
+      title: "+1σ",
     });
 
     const lower1Series = chart.addSeries(LineSeries, {
@@ -94,6 +120,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: false,
+      title: "-1σ",
     });
 
     const upper2Series = chart.addSeries(LineSeries, {
@@ -102,6 +129,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       lineStyle: LineStyle.Dotted,
       priceLineVisible: false,
       lastValueVisible: false,
+      title: "+2σ",
     });
 
     const lower2Series = chart.addSeries(LineSeries, {
@@ -110,29 +138,30 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       lineStyle: LineStyle.Dotted,
       priceLineVisible: false,
       lastValueVisible: false,
+      title: "-2σ",
     });
 
     chartRef.current = chart;
-    candleSeriesRef.current = candleSeries as any;
-    vwapSeriesRef.current = vwapSeries as any;
-    upper1SeriesRef.current = upper1Series as any;
-    lower1SeriesRef.current = lower1Series as any;
-    upper2SeriesRef.current = upper2Series as any;
-    lower2SeriesRef.current = lower2Series as any;
+    candleSeriesRef.current = candleSeries;
+    vwapSeriesRef.current = vwapSeries;
+    upper1SeriesRef.current = upper1Series;
+    lower1SeriesRef.current = lower1Series;
+    upper2SeriesRef.current = upper2Series;
+    lower2SeriesRef.current = lower2Series;
 
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.contentRect && chartRef.current) {
-          const { width: w, height: h } = entry.contentRect;
-          if (w > 0 && h > 0) chartRef.current.applyOptions({ width: w, height: h });
-        }
+    const handleResize = () => {
+      if (container && chart) {
+        chart.applyOptions({
+          width: container.clientWidth,
+          height: container.clientHeight,
+        });
       }
-    });
+    };
 
-    resizeObserver.observe(container);
+    window.addEventListener("resize", handleResize);
 
     return () => {
-      resizeObserver.disconnect();
+      window.removeEventListener("resize", handleResize);
       chart.remove();
       chartRef.current = null;
       candleSeriesRef.current = null;
@@ -141,17 +170,24 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       lower1SeriesRef.current = null;
       upper2SeriesRef.current = null;
       lower2SeriesRef.current = null;
+      entryLineRef.current = null;
+      stopLineRef.current = null;
+      targetLineRef.current = null;
+      limitLineRef.current = null;
     };
   }, []);
 
-  // 2. React to Theme & Interval Changes
+  // 2. Update Options on Theme / Interval Change
   useEffect(() => {
-    if (!chartRef.current || !candleSeriesRef.current || !vwapSeriesRef.current || !upper1SeriesRef.current || !lower1SeriesRef.current || !upper2SeriesRef.current || !lower2SeriesRef.current) return;
+    if (!chartRef.current || !chartContainerRef.current) return;
+    const container = chartContainerRef.current;
+    const width = container.clientWidth || 800;
+    const height = container.clientHeight || 400;
 
-    chartRef.current.applyOptions(getChartOptions(isDark, interval));
+    chartRef.current.applyOptions(getChartOptions(isDark, interval, width, height));
+
     const colors = isDark ? CANDLE_COLORS.dark : CANDLE_COLORS.light;
-
-    candleSeriesRef.current.applyOptions({
+    candleSeriesRef.current?.applyOptions({
       upColor: colors.upColor,
       downColor: colors.downColor,
       borderUpColor: colors.borderUpColor,
@@ -159,34 +195,14 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       wickUpColor: colors.wickUpColor,
       wickDownColor: colors.wickDownColor,
     });
+    vwapSeriesRef.current?.applyOptions({ color: colors.vwapColor });
+    upper1SeriesRef.current?.applyOptions({ color: colors.sigma1Color });
+    lower1SeriesRef.current?.applyOptions({ color: colors.sigma1Color });
+    upper2SeriesRef.current?.applyOptions({ color: colors.sigma2Color });
+    lower2SeriesRef.current?.applyOptions({ color: colors.sigma2Color });
+  }, [isDark, interval]);
 
-    vwapSeriesRef.current.applyOptions({
-      color: colors.vwapColor,
-      visible: isIntraday,
-    });
-
-    upper1SeriesRef.current.applyOptions({
-      color: colors.sigma1Color,
-      visible: isIntraday,
-    });
-
-    lower1SeriesRef.current.applyOptions({
-      color: colors.sigma1Color,
-      visible: isIntraday,
-    });
-
-    upper2SeriesRef.current.applyOptions({
-      color: colors.sigma2Color,
-      visible: isIntraday,
-    });
-
-    lower2SeriesRef.current.applyOptions({
-      color: colors.sigma2Color,
-      visible: isIntraday,
-    });
-  }, [isDark, interval, isIntraday]);
-
-  // 3. Update Candles Data & Frame On Stock or Interval Switch
+  // 3. Populate and Update Candle & Technical Indicator Data
   useEffect(() => {
     if (
       !candleSeriesRef.current ||
@@ -199,7 +215,6 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
     )
       return;
 
-    // Sanitize candles to prevent Lightweight Charts crash from NaN/Infinity/null
     const candleData = (candles || [])
       .filter((c) =>
         c &&
@@ -224,7 +239,6 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
 
     candleSeriesRef.current.setData(candleData);
 
-    // Only supply VWAP and Sigma bands data when intraday (1m, 5m, 15m)
     if (isIntraday) {
       const vwapData = (candles || [])
         .filter((c) => c && typeof c.time === "number" && Number.isFinite(c.time) && typeof c.vwap === "number" && Number.isFinite(c.vwap) && c.vwap > 0)
@@ -293,6 +307,9 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
   }, [candles, symbol, interval, selectedDate, isIntraday]);
 
   // 4. Render and update Entry, Stop Loss, and Target Price Lines
+  const activeStop = tempStopPrice ?? stopLossPrice;
+  const activeTarget = tempTargetPrice ?? targetPrice;
+
   useEffect(() => {
     if (!candleSeriesRef.current) return;
     const series = candleSeriesRef.current;
@@ -317,10 +334,10 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
     }
 
     // Stop Loss Line
-    if (stopLossPrice && stopLossPrice > 0) {
+    if (activeStop && activeStop > 0) {
       if (!stopLineRef.current) {
         stopLineRef.current = series.createPriceLine({
-          price: stopLossPrice,
+          price: activeStop,
           color: "#EF4444",
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
@@ -328,7 +345,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
           title: "STOP",
         });
       } else {
-        stopLineRef.current.applyOptions({ price: stopLossPrice });
+        stopLineRef.current.applyOptions({ price: activeStop });
       }
     } else if (stopLineRef.current) {
       series.removePriceLine(stopLineRef.current);
@@ -336,10 +353,10 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
     }
 
     // Target Line
-    if (targetPrice && targetPrice > 0) {
+    if (activeTarget && activeTarget > 0) {
       if (!targetLineRef.current) {
         targetLineRef.current = series.createPriceLine({
-          price: targetPrice,
+          price: activeTarget,
           color: "#10B981",
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
@@ -347,15 +364,15 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
           title: "TARGET",
         });
       } else {
-        targetLineRef.current.applyOptions({ price: targetPrice });
+        targetLineRef.current.applyOptions({ price: activeTarget });
       }
     } else if (targetLineRef.current) {
       series.removePriceLine(targetLineRef.current);
       targetLineRef.current = null;
     }
-  }, [entryPrice, stopLossPrice, targetPrice]);
+  }, [entryPrice, activeStop, activeTarget]);
 
-  // 5. Render Limit Order Price Line (Dashed Orange/Cyan)
+  // 5. Render Limit Order Price Line
   useEffect(() => {
     if (!candleSeriesRef.current) return;
     const series = candleSeriesRef.current;
@@ -384,56 +401,99 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
     }
   }, [limitPrice, orderType, orderSide]);
 
-  // 6. Interactive Drag Handle for Limit Price Line
-  const updateYCoordinate = useCallback(() => {
-    if (!candleSeriesRef.current || !limitPrice || limitPrice <= 0 || orderType !== "LIMIT") {
-      setDragY(null);
+  // 6. Update Drag Handles Coordinates
+  const updateCoordinates = useCallback(() => {
+    if (!candleSeriesRef.current) {
+      setDragLimitY(null);
+      setDragStopY(null);
+      setDragTargetY(null);
       return;
     }
-    const y = candleSeriesRef.current.priceToCoordinate(limitPrice);
-    if (y !== null && !isNaN(y)) {
-      setDragY(y);
+
+    // Limit Y
+    if (limitPrice && limitPrice > 0 && orderType === "LIMIT") {
+      const y = candleSeriesRef.current.priceToCoordinate(limitPrice);
+      setDragLimitY(y !== null && !isNaN(y) ? y : null);
+    } else {
+      setDragLimitY(null);
     }
-  }, [limitPrice, orderType]);
+
+    // Stop Loss Y
+    if (hasActivePosition && activeStop && activeStop > 0) {
+      const y = candleSeriesRef.current.priceToCoordinate(activeStop);
+      setDragStopY(y !== null && !isNaN(y) ? y : null);
+    } else {
+      setDragStopY(null);
+    }
+
+    // Target Y
+    if (hasActivePosition && activeTarget && activeTarget > 0) {
+      const y = candleSeriesRef.current.priceToCoordinate(activeTarget);
+      setDragTargetY(y !== null && !isNaN(y) ? y : null);
+    } else {
+      setDragTargetY(null);
+    }
+  }, [limitPrice, orderType, hasActivePosition, activeStop, activeTarget]);
 
   useEffect(() => {
-    updateYCoordinate();
-  }, [limitPrice, orderType, candles, updateYCoordinate]);
+    updateCoordinates();
+  }, [candles, updateCoordinates]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Drag Event Handlers
+  const handleLimitMouseDown = (e: React.MouseEvent) => {
     if (!isLimitDraggable || orderType !== "LIMIT") return;
-    isDraggingRef.current = true;
+    activeDragRef.current = "LIMIT";
+    e.preventDefault();
+  };
+
+  const handleStopMouseDown = (e: React.MouseEvent) => {
+    if (!hasActivePosition || !activeStop) return;
+    activeDragRef.current = "STOP";
+    e.preventDefault();
+  };
+
+  const handleTargetMouseDown = (e: React.MouseEvent) => {
+    if (!hasActivePosition || !activeTarget) return;
+    activeDragRef.current = "TARGET";
     e.preventDefault();
   };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current || !chartContainerRef.current || !candleSeriesRef.current) return;
+      if (!activeDragRef.current || !chartContainerRef.current || !candleSeriesRef.current) return;
       const rect = chartContainerRef.current.getBoundingClientRect();
       const clientY = e.clientY - rect.top;
 
       const price = candleSeriesRef.current.coordinateToPrice(clientY);
-      if (price !== null && !isNaN(price) && price > 0) {
-        let roundedPrice = Math.round(price / 0.05) * 0.05;
+      if (price === null || isNaN(price) || price <= 0) return;
 
-        // Basic check: Long limit cannot go above LTP; Short limit cannot go below LTP
-        const ltp = currentLtp || (candles.length > 0 ? candles[candles.length - 1].close : 0);
+      const roundedPrice = parseFloat((Math.round(price / 0.05) * 0.05).toFixed(2));
+      const ltp = currentLtp || (candles.length > 0 ? candles[candles.length - 1].close : 0);
+
+      if (activeDragRef.current === "LIMIT") {
+        let finalPrice = roundedPrice;
         if (ltp > 0) {
-          if (orderSide === "LONG") {
-            roundedPrice = Math.min(roundedPrice, ltp);
-          } else if (orderSide === "SHORT") {
-            roundedPrice = Math.max(roundedPrice, ltp);
-          }
+          if (orderSide === "LONG") finalPrice = Math.min(roundedPrice, ltp);
+          else if (orderSide === "SHORT") finalPrice = Math.max(roundedPrice, ltp);
         }
-
-        if (onLimitPriceChange) {
-          onLimitPriceChange(parseFloat(roundedPrice.toFixed(2)));
-        }
+        if (onLimitPriceChange) onLimitPriceChange(finalPrice);
+      } else if (activeDragRef.current === "STOP") {
+        setTempStopPrice(roundedPrice);
+      } else if (activeDragRef.current === "TARGET") {
+        setTempTargetPrice(roundedPrice);
       }
     };
 
     const handleMouseUp = () => {
-      isDraggingRef.current = false;
+      if (!activeDragRef.current) return;
+
+      if (activeDragRef.current === "STOP" && tempStopPrice && onUpdateLevels) {
+        onUpdateLevels(symbol, tempStopPrice, undefined);
+      } else if (activeDragRef.current === "TARGET" && tempTargetPrice && onUpdateLevels) {
+        onUpdateLevels(symbol, undefined, tempTargetPrice);
+      }
+
+      activeDragRef.current = null;
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -442,23 +502,63 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isLimitDraggable, onLimitPriceChange, currentLtp, orderSide, candles]);
+  }, [
+    isLimitDraggable,
+    onLimitPriceChange,
+    currentLtp,
+    orderSide,
+    candles,
+    symbol,
+    tempStopPrice,
+    tempTargetPrice,
+    onUpdateLevels,
+  ]);
 
   return (
     <div className="w-full h-full relative select-none">
       <div ref={chartContainerRef} className="w-full h-full" />
 
-      {/* Interactive Draggable Slider Bar on Limit Price */}
-      {isLimitDraggable && orderType === "LIMIT" && dragY !== null && dragY >= 0 && (
+      {/* 1. Interactive Limit Drag Handle */}
+      {isLimitDraggable && orderType === "LIMIT" && dragLimitY !== null && dragLimitY >= 0 && (
         <div
-          onMouseDown={handleMouseDown}
-          style={{ top: `${dragY - 10}px` }}
+          onMouseDown={handleLimitMouseDown}
+          style={{ top: `${dragLimitY - 10}px` }}
           className="absolute left-0 right-14 h-5 z-20 flex items-center cursor-ns-resize group"
           title="Drag up/down to adjust limit entry price"
         >
           <div className="w-full h-[2px] bg-foreground/40 group-hover:bg-foreground transition" />
-          <div className="px-2 py-0.5 rounded bg-surface border border-surface-border text-[10px]  font-black text-foreground shadow-md shrink-0 flex items-center gap-1 group-hover:border-foreground/60 transition">
+          <div className="px-2 py-0.5 rounded bg-surface border border-surface-border text-[10px] font-black text-foreground shadow-md shrink-0 flex items-center gap-1 group-hover:border-foreground/60 transition">
             <span>⇅ DRAG LIMIT: ₹{limitPrice?.toFixed(2)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Interactive Stop Loss Drag Handle */}
+      {hasActivePosition && activeStop && activeStop > 0 && dragStopY !== null && dragStopY >= 0 && (
+        <div
+          onMouseDown={handleStopMouseDown}
+          style={{ top: `${dragStopY - 10}px` }}
+          className="absolute left-0 right-14 h-5 z-20 flex items-center cursor-ns-resize group"
+          title="Drag up/down to adjust Stop Loss"
+        >
+          <div className="w-full h-[2px] bg-rose-500/40 group-hover:bg-rose-500 transition" />
+          <div className="px-2 py-0.5 rounded bg-surface border border-rose-500/40 text-[10px] font-black text-rose-500 shadow-md shrink-0 flex items-center gap-1 group-hover:border-rose-500 transition">
+            <span>⇅ DRAG SL: ₹{activeStop?.toFixed(2)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Interactive Target Price Drag Handle */}
+      {hasActivePosition && activeTarget && activeTarget > 0 && dragTargetY !== null && dragTargetY >= 0 && (
+        <div
+          onMouseDown={handleTargetMouseDown}
+          style={{ top: `${dragTargetY - 10}px` }}
+          className="absolute left-0 right-14 h-5 z-20 flex items-center cursor-ns-resize group"
+          title="Drag up/down to adjust Target Price"
+        >
+          <div className="w-full h-[2px] bg-emerald-500/40 group-hover:bg-emerald-500 transition" />
+          <div className="px-2 py-0.5 rounded bg-surface border border-emerald-500/40 text-[10px] font-black text-emerald-500 shadow-md shrink-0 flex items-center gap-1 group-hover:border-emerald-500 transition">
+            <span>⇅ DRAG TP: ₹{activeTarget?.toFixed(2)}</span>
           </div>
         </div>
       )}

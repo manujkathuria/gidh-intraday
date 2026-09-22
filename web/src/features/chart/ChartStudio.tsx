@@ -124,6 +124,9 @@ export const ChartStudio: React.FC = () => {
             onLimitPriceChange={setLimitPrice}
             orderSide={displayOrderSide}
             orderType={displayOrderType}
+            hasActivePosition={hasActivePosition}
+            positionSide={positionSide}
+            onUpdateLevels={updatePositionLevels}
           />
         </div>
       </div>

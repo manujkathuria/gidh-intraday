@@ -27,6 +27,8 @@ export interface ChartProps {
   onLimitPriceChange?: (price: number) => void;
   orderSide?: "LONG" | "SHORT";
   orderType?: "MARKET" | "LIMIT";
-  onChangeLevels?: (sl?: number, tp?: number) => void;
+  hasActivePosition?: boolean;
+  positionSide?: "LONG" | "SHORT";
+  onUpdateLevels?: (symbol: string, sl?: number | null, tp?: number | null) => Promise<boolean>;
 }
 
