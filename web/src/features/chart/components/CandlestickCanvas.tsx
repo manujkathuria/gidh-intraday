@@ -90,8 +90,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       lineWidth: 2,
       lineStyle: LineStyle.Solid,
       priceLineVisible: false,
-      lastValueVisible: false,
-      title: "VWAP",
+      lastValueVisible: true,
     });
 
     const upper1Series = chart.addSeries(LineSeries, {
@@ -99,8 +98,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       lineWidth: 1,
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
-      lastValueVisible: false,
-      title: "+1σ",
+      lastValueVisible: true,
     });
 
     const lower1Series = chart.addSeries(LineSeries, {
@@ -108,8 +106,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       lineWidth: 1,
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
-      lastValueVisible: false,
-      title: "-1σ",
+      lastValueVisible: true,
     });
 
     const upper2Series = chart.addSeries(LineSeries, {
@@ -117,8 +114,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       lineWidth: 1,
       lineStyle: LineStyle.Dotted,
       priceLineVisible: false,
-      lastValueVisible: false,
-      title: "+2σ",
+      lastValueVisible: true,
     });
 
     const lower2Series = chart.addSeries(LineSeries, {
@@ -126,8 +122,7 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       lineWidth: 1,
       lineStyle: LineStyle.Dotted,
       priceLineVisible: false,
-      lastValueVisible: false,
-      title: "-2σ",
+      lastValueVisible: true,
     });
 
     chartRef.current = chart;
@@ -319,24 +314,23 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       entryLineRef.current = null;
     }
 
-    // Stop Loss Line
-    if (displayStopPrice && displayStopPrice > 0) {
-      const isEditingSL = editingLevelType === "SL";
+    // Stop Loss Line (Hide static canvas line when actively dragging/editing SL)
+    if (displayStopPrice && displayStopPrice > 0 && editingLevelType !== "SL") {
       if (!stopLineRef.current) {
         stopLineRef.current = series.createPriceLine({
           price: displayStopPrice,
           color: "#EF4444",
-          lineWidth: isEditingSL ? 2 : 1,
-          lineStyle: isEditingSL ? LineStyle.Solid : LineStyle.Dashed,
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
           axisLabelVisible: true,
-          title: isEditingSL ? "EDIT STOP" : "STOP",
+          title: "STOP",
         });
       } else {
         stopLineRef.current.applyOptions({
           price: displayStopPrice,
-          lineWidth: isEditingSL ? 2 : 1,
-          lineStyle: isEditingSL ? LineStyle.Solid : LineStyle.Dashed,
-          title: isEditingSL ? "EDIT STOP" : "STOP",
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          title: "STOP",
         });
       }
     } else if (stopLineRef.current) {
@@ -344,24 +338,23 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       stopLineRef.current = null;
     }
 
-    // Target Line
-    if (displayTargetPrice && displayTargetPrice > 0) {
-      const isEditingTP = editingLevelType === "TP";
+    // Target Line (Hide static canvas line when actively dragging/editing TP)
+    if (displayTargetPrice && displayTargetPrice > 0 && editingLevelType !== "TP") {
       if (!targetLineRef.current) {
         targetLineRef.current = series.createPriceLine({
           price: displayTargetPrice,
           color: "#10B981",
-          lineWidth: isEditingTP ? 2 : 1,
-          lineStyle: isEditingTP ? LineStyle.Solid : LineStyle.Dashed,
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
           axisLabelVisible: true,
-          title: isEditingTP ? "EDIT TARGET" : "TARGET",
+          title: "TARGET",
         });
       } else {
         targetLineRef.current.applyOptions({
           price: displayTargetPrice,
-          lineWidth: isEditingTP ? 2 : 1,
-          lineStyle: isEditingTP ? LineStyle.Solid : LineStyle.Dashed,
-          title: isEditingTP ? "EDIT TARGET" : "TARGET",
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          title: "TARGET",
         });
       }
     } else if (targetLineRef.current) {
