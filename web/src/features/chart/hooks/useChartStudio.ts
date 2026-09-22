@@ -140,12 +140,12 @@ export function useChartStudio() {
   const lastClose = chartCandles.length > 0 ? chartCandles[chartCandles.length - 1].close : 0;
   const currentPrice = lastClose > 0 ? lastClose : (stockInfo?.price || 0);
 
-  // Reset limitPrice to fresh LTP whenever active symbol changes or new candles load
+  // Reset limitPrice when active symbol changes
   useEffect(() => {
     if (currentPrice > 0) {
       setLimitPrice(currentPrice);
     }
-  }, [activeSymbol, currentPrice]);
+  }, [activeSymbol]); // only depend on activeSymbol so live 1Hz ticks don't overwrite user's dragged price
 
   // Connect on-demand 1Hz Chart WebSocket stream
   useEffect(() => {
