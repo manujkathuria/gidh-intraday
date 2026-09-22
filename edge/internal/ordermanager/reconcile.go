@@ -143,15 +143,18 @@ func (m *Manager) reconcilePositions(ctx context.Context) error {
 			side = SideShort
 		}
 		quantity := int(math.Abs(float64(brokerPosition.Quantity)))
-		stop, target := fixedLevels(side, brokerPosition.AveragePrice)
 		position := localBySymbol[brokerPosition.Symbol]
 		eventType := "POSITION_UPDATED"
+		var stop, target float64
 		if position == nil {
 			eventType = "POSITION_OPENED"
 			position = &ActivePosition{
 				Symbol: brokerPosition.Symbol, OpenedAt: time.Now(),
 				Invalidation: "BROKER_DISCOVERED", BrokerOrderID: "ZERODHA_RECONCILED",
 			}
+		} else {
+			stop = position.StopLossPrice
+			target = position.TargetPrice
 		}
 		position.InstrumentToken = brokerPosition.InstrumentToken
 		position.Exchange = brokerPosition.Exchange
@@ -161,8 +164,8 @@ func (m *Manager) reconcilePositions(ctx context.Context) error {
 		position.CurrentLTP = brokerPosition.LastPrice
 		position.PnLINR = brokerPosition.PnL
 		position.StopFloorPct = -1
-		position.StopLossPrice = roundPrice(stop)
-		position.TargetPrice = roundPrice(target)
+		position.StopLossPrice = stop
+		position.TargetPrice = target
 		position.UpdatedAt = time.Now()
 		if position.EntryPrice > 0 && position.CurrentLTP > 0 {
 			diff := position.CurrentLTP - position.EntryPrice
