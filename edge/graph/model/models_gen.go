@@ -76,6 +76,8 @@ type Candle struct {
 	VwapUpper2 *float64 `json:"vwapUpper2,omitempty"`
 	VwapLower2 *float64 `json:"vwapLower2,omitempty"`
 	Rvol       *float64 `json:"rvol,omitempty"`
+	Pdh        *float64 `json:"pdh,omitempty"`
+	Pdl        *float64 `json:"pdl,omitempty"`
 }
 
 type ClosedPosition struct {

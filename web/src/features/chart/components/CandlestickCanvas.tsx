@@ -50,6 +50,8 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
   const stopLineRef = useRef<any>(null);
   const targetLineRef = useRef<any>(null);
   const limitLineRef = useRef<any>(null);
+  const pdhLineRef = useRef<any>(null);
+  const pdlLineRef = useRef<any>(null);
 
   // Drag coordinates state
   const [dragLimitY, setDragLimitY] = useState<number | null>(null);
@@ -158,6 +160,8 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
       stopLineRef.current = null;
       targetLineRef.current = null;
       limitLineRef.current = null;
+      pdhLineRef.current = null;
+      pdlLineRef.current = null;
     };
   }, []);
 
@@ -392,7 +396,82 @@ export const CandlestickCanvas: React.FC<ChartProps> = ({
     }
   }, [limitPrice, orderType, orderSide]);
 
-  // 6. Update Drag Handles Coordinates
+  // 6. Render Previous Day High (PDH) & Previous Day Low (PDL) Lines
+  useEffect(() => {
+    if (!candleSeriesRef.current) return;
+    const series = candleSeriesRef.current;
+
+    if (!isIntraday || !candles || candles.length === 0) {
+      if (pdhLineRef.current) {
+        series.removePriceLine(pdhLineRef.current);
+        pdhLineRef.current = null;
+      }
+      if (pdlLineRef.current) {
+        series.removePriceLine(pdlLineRef.current);
+        pdlLineRef.current = null;
+      }
+      return;
+    }
+
+    // Extract PDH and PDL from candle data
+    const latestCandle = candles[candles.length - 1];
+    const pdh = latestCandle?.pdh ?? candles.find((c) => (c?.pdh ?? 0) > 0)?.pdh;
+    const pdl = latestCandle?.pdl ?? candles.find((c) => (c?.pdl ?? 0) > 0)?.pdl;
+
+    const levelColor = isDark ? "#E2E8F0" : "#334155";
+
+    // Previous Day High (PDH)
+    if (pdh && pdh > 0) {
+      if (!pdhLineRef.current) {
+        pdhLineRef.current = series.createPriceLine({
+          price: pdh,
+          color: levelColor,
+          lineWidth: 1,
+          lineStyle: LineStyle.LargeDashed,
+          axisLabelVisible: true,
+          title: "PDH",
+        });
+      } else {
+        pdhLineRef.current.applyOptions({
+          price: pdh,
+          color: levelColor,
+          lineWidth: 1,
+          lineStyle: LineStyle.LargeDashed,
+          title: "PDH",
+        });
+      }
+    } else if (pdhLineRef.current) {
+      series.removePriceLine(pdhLineRef.current);
+      pdhLineRef.current = null;
+    }
+
+    // Previous Day Low (PDL) - Matching PDH Color
+    if (pdl && pdl > 0) {
+      if (!pdlLineRef.current) {
+        pdlLineRef.current = series.createPriceLine({
+          price: pdl,
+          color: levelColor,
+          lineWidth: 1,
+          lineStyle: LineStyle.LargeDashed,
+          axisLabelVisible: true,
+          title: "PDL",
+        });
+      } else {
+        pdlLineRef.current.applyOptions({
+          price: pdl,
+          color: levelColor,
+          lineWidth: 1,
+          lineStyle: LineStyle.LargeDashed,
+          title: "PDL",
+        });
+      }
+    } else if (pdlLineRef.current) {
+      series.removePriceLine(pdlLineRef.current);
+      pdlLineRef.current = null;
+    }
+  }, [candles, isIntraday, isDark]);
+
+  // 7. Update Drag Handles Coordinates
   const updateCoordinates = useCallback(() => {
     if (!candleSeriesRef.current) {
       setDragLimitY(null);

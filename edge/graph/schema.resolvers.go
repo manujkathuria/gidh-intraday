@@ -400,10 +400,14 @@ func (r *queryResolver) Candles(ctx context.Context, symbol string, date string,
 			(array_agg(f.vwap_lower_1 ORDER BY c.ts DESC))[1] as vwap_lower_1,
 			(array_agg(f.vwap_upper_2 ORDER BY c.ts DESC))[1] as vwap_upper_2,
 			(array_agg(f.vwap_lower_2 ORDER BY c.ts DESC))[1] as vwap_lower_2,
-			(array_agg(COALESCE(f.relative_volume, 1.0) ORDER BY c.ts DESC))[1] as rvol
+			(array_agg(COALESCE(f.relative_volume, 1.0) ORDER BY c.ts DESC))[1] as rvol,
+			MAX(df.prior_high) as pdh,
+			MIN(df.prior_low) as pdl
 		FROM market.cash_candles_1m c
 		JOIN market.instruments i ON c.instrument_id = i.id
 		LEFT JOIN market.intraday_features_1m f ON f.instrument_id = i.id AND f.ts = c.ts
+		LEFT JOIN market.feature_runs fr ON fr.session_date = (c.ts AT TIME ZONE 'Asia/Kolkata')::date AND fr.feature_set = 'DAILY' AND fr.status = 'SUCCEEDED'
+		LEFT JOIN market.daily_features df ON df.instrument_id = i.id AND df.feature_run_id = fr.id
 		WHERE i.symbol = $2 
 		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::date = $3::date
 		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time >= '09:15:00'::time
@@ -424,7 +428,7 @@ func (r *queryResolver) Candles(ctx context.Context, symbol string, date string,
 		var t int64
 		var open, high, low, close, vwap, rvol float64
 		var vol int64
-		var u1, l1, u2, l2 *float64
+		var u1, l1, u2, l2, pdh, pdl *float64
 
 		if err := rows.Scan(
 			&t,
@@ -439,6 +443,8 @@ func (r *queryResolver) Candles(ctx context.Context, symbol string, date string,
 			&u2,
 			&l2,
 			&rvol,
+			&pdh,
+			&pdl,
 		); err != nil {
 			return nil, err
 		}
@@ -455,6 +461,8 @@ func (r *queryResolver) Candles(ctx context.Context, symbol string, date string,
 		c.VwapUpper2 = u2
 		c.VwapLower2 = l2
 		c.Rvol = &rvol
+		c.Pdh = pdh
+		c.Pdl = pdl
 
 		candles = append(candles, &c)
 	}
@@ -657,10 +665,14 @@ func (r *queryResolver) ReplayCandles(ctx context.Context, sessionDate string, s
 			f.vwap_lower_1,
 			f.vwap_upper_2,
 			f.vwap_lower_2,
-			COALESCE(f.relative_volume, 1.0) as rvol
+			COALESCE(f.relative_volume, 1.0) as rvol,
+			df.prior_high as pdh,
+			df.prior_low as pdl
 		FROM market.cash_candles_1m c
 		JOIN market.instruments i ON c.instrument_id = i.id
 		LEFT JOIN market.intraday_features_1m f ON f.instrument_id = i.id AND f.ts = c.ts
+		LEFT JOIN market.feature_runs fr ON fr.session_date = (c.ts AT TIME ZONE 'Asia/Kolkata')::date AND fr.feature_set = 'DAILY' AND fr.status = 'SUCCEEDED'
+		LEFT JOIN market.daily_features df ON df.instrument_id = i.id AND df.feature_run_id = fr.id
 		WHERE i.symbol = $1 
 		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::date = $2::date 
 		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time >= '09:15:00'::time
@@ -680,7 +692,7 @@ func (r *queryResolver) ReplayCandles(ctx context.Context, sessionDate string, s
 		var t int64
 		var open, high, low, close, vwap, rvol float64
 		var vol int64
-		var u1, l1, u2, l2 *float64
+		var u1, l1, u2, l2, pdh, pdl *float64
 
 		if err := rows.Scan(
 			&t,
@@ -695,6 +707,8 @@ func (r *queryResolver) ReplayCandles(ctx context.Context, sessionDate string, s
 			&u2,
 			&l2,
 			&rvol,
+			&pdh,
+			&pdl,
 		); err != nil {
 			return nil, err
 		}
@@ -711,6 +725,8 @@ func (r *queryResolver) ReplayCandles(ctx context.Context, sessionDate string, s
 		c.VwapUpper2 = u2
 		c.VwapLower2 = l2
 		c.Rvol = &rvol
+		c.Pdh = pdh
+		c.Pdl = pdl
 
 		candles = append(candles, &c)
 	}

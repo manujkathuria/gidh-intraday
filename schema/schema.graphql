@@ -72,6 +72,8 @@ type Candle {
   vwapUpper2: Float
   vwapLower2: Float
   rvol: Float
+  pdh: Float
+  pdl: Float
 }
 
 """

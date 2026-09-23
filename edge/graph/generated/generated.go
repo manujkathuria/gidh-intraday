@@ -103,6 +103,8 @@ type ComplexityRoot struct {
 		High       func(childComplexity int) int
 		Low        func(childComplexity int) int
 		Open       func(childComplexity int) int
+		Pdh        func(childComplexity int) int
+		Pdl        func(childComplexity int) int
 		Rvol       func(childComplexity int) int
 		Time       func(childComplexity int) int
 		Volume     func(childComplexity int) int
@@ -669,6 +671,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Candle.Open(childComplexity), true
+
+	case "Candle.pdh":
+		if e.complexity.Candle.Pdh == nil {
+			break
+		}
+
+		return e.complexity.Candle.Pdh(childComplexity), true
+
+	case "Candle.pdl":
+		if e.complexity.Candle.Pdl == nil {
+			break
+		}
+
+		return e.complexity.Candle.Pdl(childComplexity), true
 
 	case "Candle.rvol":
 		if e.complexity.Candle.Rvol == nil {
@@ -2080,6 +2096,8 @@ type Candle {
   vwapUpper2: Float
   vwapLower2: Float
   rvol: Float
+  pdh: Float
+  pdl: Float
 }
 
 """
@@ -5539,6 +5557,88 @@ func (ec *executionContext) _Candle_rvol(ctx context.Context, field graphql.Coll
 }
 
 func (ec *executionContext) fieldContext_Candle_rvol(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Candle",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Candle_pdh(ctx context.Context, field graphql.CollectedField, obj *model.Candle) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Candle_pdh(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Pdh, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Candle_pdh(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Candle",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Candle_pdl(ctx context.Context, field graphql.CollectedField, obj *model.Candle) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Candle_pdl(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Pdl, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Candle_pdl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Candle",
 		Field:      field,
@@ -9694,6 +9794,10 @@ func (ec *executionContext) fieldContext_Query_candles(ctx context.Context, fiel
 				return ec.fieldContext_Candle_vwapLower2(ctx, field)
 			case "rvol":
 				return ec.fieldContext_Candle_rvol(ctx, field)
+			case "pdh":
+				return ec.fieldContext_Candle_pdh(ctx, field)
+			case "pdl":
+				return ec.fieldContext_Candle_pdl(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Candle", field.Name)
 		},
@@ -9911,6 +10015,10 @@ func (ec *executionContext) fieldContext_Query_replayCandles(ctx context.Context
 				return ec.fieldContext_Candle_vwapLower2(ctx, field)
 			case "rvol":
 				return ec.fieldContext_Candle_rvol(ctx, field)
+			case "pdh":
+				return ec.fieldContext_Candle_pdh(ctx, field)
+			case "pdl":
+				return ec.fieldContext_Candle_pdl(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Candle", field.Name)
 		},
@@ -12819,6 +12927,10 @@ func (ec *executionContext) fieldContext_Subscription_candleStream(ctx context.C
 				return ec.fieldContext_Candle_vwapLower2(ctx, field)
 			case "rvol":
 				return ec.fieldContext_Candle_rvol(ctx, field)
+			case "pdh":
+				return ec.fieldContext_Candle_pdh(ctx, field)
+			case "pdl":
+				return ec.fieldContext_Candle_pdl(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Candle", field.Name)
 		},
@@ -15768,6 +15880,10 @@ func (ec *executionContext) _Candle(ctx context.Context, sel ast.SelectionSet, o
 			out.Values[i] = ec._Candle_vwapLower2(ctx, field, obj)
 		case "rvol":
 			out.Values[i] = ec._Candle_rvol(ctx, field, obj)
+		case "pdh":
+			out.Values[i] = ec._Candle_pdh(ctx, field, obj)
+		case "pdl":
+			out.Values[i] = ec._Candle_pdl(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

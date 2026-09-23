@@ -116,6 +116,8 @@ export interface Candle {
   vwap_upper_2?: number;
   vwap_lower_2?: number;
   rvol?: number;
+  pdh?: number;
+  pdl?: number;
 }
 
 export interface MarketStatus {
@@ -248,6 +250,8 @@ export async function fetchMultiIntervalCandles(
           vwap_upper_2: vwapUpper2
           vwap_lower_2: vwapLower2
           rvol
+          pdh
+          pdl
         }
       }
     `, { symbol, date, interval });
