@@ -107,8 +107,11 @@ func (r *DailyFeatureRepo) SaveReadiness(ctx context.Context, run DailyFeatureRu
 func (r *DailyFeatureRepo) SessionDates(ctx context.Context, from, to string) ([]string, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT DISTINCT session_date::text
-		FROM market.cash_candles_1d
-		WHERE session_date BETWEEN $1::date AND $2::date
+		FROM (
+			SELECT session_date FROM market.cash_candles_1d WHERE session_date BETWEEN $1::date AND $2::date
+			UNION
+			SELECT DISTINCT (ts AT TIME ZONE 'Asia/Kolkata')::date AS session_date FROM market.cash_candles_1m WHERE ts >= ($1::date::timestamp AT TIME ZONE 'Asia/Kolkata') AND ts < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
+		) s
 		ORDER BY session_date;
 	`, from, to)
 	if err != nil {

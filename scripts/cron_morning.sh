@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================================================
-# GIDH INTRADAY — MORNING REFRESH & EDGE RESTART CRON (08:45 IST)
+# GIDH INTRADAY — MORNING REFRESH, FEATURE BASELINE & EDGE RESTART CRON (08:45 IST)
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,27 +12,49 @@ cd "${APP_DIR}"
 mkdir -p logs
 
 LOG_FILE="${APP_DIR}/logs/morning-cron.log"
+LOCK_FILE="/tmp/gidh-morning.lock"
+
+exec 200>"${LOCK_FILE}"
+if command -v flock >/dev/null 2>&1; then
+    flock -n 200 || { echo "[WARN] Morning cron is already running. Exiting." >> "${LOG_FILE}"; exit 0; }
+fi
 
 echo "" >> "${LOG_FILE}"
 echo "================================================================" >> "${LOG_FILE}"
-echo " [MORNING CRON] Starting 08:45 IST Token Refresh & Edge Check: $(date)" >> "${LOG_FILE}"
+echo " [MORNING CRON] Starting 08:45 IST Token Refresh, Feature Baseline & Service Restart: $(date)" >> "${LOG_FILE}"
 echo "================================================================" >> "${LOG_FILE}"
 
 # 1. Run automated TOTP login to refresh KITE_ACCESS_TOKEN in .env
 if [ -f "${APP_DIR}/bin/gidh-auth" ]; then
-    echo "[1/3] Running ./bin/gidh-auth to refresh Zerodha access token..." >> "${LOG_FILE}"
+    echo "[1/4] Running ./bin/gidh-auth to refresh Zerodha access token..." >> "${LOG_FILE}"
     "${APP_DIR}/bin/gidh-auth" >> "${LOG_FILE}" 2>&1 || true
 else
-    echo "[ERROR] Missing ${APP_DIR}/bin/gidh-auth utility." >> "${LOG_FILE}"
-    exit 1
+    echo "[WARN] Missing ${APP_DIR}/bin/gidh-auth utility, attempting container fallback..." >> "${LOG_FILE}"
+    docker exec gidh-backend /app/bin/gidh-auth >> "${LOG_FILE}" 2>&1 || true
 fi
 
-# 2. Recreate edge and backend so Compose reloads the refreshed token from .env.
-echo "[2/3] Recreating gidh-edge and gidh-backend with refreshed credentials..." >> "${LOG_FILE}"
+# 2. Publish today's daily feature baseline for all 210 universe instruments
+TODAY=$(date +%Y-%m-%d)
+echo "[2/4] Publishing daily feature baseline for ${TODAY}..." >> "${LOG_FILE}"
+if [ -f "${APP_DIR}/bin/gidh-batch" ]; then
+    "${APP_DIR}/bin/gidh-batch" features daily --session-date "${TODAY}" >> "${LOG_FILE}" 2>&1 || {
+        echo "[WARN] Host ./bin/gidh-batch failed, attempting container execution..." >> "${LOG_FILE}"
+        docker exec gidh-backend /app/bin/gidh-batch features daily --session-date "${TODAY}" >> "${LOG_FILE}" 2>&1 || true
+    }
+else
+    docker exec gidh-backend /app/bin/gidh-batch features daily --session-date "${TODAY}" >> "${LOG_FILE}" 2>&1 || true
+fi
+
+# 3. Recreate edge and backend so Compose reloads the refreshed token and binds to today's feature RunID
+echo "[3/5] Recreating gidh-edge and gidh-backend with refreshed credentials and feature baseline..." >> "${LOG_FILE}"
 docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate edge backend >> "${LOG_FILE}" 2>&1
 
-# 3. Health check verification loop (up to 20s)
-echo "[3/3] Verifying edge & backend health..." >> "${LOG_FILE}"
+# 4. Reload Nginx so upstream DNS/IP mapping for edge is updated immediately
+echo "[4/5] Reloading Nginx reverse proxy..." >> "${LOG_FILE}"
+docker exec gidh-nginx nginx -s reload >> "${LOG_FILE}" 2>&1 || docker restart gidh-nginx >> "${LOG_FILE}" 2>&1
+
+# 5. Health check verification loop (up to 20s)
+echo "[5/5] Verifying edge & backend health..." >> "${LOG_FILE}"
 HEALTHY=false
 for i in {1..10}; do
     sleep 2

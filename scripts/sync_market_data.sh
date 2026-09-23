@@ -59,7 +59,6 @@ for DATE in "${DATES[@]}"; do
         DELETE FROM market.daily_features WHERE feature_run_id IN (SELECT id FROM market.feature_runs WHERE session_date = '${DATE}');
         DELETE FROM market.data_readiness WHERE session_date = '${DATE}';
         DELETE FROM market.feature_runs WHERE session_date = '${DATE}';
-        DELETE FROM market.preopen_snapshots WHERE session_date = '${DATE}';
     "
 
     # A. Sync feature_runs for this date
@@ -99,11 +98,6 @@ for DATE in "${DATES[@]}"; do
     echo " -> market.data_readiness"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.data_readiness WHERE session_date = '${DATE}') TO STDOUT WITH (FORMAT csv);\"" \
         | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.data_readiness FROM STDIN WITH (FORMAT csv);"
-
-    # G. Preopen snapshots
-    echo " -> market.preopen_snapshots"
-    ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.preopen_snapshots WHERE session_date = '${DATE}') TO STDOUT WITH (FORMAT csv);\"" \
-        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.preopen_snapshots FROM STDIN WITH (FORMAT csv);"
 
     echo "==> Completed sync for ${DATE}"
 done

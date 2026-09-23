@@ -35,8 +35,25 @@ func (e *UniverseStreamEngine) runMinuteFlusher(ctx context.Context) {
 }
 
 func (e *UniverseStreamEngine) flushCompletedMinute(ctx context.Context, candleTime, nowIST time.Time) {
+	// NSE regular trading session is 09:15 to 15:30 IST.
+	// Minutes of day: 09:15 = 555, 15:30 = 930.
+	// Any candle before 09:15:00 IST (pre-open 09:08-09:14) or at/after 15:30:00 IST is silently dropped.
+	candleMin := candleTime.Hour()*60 + candleTime.Minute()
+	if candleMin < 555 || candleMin >= 930 {
+		e.mu.Lock()
+		for _, s := range e.instruments {
+			if s.HasTickInMinute && s.MinClose > 0 {
+				s.LastClose = s.MinClose
+			}
+			s.HasTickInMinute = false
+			s.MinOpen, s.MinHigh, s.MinLow, s.MinClose, s.MinVolume = 0, 0, 0, 0, 0
+		}
+		e.mu.Unlock()
+		return
+	}
+
 	start := time.Now()
-	minutesSinceOpen := int16(candleTime.Hour()*60 + candleTime.Minute() - 555)
+	minutesSinceOpen := int16(candleMin - 555)
 	if minutesSinceOpen < 0 {
 		minutesSinceOpen = 0
 	}

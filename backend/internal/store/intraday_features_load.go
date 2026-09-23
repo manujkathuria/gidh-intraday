@@ -89,6 +89,8 @@ func (r *DailyFeatureRepo) LoadTodayCandles(ctx context.Context, sessionDate str
 		SELECT instrument_id, ts, open, high, low, close, volume
 		FROM market.cash_candles_1m
 		WHERE (ts AT TIME ZONE 'Asia/Kolkata')::date = $1::date
+		  AND (ts AT TIME ZONE 'Asia/Kolkata')::time >= '09:15:00'::time
+		  AND (ts AT TIME ZONE 'Asia/Kolkata')::time < '15:30:00'::time
 		ORDER BY instrument_id, ts ASC;
 	`, sessionDate)
 	if err != nil {

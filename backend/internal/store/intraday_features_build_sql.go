@@ -13,6 +13,8 @@ WITH target_sessions AS (
 	FROM market.cash_candles_1m
 	WHERE ts >= ((($1::date - 40)::timestamp) AT TIME ZONE 'Asia/Kolkata')
 		AND ts < ($2::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+		AND (ts AT TIME ZONE 'Asia/Kolkata')::time >= '09:15:00'::time
+		AND (ts AT TIME ZONE 'Asia/Kolkata')::time < '15:30:00'::time
 ), historical_ranked AS (
 	SELECT t.session_date, c.instrument_id, c.minute_of_day, c.cum_vol,
 		ROW_NUMBER() OVER (PARTITION BY t.session_date, c.instrument_id, c.minute_of_day ORDER BY c.dt DESC) AS session_rank
@@ -30,6 +32,8 @@ WITH target_sessions AS (
 	JOIN market.instruments i ON i.id = c.instrument_id AND i.is_active
 	WHERE c.ts >= ($1::date::timestamp AT TIME ZONE 'Asia/Kolkata')
 		AND c.ts < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
+		AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time >= '09:15:00'::time
+		AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time < '15:30:00'::time
 ), cash_numbered AS (
 	SELECT *, ROW_NUMBER() OVER (PARTITION BY instrument_id, session_date ORDER BY ts) - 1 AS minutes_since_open
 	FROM cash_target_base

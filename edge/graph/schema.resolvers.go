@@ -405,7 +405,9 @@ func (r *queryResolver) Candles(ctx context.Context, symbol string, date string,
 		JOIN market.instruments i ON c.instrument_id = i.id
 		LEFT JOIN market.intraday_features_1m f ON f.instrument_id = i.id AND f.ts = c.ts
 		WHERE i.symbol = $2 
-		  AND c.ts::date = $3::date
+		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::date = $3::date
+		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time >= '09:15:00'::time
+		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time < '15:30:00'::time
 		GROUP BY 1
 		ORDER BY 1 ASC;
 	`
@@ -472,8 +474,9 @@ func (r *queryResolver) ReplaySnapshot(ctx context.Context, sessionDate string, 
 	}
 
 	// Use precise timestamp range for index scan on (instrument_id, ts DESC)
-	startTs := fmt.Sprintf("%s 09:15:00", sessionDate)
-	endTs := fmt.Sprintf("%s %s", sessionDate, asOf)
+	// Database timestamps are stored in UTC, sessionDate and asOf are IST (+05:30)
+	startTs := fmt.Sprintf("%s 09:15:00+05:30", sessionDate)
+	endTs := fmt.Sprintf("%s %s+05:30", sessionDate, asOf)
 
 	sql := `
 		WITH latest_min AS (
@@ -659,8 +662,9 @@ func (r *queryResolver) ReplayCandles(ctx context.Context, sessionDate string, s
 		JOIN market.instruments i ON c.instrument_id = i.id
 		LEFT JOIN market.intraday_features_1m f ON f.instrument_id = i.id AND f.ts = c.ts
 		WHERE i.symbol = $1 
-		  AND c.ts::date = $2::date 
-		  AND c.ts::time <= $3::time
+		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::date = $2::date 
+		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time >= '09:15:00'::time
+		  AND (c.ts AT TIME ZONE 'Asia/Kolkata')::time <= $3::time
 		ORDER BY c.ts ASC;
 	`
 
