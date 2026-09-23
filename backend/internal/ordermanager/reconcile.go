@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math"
 	"time"
 
 	"gidh-intraday/backend/internal/broker"
@@ -44,75 +43,17 @@ func (m *Manager) Reconcile(ctx context.Context) error {
 		firstErr = brokerListErr
 	}
 	for _, order := range orders {
-		if terminal(order.Status) {
-			continue
-		}
-		if order.Status == StatusPending {
+		if terminal(order.Status) || order.Status == StatusPending {
 			continue
 		}
 		if order.BrokerOrderID == "" {
-			discovered, ok := byTag[order.BrokerTag]
-			if !ok {
-				if order.Status == StatusTriggering {
-					reset, resetErr := m.store.Transition(ctx, order, StatusPending, func(next *ManagedOrder) {
-						next.RejectionReason = ""
-					})
-					if resetErr == nil {
-						_ = m.index.addPending(ctx, reset.InstrumentToken, reset.ID)
-					} else if firstErr == nil {
-						firstErr = resetErr
-					}
-				} else if order.Status == StatusSubmitting && time.Since(order.UpdatedAt) >= 15*time.Second {
-					_, transitionErr := m.store.Transition(ctx, order, StatusReconcileRequired, func(next *ManagedOrder) {
-						next.RejectionReason = "submission outcome is unknown; broker reconciliation required"
-					})
-					if transitionErr != nil && firstErr == nil {
-						firstErr = transitionErr
-					}
-				}
-				continue
-			}
-			nextStatus := StatusSubmitted
-			if order.IsExit {
-				nextStatus = StatusExitSubmitted
-			}
-			order, err = m.store.Transition(ctx, order, nextStatus, func(next *ManagedOrder) {
-				next.BrokerOrderID = discovered.OrderID
-			})
-			if err != nil {
-				if firstErr == nil {
-					firstErr = err
-				}
+			var handled bool
+			order, handled, firstErr = m.reconcileMissingBrokerOrder(ctx, order, byTag, firstErr)
+			if !handled {
 				continue
 			}
 		}
-		brokerOrder, getErr := m.broker.GetOrder(ctx, order.BrokerOrderID)
-		if getErr != nil {
-			if firstErr == nil {
-				firstErr = fmt.Errorf("reconcile %s: %w", order.ID, getErr)
-			}
-			continue
-		}
-		if order.IsExit {
-			if brokerOrder.Status == "COMPLETE" {
-				position, positionErr := m.store.GetPosition(ctx, order.Symbol)
-				if positionErr == nil {
-					_, getErr = m.applyExitFill(ctx, order, position, brokerOrder)
-				}
-			} else if brokerOrder.Status == "REJECTED" || brokerOrder.Status == "CANCELLED" {
-				_, getErr = m.store.Transition(ctx, order, StatusRejected, func(next *ManagedOrder) {
-					next.RejectionReason = brokerOrder.StatusMessage
-				})
-				if getErr == nil {
-					_ = m.store.ReleasePositionExit(ctx, order.Symbol)
-				}
-			}
-		} else {
-			_, getErr = m.applyBrokerEntryStatus(ctx, order, brokerOrder)
-		}
-		if getErr != nil && firstErr == nil {
-			firstErr = getErr
-		}
+		firstErr = m.reconcileOrderState(ctx, order, firstErr)
 	}
 	if m.config.LiveExecution {
 		if positionErr := m.reconcilePositions(ctx); positionErr != nil && firstErr == nil {
@@ -122,72 +63,69 @@ func (m *Manager) Reconcile(ctx context.Context) error {
 	return firstErr
 }
 
-func (m *Manager) reconcilePositions(ctx context.Context) error {
-	brokerPositions, err := m.broker.GetPositions(ctx)
-	if err != nil {
-		return fmt.Errorf("fetch broker positions: %w", err)
-	}
-	localPositions, err := m.store.ListPositions(ctx)
-	if err != nil {
-		return err
-	}
-	localBySymbol := make(map[string]*ActivePosition, len(localPositions))
-	for _, position := range localPositions {
-		localBySymbol[position.Symbol] = position
-	}
-	seen := make(map[string]struct{}, len(brokerPositions))
-	for _, brokerPosition := range brokerPositions {
-		seen[brokerPosition.Symbol] = struct{}{}
-		side := SideLong
-		if brokerPosition.Quantity < 0 {
-			side = SideShort
-		}
-		quantity := int(math.Abs(float64(brokerPosition.Quantity)))
-		position := localBySymbol[brokerPosition.Symbol]
-		eventType := "POSITION_UPDATED"
-		var stop, target float64
-		if position == nil {
-			eventType = "POSITION_OPENED"
-			position = &ActivePosition{
-				Symbol: brokerPosition.Symbol, OpenedAt: time.Now(),
-				Invalidation: "BROKER_DISCOVERED", BrokerOrderID: "ZERODHA_RECONCILED",
+func (m *Manager) reconcileMissingBrokerOrder(ctx context.Context, order *ManagedOrder, byTag map[string]broker.BrokerOrder, firstErr error) (*ManagedOrder, bool, error) {
+	discovered, ok := byTag[order.BrokerTag]
+	if !ok {
+		if order.Status == StatusTriggering {
+			reset, resetErr := m.store.Transition(ctx, order, StatusPending, func(next *ManagedOrder) {
+				next.RejectionReason = ""
+			})
+			if resetErr == nil {
+				_ = m.index.addPending(ctx, reset.InstrumentToken, reset.ID)
+			} else if firstErr == nil {
+				firstErr = resetErr
 			}
-		} else {
-			stop = position.StopLossPrice
-			target = position.TargetPrice
-		}
-		position.InstrumentToken = brokerPosition.InstrumentToken
-		position.Exchange = brokerPosition.Exchange
-		position.Side = side
-		position.Quantity = quantity
-		position.EntryPrice = brokerPosition.AveragePrice
-		position.CurrentLTP = brokerPosition.LastPrice
-		position.PnLINR = brokerPosition.PnL
-		position.StopFloorPct = -1
-		position.StopLossPrice = stop
-		position.TargetPrice = target
-		position.UpdatedAt = time.Now()
-		if position.EntryPrice > 0 && position.CurrentLTP > 0 {
-			diff := position.CurrentLTP - position.EntryPrice
-			if position.Side == SideShort {
-				diff = -diff
+		} else if order.Status == StatusSubmitting && time.Since(order.UpdatedAt) >= 15*time.Second {
+			_, transitionErr := m.store.Transition(ctx, order, StatusReconcileRequired, func(next *ManagedOrder) {
+				next.RejectionReason = "submission outcome is unknown; broker reconciliation required"
+			})
+			if transitionErr != nil && firstErr == nil {
+				firstErr = transitionErr
 			}
-			position.PnLPct = diff / position.EntryPrice * 100
 		}
-		if err := m.store.SavePosition(ctx, position, eventType); err != nil {
-			return err
-		}
-		_ = m.index.addPosition(ctx, position)
+		return order, false, firstErr
 	}
-	for _, position := range localPositions {
-		if _, ok := seen[position.Symbol]; ok {
-			continue
-		}
-		payload := map[string]any{"symbol": position.Symbol, "exit_reason": "BROKER_RECONCILIATION"}
-		if err := m.store.RemovePosition(ctx, position.Symbol, payload); err != nil {
-			return err
-		}
-		_ = m.index.removePosition(ctx, position.InstrumentToken)
+	nextStatus := StatusSubmitted
+	if order.IsExit {
+		nextStatus = StatusExitSubmitted
 	}
-	return nil
+	var err error
+	order, err = m.store.Transition(ctx, order, nextStatus, func(next *ManagedOrder) {
+		next.BrokerOrderID = discovered.OrderID
+	})
+	if err != nil && firstErr == nil {
+		firstErr = err
+	}
+	return order, true, firstErr
+}
+
+func (m *Manager) reconcileOrderState(ctx context.Context, order *ManagedOrder, firstErr error) error {
+	brokerOrder, getErr := m.broker.GetOrder(ctx, order.BrokerOrderID)
+	if getErr != nil {
+		if firstErr == nil {
+			firstErr = fmt.Errorf("reconcile %s: %w", order.ID, getErr)
+		}
+		return firstErr
+	}
+	if order.IsExit {
+		if brokerOrder.Status == "COMPLETE" {
+			position, positionErr := m.store.GetPosition(ctx, order.Symbol)
+			if positionErr == nil {
+				_, getErr = m.applyExitFill(ctx, order, position, brokerOrder)
+			}
+		} else if brokerOrder.Status == "REJECTED" || brokerOrder.Status == "CANCELLED" {
+			_, getErr = m.store.Transition(ctx, order, StatusRejected, func(next *ManagedOrder) {
+				next.RejectionReason = brokerOrder.StatusMessage
+			})
+			if getErr == nil {
+				_ = m.store.ReleasePositionExit(ctx, order.Symbol)
+			}
+		}
+	} else {
+		_, getErr = m.applyBrokerEntryStatus(ctx, order, brokerOrder)
+	}
+	if getErr != nil && firstErr == nil {
+		firstErr = getErr
+	}
+	return firstErr
 }

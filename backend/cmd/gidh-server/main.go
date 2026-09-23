@@ -27,12 +27,10 @@ import (
 
 func main() {
 	_ = godotenv.Load(".env", "../.env")
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-
 	cfg, err := config.Load()
 	if err != nil {
 		log.Printf("[CONFIG WARN] %v", err)
@@ -41,7 +39,6 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// 1. Connect to TimescaleDB
 	db, err := store.NewDB(ctx, cfg.DBURL)
 	if err != nil {
 		log.Fatalf("[DB FATAL] Failed to connect to TimescaleDB: %v", err)
@@ -49,10 +46,7 @@ func main() {
 	defer db.Close()
 	log.Println("🐘 [TIMESCALEDB] Connected successfully.")
 
-	// 2. Connect to Redis
-	rdb := redis.NewClient(&redis.Options{
-		Addr: cfg.RedisAddr,
-	})
+	rdb := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr})
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		log.Printf("[REDIS WARN] Redis ping warning: %v", err)
 	} else {
@@ -60,19 +54,12 @@ func main() {
 	}
 	defer rdb.Close()
 
-	// 3. Optional Universe Market Data Streamer (Background Ingestion from Kite)
 	if cfg.KiteAPIKey != "" && cfg.KiteAccessToken != "" {
 		instRepo := store.NewMarketInstrumentRepo(db)
 		candleRepo := store.NewMarketCandleRepo(db)
 		featureRepo := store.NewDailyFeatureRepo(db)
 
-		streamEngine := marketdata.NewUniverseStreamEngine(
-			cfg.KiteAPIKey,
-			cfg.KiteAccessToken,
-			instRepo,
-			candleRepo,
-			featureRepo,
-		)
+		streamEngine := marketdata.NewUniverseStreamEngine(cfg.KiteAPIKey, cfg.KiteAccessToken, instRepo, candleRepo, featureRepo)
 		streamEngine.SetRedisClient(rdb)
 		streamEngine.SetSectorResolver(universe.ResolveSector)
 
@@ -84,7 +71,6 @@ func main() {
 		}
 	}
 
-	// 4. Initialize Live Zerodha Kite Order Execution Boundary
 	var orderManager *ordermanager.Manager
 	apiKey := strings.TrimSpace(os.Getenv("KITE_API_KEY"))
 	accessToken := strings.TrimSpace(os.Getenv("KITE_ACCESS_TOKEN"))
@@ -111,68 +97,13 @@ func main() {
 		log.Println("⚠️ [ORDER MANAGER] KITE_API_KEY/KITE_ACCESS_TOKEN missing. Live trading disabled.")
 	}
 
-	// 5. Auth Middleware
 	authMiddleware, err := auth.New(ctx)
 	if err != nil {
 		log.Printf("[AUTH WARN] Initializing auth: %v", err)
 	}
 
-	// 6. HTTP Router & WebSockets
 	mux := http.NewServeMux()
-	apiServer := api.NewServer(db, rdb, orderManager)
-	wsHub := ws.NewHub(db, rdb)
-
-	// WebSockets
-	mux.HandleFunc("/v1/stream/radar", wsHub.HandleRadarStream)
-	mux.HandleFunc("/v1/stream/chart", wsHub.HandleChartStream)
-	mux.HandleFunc("/v1/stream/orders", wsHub.HandleOrdersStream)
-	mux.HandleFunc("/v1/stream/sectors", wsHub.HandleSectorsStream)
-	mux.HandleFunc("/v1/live/orders/ws", wsHub.HandleLiveOrdersWS)
-	mux.HandleFunc("/v1/live/market/ws", wsHub.HandleLiveMarketWS)
-	mux.HandleFunc("/v1/replay/ws", wsHub.HandleReplayWS)
-
-	// REST API Endpoints
-	mux.HandleFunc("/api/market/status", apiServer.HandleMarketStatus)
-	mux.HandleFunc("/api/market/sessions", apiServer.HandleSessions)
-	mux.HandleFunc("/api/market/snapshot", apiServer.HandleMarketSnapshot)
-	mux.HandleFunc("/api/market/candles", apiServer.HandleCandles)
-	mux.HandleFunc("/api/candles", apiServer.HandleCandles)
-
-	mux.HandleFunc("/api/trading/positions", apiServer.HandleLivePositions)
-	mux.HandleFunc("/api/trading/closed-positions", apiServer.HandleClosedPositions)
-	mux.HandleFunc("/api/trading/orders", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			apiServer.HandlePlaceOrder(w, r)
-		} else {
-			apiServer.HandleManagedOrders(w, r)
-		}
-	})
-	mux.HandleFunc("/api/trading/positions/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/square-off") {
-			apiServer.HandleSquareOff(w, r)
-		} else if strings.HasSuffix(r.URL.Path, "/levels") {
-			apiServer.HandleUpdateLevels(w, r)
-		} else {
-			http.NotFound(w, r)
-		}
-	})
-	mux.HandleFunc("/api/trading/orders/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodDelete {
-			apiServer.HandleCancelOrder(w, r)
-		} else {
-			http.NotFound(w, r)
-		}
-	})
-	mux.HandleFunc("/api/trading/risk-state", apiServer.HandleRiskState)
-	mux.HandleFunc("/api/trading/risk-state/reset", apiServer.HandleResetTripwire)
-	mux.HandleFunc("/api/macro/brain-sessions", apiServer.HandleBrainSessions)
-
-	// Health check
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok","service":"gidh-server"}`))
-	})
+	registerRoutes(mux, api.NewServer(db, rdb, orderManager), ws.NewHub(db, rdb))
 
 	var handler http.Handler = mux
 	if authMiddleware != nil {
@@ -185,11 +116,9 @@ func main() {
 		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,
 	})
-	handler = c.Handler(handler)
-
 	server := &http.Server{
 		Addr:         ":" + port,
-		Handler:      handler,
+		Handler:      c.Handler(handler),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

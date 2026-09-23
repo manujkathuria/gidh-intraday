@@ -8,47 +8,10 @@ import (
 	"gidh-intraday/backend/internal/store"
 )
 
-func (e *UniverseStreamEngine) runMinuteFlusher(ctx context.Context) {
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	lastFlushedMinute := -1
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case t := <-ticker.C:
-			nowIST := t.In(e.loc)
-			currentMin := nowIST.Hour()*60 + nowIST.Minute()
-			currentSec := nowIST.Second()
-
-			if currentSec == 0 && currentMin != lastFlushedMinute {
-				if e.isMarketHours(nowIST) {
-					lastFlushedMinute = currentMin
-					candleTime := time.Date(nowIST.Year(), nowIST.Month(), nowIST.Day(), nowIST.Hour(), nowIST.Minute()-1, 0, 0, e.loc)
-					e.flushCompletedMinute(ctx, candleTime, nowIST)
-				}
-			}
-		}
-	}
-}
-
 func (e *UniverseStreamEngine) flushCompletedMinute(ctx context.Context, candleTime, nowIST time.Time) {
-	// NSE regular trading session is 09:15 to 15:30 IST.
-	// Minutes of day: 09:15 = 555, 15:30 = 930.
-	// Any candle before 09:15:00 IST (pre-open 09:08-09:14) or at/after 15:30:00 IST is silently dropped.
 	candleMin := candleTime.Hour()*60 + candleTime.Minute()
 	if candleMin < 555 || candleMin >= 930 {
-		e.mu.Lock()
-		for _, s := range e.instruments {
-			if s.HasTickInMinute && s.MinClose > 0 {
-				s.LastClose = s.MinClose
-			}
-			s.HasTickInMinute = false
-			s.MinOpen, s.MinHigh, s.MinLow, s.MinClose, s.MinVolume = 0, 0, 0, 0, 0
-		}
-		e.mu.Unlock()
+		e.resetPreMarketMinute()
 		return
 	}
 
@@ -89,26 +52,7 @@ func (e *UniverseStreamEngine) flushCompletedMinute(ctx context.Context, candleT
 		s.CumTurnover += cClose * float64(cVol)
 		s.CumSqTurnover += cClose * cClose * float64(cVol)
 
-		if minutesSinceOpen < 15 {
-			if s.OR15High == nil || cHigh > *s.OR15High {
-				val := cHigh
-				s.OR15High = &val
-			}
-			if s.OR15Low == nil || cLow < *s.OR15Low {
-				val := cLow
-				s.OR15Low = &val
-			}
-		}
-		if minutesSinceOpen < 30 {
-			if s.OR30High == nil || cHigh > *s.OR30High {
-				val := cHigh
-				s.OR30High = &val
-			}
-			if s.OR30Low == nil || cLow < *s.OR30Low {
-				val := cLow
-				s.OR30Low = &val
-			}
-		}
+		updateOpeningRanges(s, cHigh, cLow, minutesSinceOpen)
 
 		if s.LastClose > 0 && cClose > 0 {
 			lr := math.Log(cClose / s.LastClose)
@@ -118,21 +62,19 @@ func (e *UniverseStreamEngine) flushCompletedMinute(ctx context.Context, candleT
 			}
 		}
 		s.LastClose = cClose
-
 		s.HasTickInMinute = false
 		s.MinOpen, s.MinHigh, s.MinLow, s.MinClose, s.MinVolume = 0, 0, 0, 0, 0
 
-		candle := store.MarketCandle{
-			Timestamp: candleTime,
-			Open:      cOpen,
-			High:      cHigh,
-			Low:       cLow,
-			Close:     cClose,
-			Volume:    cVol,
-		}
 		candles = append(candles, store.MarketCandleWithID{
 			InstrumentID: s.InstrumentID,
-			Candle:       candle,
+			Candle: store.MarketCandle{
+				Timestamp: candleTime,
+				Open:      cOpen,
+				High:      cHigh,
+				Low:       cLow,
+				Close:     cClose,
+				Volume:    cVol,
+			},
 		})
 		vwap, u1, l1, u2, l2 := liveVWAPAndBands(s, cClose)
 		feat := e.calculateFeatures(s, candleTime, cOpen, cHigh, cLow, cClose, cVol, minutesSinceOpen, runID)
@@ -164,4 +106,27 @@ func (e *UniverseStreamEngine) flushCompletedMinute(ctx context.Context, candleT
 	e.mu.Unlock()
 
 	e.commitFlushedMinute(candles, features, runID, start, candleTime.Format("15:04:05"))
+}
+
+func updateOpeningRanges(s *InstrumentState, cHigh, cLow float64, minutesSinceOpen int16) {
+	if minutesSinceOpen < 15 {
+		if s.OR15High == nil || cHigh > *s.OR15High {
+			val := cHigh
+			s.OR15High = &val
+		}
+		if s.OR15Low == nil || cLow < *s.OR15Low {
+			val := cLow
+			s.OR15Low = &val
+		}
+	}
+	if minutesSinceOpen < 30 {
+		if s.OR30High == nil || cHigh > *s.OR30High {
+			val := cHigh
+			s.OR30High = &val
+		}
+		if s.OR30Low == nil || cLow < *s.OR30Low {
+			val := cLow
+			s.OR30Low = &val
+		}
+	}
 }

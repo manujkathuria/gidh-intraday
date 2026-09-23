@@ -128,26 +128,3 @@ type RiskState struct {
 	CircuitBroken bool   `json:"circuit_broken"`
 	Reason        string `json:"reason,omitempty"`
 }
-
-func fixedLevels(side TradeSide, fill float64) (float64, float64) {
-	if side == SideShort {
-		return fill * 1.01, fill * 0.98
-	}
-	return fill * 0.99, fill * 1.02
-}
-
-func (p *ActivePosition) updatePnL(ltp float64) {
-	p.CurrentLTP = ltp
-	diff := ltp - p.EntryPrice
-	if p.Side == SideShort {
-		diff = -diff
-	}
-	p.PnLINR = diff * float64(p.Quantity)
-	if p.EntryPrice > 0 {
-		p.PnLPct = diff / p.EntryPrice * 100
-	}
-	if p.PnLPct > p.MFEPct {
-		p.MFEPct = p.PnLPct
-	}
-	p.UpdatedAt = time.Now()
-}
