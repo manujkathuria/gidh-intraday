@@ -7,13 +7,14 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/bin/gidh-auth ./cmd/gidh-auth && \
-    CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/bin/gidh-batch ./cmd/gidh-batch && \
-    CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/bin/gidh-stream ./cmd/gidh-stream
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/bin/gidh-server ./cmd/gidh-server && \
+    CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/bin/gidh-auth ./cmd/gidh-auth && \
+    CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/bin/gidh-batch ./cmd/gidh-batch
 
 FROM alpine:3.20
 WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata wget
 COPY --from=builder /app/bin/* /app/bin/
 
-CMD ["/app/bin/gidh-stream"]
+EXPOSE 8080
+CMD ["/app/bin/gidh-server"]

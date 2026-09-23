@@ -16,9 +16,7 @@ export const NavigationItems: React.FC<Props> = ({ activeCount, isCollapsed }) =
   const links = [
     { href: "/", label: "Radar", icon: Crosshair, badge: null },
     { href: "/sectors", label: "Sectors", icon: Layers, badge: null },
-    { href: "/futures", label: "Futures", icon: FileText, badge: null },
     { href: "/chart", label: "Charts", icon: LineChart, badge: null },
-    { href: "/brain", label: "Brain", icon: Brain, badge: null },
     { href: "/positions", label: "Positions", icon: Briefcase, badge: `${activeCount}/5` },
   ];
 

@@ -46,10 +46,8 @@ export const AppBreadcrumbs: React.FC<Props> = ({
 
   const routeNames: Record<string, string> = {
     "/": "Radar",
-    "/futures": "Futures",
     "/sectors": "Sectors",
     "/chart": "Charts",
-    "/brain": "Brain",
     "/docs": "Docs",
     "/positions": "Positions",
   };

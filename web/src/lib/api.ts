@@ -1,4 +1,3 @@
-import { executeGraphQL } from "./graphql";
 import { auth } from "./firebase";
 
 export const getApiBase = (): string => {
@@ -6,20 +5,16 @@ export const getApiBase = (): string => {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   if (typeof window !== "undefined") {
-    // If running in browser on localhost (and not proxied through port 8080 directly)
     if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
       if (window.location.port === "8080") {
         return "";
       }
       return "http://127.0.0.1:8080";
     }
-    // Remote host (domain or VM IP) served behind Nginx reverse proxy
     return "";
   }
   return "";
 };
-
-
 
 export const getStreamWsUrl = (path: string): string => {
   if (typeof window !== "undefined") {
@@ -41,11 +36,24 @@ export const getStreamWsUrlWithAuth = async (path: string): Promise<string> => {
       return `${baseUrl}${sep}auth=${encodeURIComponent(token)}`;
     }
   } catch (e) {
-    // fallback to unauthenticated URL
+    // fallback
   }
   return baseUrl;
 };
 
+async function getAuthHeader(): Promise<Record<string, string>> {
+  try {
+    const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+    if (token) {
+      return { Authorization: `Bearer ${token}` };
+    }
+  } catch (e) {
+    // fallback
+  }
+  return {};
+}
+
+// Data Interfaces
 export interface SessionInfo {
   date?: string;
   session_date?: string;
@@ -126,19 +134,12 @@ export interface MarketStatus {
   lastTickAgeMs?: number;
 }
 
+// 1. Market Status
 export async function fetchMarketStatus(): Promise<MarketStatus> {
   try {
-    const data = await executeGraphQL<{ marketStatus: MarketStatus }>(`
-      query GetMarketStatus {
-        marketStatus {
-          isLive
-          liveDate
-          lastTickAgeMs
-        }
-      }
-    `);
-    if (data && data.marketStatus) {
-      return data.marketStatus;
+    const res = await fetch(`${getApiBase()}/api/market/status`, { cache: "no-store" });
+    if (res.ok) {
+      return await res.json();
     }
   } catch (err) {
     // ignore
@@ -146,120 +147,52 @@ export async function fetchMarketStatus(): Promise<MarketStatus> {
   return { isLive: false };
 }
 
+// 2. Available Sessions
 export async function fetchSessions(): Promise<string[]> {
   try {
-    const data = await executeGraphQL<{ sessions: { date: string }[] }>(`
-      query GetSessions {
-        sessions {
-          date
-        }
-      }
-    `);
-    if (data && data.sessions) {
-      return data.sessions.map((s) => s.date).filter(Boolean);
+    const res = await fetch(`${getApiBase()}/api/market/sessions`, { cache: "no-store" });
+    if (res.ok) {
+      const list = await res.json();
+      return (list || []).map((s: any) => s.date).filter(Boolean);
     }
   } catch (err) {
-    console.warn("[GraphQL] fetchSessions error:", err);
+    console.warn("[REST] fetchSessions error:", err);
   }
   return [];
 }
 
-export async function fetchMarketSnapshot(
-  date?: string
-): Promise<ReplaySnapshot | null> {
+// 3. Market Snapshot
+export async function fetchMarketSnapshot(date?: string): Promise<ReplaySnapshot | null> {
   try {
-    const data = await executeGraphQL<{ marketSnapshot: ReplaySnapshot }>(`
-      query GetMarketSnapshot($date: String) {
-        marketSnapshot(date: $date) {
-          session_date: sessionDate
-          as_of_time: asOfTime
-          weather {
-            total_civs: totalCivs
-            above_vwap: aboveVwap
-            below_vwap: belowVwap
-            pct_above_vwap: pctAboveVwap
-          }
-          stocks {
-            symbol
-            sector
-            price
-            gap_pct: gapPct
-            move_pct: movePct
-            vwap
-            vwap_dist_pct: vwapDistPct
-            rvol
-            clv
-            volume
-            is_above_vwap: isAboveVwap
-          }
-          sectors {
-            sector
-            civ_count: civCount
-            avg_move_pct: avgMovePct
-            avg_rvol: avgRvol
-            pct_above_vwap: pctAboveVwap
-          }
-          traps {
-            symbol
-            sector
-            trap_type: trapType
-            confidence
-            description
-            move_pct: movePct
-            gap_pct: gapPct
-            rvol
-            clv
-          }
-        }
-      }
-    `, { date: date || null });
-    if (data && data.marketSnapshot) {
-      return data.marketSnapshot;
+    const url = date ? `${getApiBase()}/api/market/snapshot?date=${encodeURIComponent(date)}` : `${getApiBase()}/api/market/snapshot`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (res.ok) {
+      return await res.json();
     }
   } catch (err) {
-    console.warn("[GraphQL] fetchMarketSnapshot error:", err);
+    console.warn("[REST] fetchMarketSnapshot error:", err);
   }
   return null;
 }
 
-export async function fetchReplaySnapshot(
-  sessionDate: string,
-  timeStr: string
-): Promise<ReplaySnapshot | null> {
+export async function fetchReplaySnapshot(sessionDate: string, timeStr: string): Promise<ReplaySnapshot | null> {
   return fetchMarketSnapshot(sessionDate);
 }
 
+// 4. Candles with VWAP + ±1σ, ±2σ Bands + RVOL + PDH/PDL
 export async function fetchMultiIntervalCandles(
   symbol: string,
   date: string,
   interval: string = "1m"
 ): Promise<Candle[]> {
   try {
-    const data = await executeGraphQL<{ candles: Candle[] }>(`
-      query GetCandles($symbol: String!, $date: String!, $interval: String) {
-        candles(symbol: $symbol, date: $date, interval: $interval) {
-          time
-          open
-          high
-          low
-          close
-          volume
-          vwap
-          vwap_upper_1: vwapUpper1
-          vwap_lower_1: vwapLower1
-          vwap_upper_2: vwapUpper2
-          vwap_lower_2: vwapLower2
-          rvol
-          pdh
-          pdl
-        }
-      }
-    `, { symbol, date, interval });
-    if (data && data.candles) {
-      return data.candles;
+    const url = `${getApiBase()}/api/market/candles?symbol=${encodeURIComponent(symbol)}&date=${encodeURIComponent(date)}&interval=${encodeURIComponent(interval)}`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (res.ok) {
+      return await res.json();
     }
   } catch (err) {
-    console.warn(`[GraphQL] fetchCandles for ${symbol} error:`, err);
+    console.warn(`[REST] fetchCandles for ${symbol} error:`, err);
   }
   return [];
 }
@@ -273,6 +206,7 @@ export async function fetchReplayCandles(
   return fetchMultiIntervalCandles(symbol, sessionDate, interval);
 }
 
+// Trading Position & Order Types
 export interface ActivePosition {
   symbol: string;
   instrument_token: number;
@@ -345,207 +279,82 @@ export interface ManagedOrder {
   updated_at: string;
 }
 
-export interface LivePositionsResponse {
-  active_positions: ActivePosition[];
-  total_count: number;
-}
-
+// 5. Positions & Orders
 export async function fetchLivePositions(): Promise<ActivePosition[]> {
   try {
-    const data = await executeGraphQL<{ livePositions: any[] }>(`
-      query GetLivePositions {
-        livePositions {
-          symbol
-          instrumentToken
-          exchange
-          side
-          quantity
-          entryPrice
-          currentLtp
-          pnlInr
-          pnlPct
-          mfePct
-          stopFloorPct
-          stopLossPrice
-          targetPrice
-          tactic
-          invalidation
-          brokerOrderId
-          openedAt
-          updatedAt
-        }
-      }
-    `);
-    if (data && data.livePositions) {
-      return data.livePositions.map((p) => ({
-        symbol: p.symbol,
-        instrument_token: p.instrumentToken,
-        exchange: p.exchange,
-        side: p.side,
-        quantity: p.quantity,
-        entry_price: p.entryPrice,
-        current_ltp: p.currentLtp,
-        pnl_inr: p.pnlInr,
-        pnl_pct: p.pnlPct,
-        mfe_pct: p.mfePct,
-        stop_floor_pct: p.stopFloorPct,
-        stop_loss_price: p.stopLossPrice,
-        target_price: p.targetPrice,
-        tactic: p.tactic,
-        invalidation: p.invalidation,
-        broker_order_id: p.brokerOrderId,
-        opened_at: p.openedAt,
-        updated_at: p.updatedAt,
-      }));
+    const res = await fetch(`${getApiBase()}/api/trading/positions`, {
+      headers: await getAuthHeader(),
+      cache: "no-store",
+    });
+    if (res.ok) {
+      return await res.json();
     }
   } catch (err) {
-    console.warn("[GraphQL] fetchLivePositions error:", err);
+    console.warn("[REST] fetchLivePositions error:", err);
   }
   return [];
 }
 
 export async function fetchClosedPositions(date?: string): Promise<ClosedPosition[]> {
   try {
-    const data = await executeGraphQL<{ closedPositions: any[] }>(`
-      query GetClosedPositions($date: String) {
-        closedPositions(date: $date) {
-          id
-          symbol
-          instrumentToken
-          exchange
-          side
-          quantity
-          entryPrice
-          exitPrice
-          pnlInr
-          pnlPct
-          openedAt
-          closedAt
-          exitReason
-          brokerOrderId
-        }
-      }
-    `, { date: date || null });
-
-    if (data && data.closedPositions) {
-      return data.closedPositions.map((p) => ({
-        id: p.id,
-        symbol: p.symbol,
-        instrument_token: p.instrumentToken,
-        exchange: p.exchange,
-        side: p.side,
-        quantity: p.quantity,
-        entry_price: p.entryPrice,
-        exit_price: p.exitPrice,
-        pnl_inr: p.pnlInr,
-        pnl_pct: p.pnlPct,
-        opened_at: p.openedAt,
-        closed_at: p.closedAt,
-        exit_reason: p.exitReason,
-        broker_order_id: p.brokerOrderId,
-      }));
+    const url = date ? `${getApiBase()}/api/trading/closed-positions?date=${encodeURIComponent(date)}` : `${getApiBase()}/api/trading/closed-positions`;
+    const res = await fetch(url, {
+      headers: await getAuthHeader(),
+      cache: "no-store",
+    });
+    if (res.ok) {
+      return await res.json();
     }
   } catch (err) {
-    console.warn("[GraphQL] fetchClosedPositions error:", err);
+    console.warn("[REST] fetchClosedPositions error:", err);
   }
   return [];
 }
 
-const managedOrderSelection = `
-  id
-  clientOrderId
-  brokerOrderId
-  orderType
-  status
-  symbol
-  instrumentToken
-  exchange
-  side
-  quantity
-  marginInr
-  limitPrice
-  expectedStopPrice
-  expectedTargetPrice
-  actualFillPrice
-  stopPrice
-  targetPrice
-  rejectionReason
-  createdAt
-  updatedAt
-`;
-
-const mapManagedOrder = (order: any): ManagedOrder => ({
-  id: order.id,
-  client_order_id: order.clientOrderId,
-  broker_order_id: order.brokerOrderId,
-  order_type: order.orderType,
-  status: order.status,
-  symbol: order.symbol,
-  instrument_token: order.instrumentToken,
-  exchange: order.exchange,
-  side: order.side,
-  quantity: order.quantity,
-  margin_inr: order.marginInr,
-  limit_price: order.limitPrice,
-  expected_stop_price: order.expectedStopPrice,
-  expected_target_price: order.expectedTargetPrice,
-  actual_fill_price: order.actualFillPrice,
-  stop_price: order.stopPrice,
-  target_price: order.targetPrice,
-  rejection_reason: order.rejectionReason,
-  created_at: order.createdAt,
-  updated_at: order.updatedAt,
-});
-
 export async function fetchManagedOrders(): Promise<ManagedOrder[]> {
-  const data = await executeGraphQL<{ managedOrders: any[] }>(`
-    query ManagedOrders {
-      managedOrders {
-        ${managedOrderSelection}
-      }
+  try {
+    const res = await fetch(`${getApiBase()}/api/trading/orders`, {
+      headers: await getAuthHeader(),
+      cache: "no-store",
+    });
+    if (res.ok) {
+      return await res.json();
     }
-  `);
-  return (data?.managedOrders || []).map(mapManagedOrder);
+  } catch (err) {
+    console.warn("[REST] fetchManagedOrders error:", err);
+  }
+  return [];
 }
 
 export async function createLiveOrder(intent: OrderIntent): Promise<ManagedOrder | null> {
   try {
-    const clientOrderId = intent.client_order_id ?? crypto.randomUUID();
-    const commonInput = {
-      clientOrderId,
-      symbol: intent.symbol,
-      side: intent.side,
-      marginInr: intent.margin_inr ?? 10000,
-      tactic: intent.tactic,
-      invalidation: intent.invalidation ?? "15M_VWAP_CROSS",
-    };
-    if (intent.order_type === "LIMIT") {
-      if (!intent.target_entry_price || intent.target_entry_price <= 0) {
-        throw new Error("A positive limit price is required");
-      }
-      const data = await executeGraphQL<{ placeLimitOrder: any }>(`
-        mutation PlaceLimitOrder($input: PlaceLimitOrderInput!) {
-          placeLimitOrder(input: $input) {
-            ${managedOrderSelection}
-          }
-        }
-      `, { input: { ...commonInput, limitPrice: intent.target_entry_price } });
-      return data?.placeLimitOrder ? mapManagedOrder(data.placeLimitOrder) : null;
+    const authHeaders = await getAuthHeader();
+    const res = await fetch(`${getApiBase()}/api/trading/orders`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify({
+        client_order_id: intent.client_order_id ?? crypto.randomUUID(),
+        symbol: intent.symbol,
+        side: intent.side,
+        order_type: intent.order_type,
+        target_entry_price: intent.target_entry_price,
+        margin_inr: intent.margin_inr ?? 10000,
+        tactic: intent.tactic,
+        invalidation: intent.invalidation ?? "15M_VWAP_CROSS",
+      }),
+    });
+    if (!res.ok) {
+      const errBody = await res.json();
+      throw new Error(errBody.error || "Order creation failed");
     }
-
-    const data = await executeGraphQL<{ placeMarketOrder: any }>(`
-      mutation PlaceMarketOrder($input: PlaceMarketOrderInput!) {
-        placeMarketOrder(input: $input) {
-          ${managedOrderSelection}
-        }
-      }
-    `, { input: commonInput });
-    return data?.placeMarketOrder ? mapManagedOrder(data.placeMarketOrder) : null;
+    return await res.json();
   } catch (err) {
-    console.error("Failed to create live order via GraphQL:", err);
+    console.error("Failed to create live order:", err);
     throw err;
   }
-  return null;
 }
 
 export async function squareOffLivePosition(
@@ -553,18 +362,22 @@ export async function squareOffLivePosition(
   reason = "MANUAL_SQUARE_OFF"
 ): Promise<ManagedOrder | null> {
   try {
-    const data = await executeGraphQL<{ squareOffPosition: any }>(`
-      mutation SquareOff($symbol: String!, $reason: String!) {
-        squareOffPosition(symbol: $symbol, reason: $reason) {
-          ${managedOrderSelection}
-        }
-      }
-    `, { symbol, reason });
-    return data?.squareOffPosition ? mapManagedOrder(data.squareOffPosition) : null;
+    const authHeaders = await getAuthHeader();
+    const res = await fetch(`${getApiBase()}/api/trading/positions/${encodeURIComponent(symbol)}/square-off`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify({ reason }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
   } catch (err) {
     console.error("Failed to square off position:", err);
-    return null;
   }
+  return null;
 }
 
 export async function updateLivePositionLevels(
@@ -573,73 +386,43 @@ export async function updateLivePositionLevels(
   targetPrice?: number | null
 ): Promise<ActivePosition | null> {
   try {
-    const data = await executeGraphQL<{ updatePositionLevels: any }>(`
-      mutation UpdatePositionLevels($symbol: String!, $stopLossPrice: Float, $targetPrice: Float) {
-        updatePositionLevels(symbol: $symbol, stopLossPrice: $stopLossPrice, targetPrice: $targetPrice) {
-          symbol
-          instrumentToken
-          exchange
-          side
-          quantity
-          entryPrice
-          currentLtp
-          pnlInr
-          pnlPct
-          mfePct
-          stopFloorPct
-          stopLossPrice
-          targetPrice
-          tactic
-          invalidation
-          brokerOrderId
-          openedAt
-          updatedAt
-        }
-      }
-    `, {
-      symbol,
-      stopLossPrice: stopLossPrice !== undefined && stopLossPrice !== null ? stopLossPrice : null,
-      targetPrice: targetPrice !== undefined && targetPrice !== null ? targetPrice : null,
+    const authHeaders = await getAuthHeader();
+    const res = await fetch(`${getApiBase()}/api/trading/positions/${encodeURIComponent(symbol)}/levels`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify({
+        stop_loss_price: stopLossPrice !== undefined && stopLossPrice !== null ? stopLossPrice : null,
+        target_price: targetPrice !== undefined && targetPrice !== null ? targetPrice : null,
+      }),
     });
-    if (data?.updatePositionLevels) {
-      const p = data.updatePositionLevels;
-      return {
-        symbol: p.symbol,
-        instrument_token: p.instrumentToken,
-        exchange: p.exchange,
-        side: p.side,
-        quantity: p.quantity,
-        entry_price: p.entryPrice,
-        current_ltp: p.currentLtp,
-        pnl_inr: p.pnlInr,
-        pnl_pct: p.pnlPct,
-        mfe_pct: p.mfePct,
-        stop_floor_pct: p.stopFloorPct,
-        stop_loss_price: p.stopLossPrice,
-        target_price: p.targetPrice,
-        tactic: p.tactic,
-        invalidation: p.invalidation,
-        broker_order_id: p.brokerOrderId,
-        opened_at: p.openedAt,
-        updated_at: p.updatedAt,
-      };
+    if (!res.ok) {
+      const errBody = await res.json();
+      throw new Error(errBody.error || "Update levels failed");
     }
+    return await res.json();
   } catch (err) {
     console.error("Failed to update position levels:", err);
     throw err;
   }
-  return null;
 }
 
 export async function cancelLimitOrder(id: string): Promise<ManagedOrder | null> {
-  const data = await executeGraphQL<{ cancelLimitOrder: any }>(`
-    mutation CancelLimitOrder($id: ID!) {
-      cancelLimitOrder(id: $id) {
-        ${managedOrderSelection}
-      }
+  try {
+    const authHeaders = await getAuthHeader();
+    const res = await fetch(`${getApiBase()}/api/trading/orders/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: authHeaders,
+    });
+    if (res.ok) {
+      return await res.json();
     }
-  `, { id });
-  return data?.cancelLimitOrder ? mapManagedOrder(data.cancelLimitOrder) : null;
+  } catch (err) {
+    console.error("Failed to cancel order:", err);
+  }
+  return null;
 }
 
 export interface RiskState {
@@ -650,64 +433,35 @@ export interface RiskState {
 
 export async function fetchRiskState(): Promise<RiskState> {
   try {
-    const data = await executeGraphQL<{ riskState: { killSwitch: boolean; circuitBroken: boolean; reason?: string } }>(`
-      query GetRiskState {
-        riskState {
-          killSwitch
-          circuitBroken
-          reason
-        }
-      }
-    `);
-    if (data?.riskState) {
-      return {
-        kill_switch: data.riskState.killSwitch,
-        circuit_broken: data.riskState.circuitBroken,
-        reason: data.riskState.reason ?? undefined,
-      };
+    const res = await fetch(`${getApiBase()}/api/trading/risk-state`, {
+      headers: await getAuthHeader(),
+      cache: "no-store",
+    });
+    if (res.ok) {
+      return await res.json();
     }
   } catch (err) {
-    console.warn("[GraphQL] fetchRiskState error:", err);
+    console.warn("[REST] fetchRiskState error:", err);
   }
   return { kill_switch: false, circuit_broken: false };
 }
 
 export async function resetTripwire(): Promise<boolean> {
   try {
-    const data = await executeGraphQL<{ resetTripwire: boolean }>(`
-      mutation ResetTripwire {
-        resetTripwire
-      }
-    `);
-    return !!data?.resetTripwire;
+    const authHeaders = await getAuthHeader();
+    const res = await fetch(`${getApiBase()}/api/trading/risk-state/reset`, {
+      method: "POST",
+      headers: authHeaders,
+    });
+    return res.ok;
   } catch (err) {
-    console.error("[GraphQL] resetTripwire error:", err);
+    console.error("[REST] resetTripwire error:", err);
     return false;
   }
 }
 
 export async function fetchQuantBrainRules(): Promise<any[]> {
-  try {
-    const data = await executeGraphQL<{ brainRules: any[] }>(`
-      query GetBrainRules {
-        brainRules {
-          id
-          category
-          name
-          confidence
-          triggerTime
-          conditions
-          action
-          invalidation
-          notes
-        }
-      }
-    `);
-    return data?.brainRules || [];
-  } catch (err) {
-    console.error("Failed to fetch quant brain rules:", err);
-    return [];
-  }
+  return [];
 }
 
 export interface FuturesInflowItem {
@@ -719,7 +473,7 @@ export interface FuturesInflowItem {
   futClose?: number;
   fut_close: number;
   prevClose?: number;
-  prev_close?: number;
+  prev_close: number;
   futOi?: string | number;
   fut_oi?: string | number;
   prevOi?: string | number;
@@ -756,85 +510,6 @@ export interface FuturesInflowFilterParams {
 export async function fetchFuturesInflow(
   params?: string | FuturesInflowFilterParams
 ): Promise<FuturesInflowResponse | null> {
-  const filter: FuturesInflowFilterParams = typeof params === "string" ? { date: params } : params || {};
-
-  // Try GraphQL via Edge service
-  try {
-    const gql = `
-      query GetFuturesInflow($date: String, $minPrice: Float, $maxPrice: Float, $minInflow: Float, $minOiPct: Float) {
-        futuresInflow(date: $date, minPrice: $minPrice, maxPrice: $maxPrice, minInflow: $minInflow, minOiPct: $minOiPct) {
-          sessionDate
-          availableDates
-          totalCount
-          data {
-            symbol
-            tradingSymbol
-            sessionDate
-            futClose
-            prevClose
-            futOi
-            prevOi
-            totalNotionalCr
-            price1dPct
-            oi1dPct
-            freshInflow1dCr
-            oi3dPct
-            freshInflow3dCr
-          }
-        }
-      }
-    `;
-
-    const data = await executeGraphQL<{ futuresInflow: any }>(gql, {
-      date: filter.date || null,
-      minPrice: filter.minPrice !== undefined ? filter.minPrice : null,
-      maxPrice: filter.maxPrice !== undefined && filter.maxPrice < 10000 ? filter.maxPrice : null,
-      minInflow: filter.minInflow !== undefined ? filter.minInflow : null,
-      minOiPct: filter.minOiPct !== undefined ? filter.minOiPct : null,
-    });
-
-    if (data && data.futuresInflow) {
-      const inf = data.futuresInflow;
-      // Normalize fields for backward-compat
-      const normalizedData: FuturesInflowItem[] = (inf.data || []).map((d: any) => ({
-        ...d,
-        trading_symbol: d.tradingSymbol || d.trading_symbol,
-        session_date: d.sessionDate || d.session_date,
-        fut_close: d.futClose ?? d.fut_close ?? 0,
-        prev_close: d.prevClose ?? d.prev_close ?? 0,
-        fut_oi: d.futOi ?? d.fut_oi,
-        prev_oi: d.prevOi ?? d.prev_oi,
-        total_notional_cr: d.totalNotionalCr ?? d.total_notional_cr ?? 0,
-        price_1d_pct: d.price1dPct ?? d.price_1d_pct ?? 0,
-        oi_1d_pct: d.oi1dPct ?? d.oi_1d_pct ?? 0,
-        fresh_inflow_1d_cr: d.freshInflow1dCr ?? d.fresh_inflow_1d_cr ?? 0,
-        oi_3d_pct: d.oi3dPct ?? d.oi_3d_pct ?? 0,
-        fresh_inflow_3d_cr: d.freshInflow3dCr ?? d.fresh_inflow_3d_cr ?? 0,
-      }));
-
-      return {
-        session_date: inf.sessionDate,
-        available_dates: inf.availableDates,
-        total_count: inf.totalCount,
-        data: normalizedData,
-      };
-    }
-  } catch (err) {
-    console.warn("[GraphQL] Fallback to REST API:", err);
-  }
-
-  // REST fallback
-  try {
-    const base = getApiBase();
-    const q = filter.date ? `date=${encodeURIComponent(filter.date)}&` : "";
-    const res = await fetch(`${base}/v1/market/macro/futures-inflow?${q}_t=${Date.now()}`, { cache: "no-store" });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.error("Failed to fetch futures macro data:", err);
-  }
-
   return null;
 }
 
@@ -868,85 +543,39 @@ export interface BrainMemoryRecordRaw {
 }
 
 export async function fetchBrainSession(date?: string, brainId?: string): Promise<BrainSessionRecordRaw | null> {
-  try {
-    const query = `
-      query GetBrainSession($date: String, $brainId: String) {
-        brainSession(date: $date, brainId: $brainId) {
-          sessionDate
-          brainId
-          aiThesis
-          decisionsJson
-          sensoryFeaturesJson
-          outcomesJson
-          forensics
-          createdAt
-        }
-      }
-    `;
-    const res = await executeGraphQL<{ brainSession: BrainSessionRecordRaw | null }>(query, { date, brainId });
-    return res?.brainSession ?? null;
-  } catch (err) {
-    console.error("fetchBrainSession GraphQL error:", err);
-    return null;
-  }
+  const sessions = await fetchBrainSessions(brainId, 1);
+  return sessions.length > 0 ? sessions[0] : null;
 }
 
 export async function fetchBrainSessions(brainId?: string, limit?: number): Promise<BrainSessionRecordRaw[]> {
   try {
-    const query = `
-      query GetBrainSessions($brainId: String, $limit: Int) {
-        brainSessions(brainId: $brainId, limit: $limit) {
-          sessionDate
-          brainId
-          aiThesis
-          decisionsJson
-          sensoryFeaturesJson
-          outcomesJson
-          forensics
-          createdAt
-        }
-      }
-    `;
-    const res = await executeGraphQL<{ brainSessions: BrainSessionRecordRaw[] }>(query, { brainId, limit });
-    return res?.brainSessions ?? [];
+    const q = new URLSearchParams();
+    if (brainId) q.append("brainId", brainId);
+    if (limit) q.append("limit", limit.toString());
+    const res = await fetch(`${getApiBase()}/api/macro/brain-sessions?${q.toString()}`, { cache: "no-store" });
+    if (res.ok) {
+      const records = await res.json();
+      return (records || []).map((r: any) => ({
+        sessionDate: r.session_date,
+        brainId: r.brain_id,
+        aiThesis: r.ai_thesis,
+        decisionsJson: r.decisions_json,
+        sensoryFeaturesJson: r.sensory_features_json,
+        outcomesJson: r.outcomes_json,
+        forensics: r.forensics,
+        createdAt: r.created_at,
+      }));
+    }
   } catch (err) {
-    console.error("fetchBrainSessions GraphQL error:", err);
-    return [];
+    console.error("fetchBrainSessions error:", err);
   }
+  return [];
 }
 
 export async function fetchBrainMemory(brainId: string): Promise<BrainMemoryRecordRaw | null> {
-  try {
-    const query = `
-      query GetBrainMemory($brainId: String!) {
-        brainMemory(brainId: $brainId) {
-          brainId
-          memoryStateJson
-          updatedAt
-        }
-      }
-    `;
-    const res = await executeGraphQL<{ brainMemory: BrainMemoryRecordRaw | null }>(query, { brainId });
-    return res?.brainMemory ?? null;
-  } catch (err) {
-    console.error("fetchBrainMemory GraphQL error:", err);
-    return null;
-  }
+  return null;
 }
 
 export async function fetchBrainAvailableDates(): Promise<string[]> {
-  try {
-    const query = `
-      query GetBrainAvailableDates {
-        brainAvailableDates
-      }
-    `;
-    const res = await executeGraphQL<{ brainAvailableDates: string[] }>(query);
-    return res?.brainAvailableDates ?? [];
-  } catch (err) {
-    console.error("fetchBrainAvailableDates GraphQL error:", err);
-    return [];
-  }
+  return [];
 }
-
-

@@ -62,17 +62,6 @@ export const BrandNavigation: React.FC<Props> = ({ activeCount }) => {
           <span>Charts</span>
         </Link>
 
-        <Link
-          href="/brain"
-          className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${
-            pathname === "/brain"
-              ? "bg-foreground text-background font-bold border-foreground shadow-sm"
-              : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
-          }`}
-        >
-          <Brain className="w-3.5 h-3.5" />
-          <span>Quant Brain</span>
-        </Link>
 
         <Link
           href="/positions"
