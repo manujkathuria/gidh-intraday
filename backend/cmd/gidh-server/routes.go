@@ -22,8 +22,12 @@ func registerRoutes(mux *http.ServeMux, apiServer *api.Server, wsHub *ws.Hub) {
 	mux.HandleFunc("/api/market/status", apiServer.HandleMarketStatus)
 	mux.HandleFunc("/api/market/sessions", apiServer.HandleSessions)
 	mux.HandleFunc("/api/market/snapshot", apiServer.HandleMarketSnapshot)
+	mux.HandleFunc("/api/market/indices", apiServer.HandleIndicesDashboard)
+	mux.HandleFunc("/api/indices", apiServer.HandleIndicesDashboard)
 	mux.HandleFunc("/api/market/candles", apiServer.HandleCandles)
 	mux.HandleFunc("/api/candles", apiServer.HandleCandles)
+	mux.HandleFunc("/api/market/chart/hvn", apiServer.HandleChartHVN)
+	mux.HandleFunc("/api/chart/hvn", apiServer.HandleChartHVN)
 
 	mux.HandleFunc("/api/trading/positions", apiServer.HandleLivePositions)
 	mux.HandleFunc("/api/trading/closed-positions", apiServer.HandleClosedPositions)
@@ -53,6 +57,9 @@ func registerRoutes(mux *http.ServeMux, apiServer *api.Server, wsHub *ws.Hub) {
 	mux.HandleFunc("/api/trading/risk-state", apiServer.HandleRiskState)
 	mux.HandleFunc("/api/trading/risk-state/reset", apiServer.HandleResetTripwire)
 	mux.HandleFunc("/api/macro/brain-sessions", apiServer.HandleBrainSessions)
+	mux.HandleFunc("/api/macro/futures-inflow", apiServer.HandleFuturesInflow)
+	mux.HandleFunc("/api/market/macro/futures-inflow", apiServer.HandleFuturesInflow)
+	mux.HandleFunc("/v1/market/macro/futures-inflow", apiServer.HandleFuturesInflow)
 
 	// Health check
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

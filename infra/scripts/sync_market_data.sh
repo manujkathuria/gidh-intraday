@@ -84,17 +84,18 @@ for DATE in "${DATES[@]}"; do
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.future_candles_1m WHERE ts >= '${TS_START}' AND ts < '${TS_END}') TO STDOUT WITH (FORMAT csv);\"" \
         | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.future_candles_1m FROM STDIN WITH (FORMAT csv);"
 
-    # D. Intraday features 1m
+    # D. Intraday features 1m (explicit column mapping)
     echo " -> market.intraday_features_1m"
-    ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.intraday_features_1m WHERE ts >= '${TS_START}' AND ts < '${TS_END}') TO STDOUT WITH (FORMAT csv);\"" \
-        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.intraday_features_1m FROM STDIN WITH (FORMAT csv);"
+    COLS="ts, feature_run_id, instrument_id, cash_source_ts, future_source_ts, cash_is_complete, future_is_complete, cash_open, cash_high, cash_low, cash_close, session_open, session_high, session_low, minutes_since_open, opening_range_15_high, opening_range_15_low, opening_range_30_high, opening_range_30_low, session_vwap, vwap_sigma, vwap_upper_1, vwap_lower_1, vwap_upper_2, vwap_lower_2, vwap_distance_sigma, bar_range, bar_body, clv, upper_wick_pct, lower_wick_pct, cumulative_volume, expected_cumulative_volume, relative_volume, realised_volatility_5m, realised_volatility_15m, realised_volatility_30m, session_range_pct_atr, adr_fuel_used_pct, future_contract_id, future_close, futures_basis, futures_basis_pct, oi_change_1m, oi_change_5m, oi_change_15m, oi_change_session"
+    ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT ${COLS} FROM market.intraday_features_1m WHERE ts >= '${TS_START}' AND ts < '${TS_END}') TO STDOUT WITH (FORMAT csv);\"" \
+        | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.intraday_features_1m (${COLS}) FROM STDIN WITH (FORMAT csv);"
 
     # E. Daily features
     echo " -> market.daily_features"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT df.* FROM market.daily_features df JOIN market.feature_runs fr ON df.feature_run_id = fr.id WHERE fr.session_date = '${DATE}') TO STDOUT WITH (FORMAT csv);\"" \
         | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.daily_features FROM STDIN WITH (FORMAT csv);"
 
-    # F. Data readiness (required for Sessions resolver in UI)
+    # F. Data readiness
     echo " -> market.data_readiness"
     ssh "${REMOTE_HOST}" "docker exec ${REMOTE_CONTAINER} psql -U postgres -d ${REMOTE_DB} -c \"COPY (SELECT * FROM market.data_readiness WHERE session_date = '${DATE}') TO STDOUT WITH (FORMAT csv);\"" \
         | psql -h "${LOCAL_HOST}" -U "${LOCAL_USER}" -d "${LOCAL_DB}" -c "COPY market.data_readiness FROM STDIN WITH (FORMAT csv);"

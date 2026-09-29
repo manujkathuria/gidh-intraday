@@ -93,7 +93,7 @@ export const ChartStudio: React.FC = () => {
         onUpdateLevels={updatePositionLevels}
       />
 
-      {/* 2. Edge-to-Edge Candlestick Studio with Entry, SL, TP, and Interactive Draggable Limit Lines */}
+      {/* 2. Edge-to-Edge Candlestick Studio with Entry, SL, TP, Dynamic POC, and Limit Lines */}
       <div className="flex-1 w-full bg-surface border border-surface-border rounded-lg p-2 flex flex-col min-h-0 relative overflow-hidden">
         {loadingCandles && (
           <div className="absolute top-3 right-3 z-20 bg-surface/90 border border-surface-border px-3 py-1.5 rounded text-xs text-foreground/70 flex items-center gap-2 shadow-lg backdrop-blur-sm">
@@ -144,3 +144,5 @@ export const ChartStudio: React.FC = () => {
     </div>
   );
 };
+
+

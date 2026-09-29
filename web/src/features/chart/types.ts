@@ -22,6 +22,7 @@ export interface ChartProps {
   stopLossPrice?: number;
   targetPrice?: number;
   // Interactive Limit Order Slider
+
   limitPrice?: number;
   isLimitDraggable?: boolean;
   onLimitPriceChange?: (price: number) => void;
@@ -34,4 +35,5 @@ export interface ChartProps {
   onDraftLevelPriceChange?: (price: number) => void;
   onUpdateLevels?: (symbol: string, sl?: number | null, tp?: number | null) => Promise<boolean>;
 }
+
 

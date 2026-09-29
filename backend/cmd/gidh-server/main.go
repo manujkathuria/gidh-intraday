@@ -111,7 +111,12 @@ func main() {
 	}
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins: []string{
+			"https://gidh.tech",
+			"https://www.gidh.tech",
+			"http://localhost:3000",
+			"http://127.0.0.1:3000",
+		},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,

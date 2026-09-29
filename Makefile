@@ -34,6 +34,13 @@ help:
 # ==============================================================================
 
 dev: server-dev web-dev
+	@echo "⏳ Waiting for services to initialize..."
+	@for i in 1 2 3 4 5; do \
+		if lsof -ti:8080 >/dev/null 2>&1 && lsof -ti:3000 >/dev/null 2>&1; then \
+			break; \
+		fi; \
+		sleep 1; \
+	done
 	@echo ""
 	@echo "✅ Gidh Intraday running in background!"
 	@make status

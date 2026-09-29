@@ -35,11 +35,6 @@ func (s *Server) HandleSessions(w http.ResponseWriter, r *http.Request) {
 		FROM market.feature_runs r
 		JOIN market.data_readiness d ON d.feature_run_id = r.id AND d.status = 'READY'
 		WHERE r.feature_set = 'DAILY' AND r.status = 'SUCCEEDED'
-		  AND EXISTS (
-		      SELECT 1 FROM market.intraday_features_1m f 
-		      WHERE f.ts::date = r.session_date 
-		      LIMIT 1
-		  )
 		ORDER BY r.session_date DESC;
 	`)
 	if err != nil {

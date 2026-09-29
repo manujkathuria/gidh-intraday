@@ -63,6 +63,9 @@ function buildAggregatedBar(bars: Candle[], time: number): Candle {
     vwap_upper_2: lastBar.vwap_upper_2,
     vwap_lower_2: lastBar.vwap_lower_2,
     rvol: lastBar.rvol,
+    developing_poc: lastBar.developing_poc,
+    pdh: bars[0].pdh,
+    pdl: bars[0].pdl,
   };
 }
 

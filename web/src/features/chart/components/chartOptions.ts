@@ -89,6 +89,7 @@ export const CANDLE_COLORS = {
     vwapColor: "#A855F7",
     sigma1Color: "#60A5FA", // Sky blue for +-1 sigma
     sigma2Color: "#F472B6", // Pink/Rose for +-2 sigma outer boundary
+    pocColor: "#EA580C",    // Rich Burnt Orange / Amber for Developing POC
   },
   light: {
     upColor: "#059669",
@@ -100,6 +101,9 @@ export const CANDLE_COLORS = {
     vwapColor: "#7E22CE",
     sigma1Color: "#2563EB",
     sigma2Color: "#DB2777",
+    pocColor: "#C2410C",    // Deep Burnt Orange for light mode
   },
 };
+
+
 

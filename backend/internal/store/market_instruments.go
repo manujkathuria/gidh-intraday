@@ -50,24 +50,26 @@ func (r *MarketInstrumentRepo) ReplaceActiveUniverse(ctx context.Context, pairs 
 			return fmt.Errorf("upserting %s: %w", pair.Symbol, err)
 		}
 
-		if _, err := tx.Exec(ctx, `
-			UPDATE market.future_contracts SET is_active = FALSE, updated_at = NOW()
-			WHERE instrument_id = $1 AND token <> $2 AND is_active;
-		`, instrumentID, pair.FutureToken); err != nil {
-			return fmt.Errorf("deactivating old future for %s: %w", pair.Symbol, err)
-		}
+		if pair.FutureToken > 0 {
+			if _, err := tx.Exec(ctx, `
+				UPDATE market.future_contracts SET is_active = FALSE, updated_at = NOW()
+				WHERE instrument_id = $1 AND token <> $2 AND is_active;
+			`, instrumentID, pair.FutureToken); err != nil {
+				return fmt.Errorf("deactivating old future for %s: %w", pair.Symbol, err)
+			}
 
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO market.future_contracts (
-				instrument_id, token, trading_symbol, expiry, lot_size, tick_size, is_active, updated_at
-			) VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW())
-			ON CONFLICT (token) DO UPDATE SET
-				instrument_id = EXCLUDED.instrument_id, trading_symbol = EXCLUDED.trading_symbol,
-				expiry = EXCLUDED.expiry, lot_size = EXCLUDED.lot_size, tick_size = EXCLUDED.tick_size,
-				is_active = TRUE, updated_at = NOW();
-		`, instrumentID, pair.FutureToken, pair.FutureTradingCode, pair.FutureExpiry,
-			pair.FutureLotSize, pair.FutureTickSize); err != nil {
-			return fmt.Errorf("upserting future for %s: %w", pair.Symbol, err)
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO market.future_contracts (
+					instrument_id, token, trading_symbol, expiry, lot_size, tick_size, is_active, updated_at
+				) VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW())
+				ON CONFLICT (token) DO UPDATE SET
+					instrument_id = EXCLUDED.instrument_id, trading_symbol = EXCLUDED.trading_symbol,
+					expiry = EXCLUDED.expiry, lot_size = EXCLUDED.lot_size, tick_size = EXCLUDED.tick_size,
+					is_active = TRUE, updated_at = NOW();
+			`, instrumentID, pair.FutureToken, pair.FutureTradingCode, pair.FutureExpiry,
+				pair.FutureLotSize, pair.FutureTickSize); err != nil {
+				return fmt.Errorf("upserting future for %s: %w", pair.Symbol, err)
+			}
 		}
 		symbols = append(symbols, pair.Symbol)
 	}

@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import {
-  fetchSessions,
   fetchMarketSnapshot,
   fetchMultiIntervalCandles,
   fetchMarketStatus,
@@ -9,6 +8,7 @@ import {
   ReplaySector,
   ReplayTrap,
 } from "@/lib/api";
+import { initMarketState, mergeLiveSnapshot } from "./marketStoreHelpers";
 
 interface MarketStoreState {
   sessions: string[];
@@ -26,7 +26,6 @@ interface MarketStoreState {
   loading: boolean;
   error: string | null;
 
-  // Actions
   init: () => Promise<void>;
   setSelectedDate: (date: string) => Promise<void>;
   setSelectedSymbol: (symbol: string) => Promise<void>;
@@ -49,7 +48,6 @@ export const useMarketStore = create<MarketStoreState>((set, get) => ({
   traps: [],
   wsConnected: false,
   isLive: false,
-
   loading: false,
   error: null,
 
@@ -57,55 +55,12 @@ export const useMarketStore = create<MarketStoreState>((set, get) => ({
     try {
       const status = await fetchMarketStatus();
       set({ isLive: status.isLive });
-    } catch (e) {
+    } catch {
       // ignore
     }
   },
 
-  init: async () => {
-    // Check Redis live status
-    get().checkMarketStatus();
-
-    // If sessions are already loaded and a date is selected, avoid overwriting user choice
-    const currentSessions = get().sessions;
-    const currentDate = get().selectedDate;
-
-    try {
-      set({ loading: !currentDate });
-      const sessions = await fetchSessions();
-      if (sessions.length === 0) {
-        set({ error: "No market sessions available.", loading: false });
-        return;
-      }
-
-      const activeDate = currentDate && sessions.includes(currentDate) ? currentDate : sessions[0];
-      set({ sessions, selectedDate: activeDate });
-
-      // If snapshot already loaded for this activeDate, no need to re-fetch on simple page navigation
-      if (get().snapshot?.session_date === activeDate && (get().snapshot?.stocks?.length || 0) > 0) {
-        set({ loading: false });
-        return;
-      }
-
-      const snap = await fetchMarketSnapshot(activeDate);
-      if (snap) {
-        set({
-          snapshot: snap,
-          sectors: snap.sectors || [],
-          traps: snap.traps || [],
-          loading: false,
-          error: null,
-        });
-      }
-
-      // Fetch initial candles
-      const { selectedSymbol, selectedInterval } = get();
-      const candles = await fetchMultiIntervalCandles(selectedSymbol, activeDate, selectedInterval);
-      set({ candles, loading: false });
-    } catch (err: any) {
-      set({ error: err.message || "Failed to initialize market store", loading: false });
-    }
-  },
+  init: async () => initMarketState(get, set),
 
   setSelectedDate: async (date: string) => {
     set({ selectedDate: date, loading: true });
@@ -115,7 +70,6 @@ export const useMarketStore = create<MarketStoreState>((set, get) => ({
         fetchMarketSnapshot(date),
         fetchMultiIntervalCandles(selectedSymbol, date, selectedInterval),
       ]);
-
       set({
         snapshot: snap,
         sectors: snap?.sectors || [],
@@ -134,9 +88,7 @@ export const useMarketStore = create<MarketStoreState>((set, get) => ({
     const { selectedDate, selectedInterval } = get();
     if (selectedDate) {
       const candles = await fetchMultiIntervalCandles(symbol, selectedDate, selectedInterval);
-      if (get().selectedSymbol === symbol) {
-        set({ candles });
-      }
+      if (get().selectedSymbol === symbol) set({ candles });
     }
   },
 
@@ -145,43 +97,17 @@ export const useMarketStore = create<MarketStoreState>((set, get) => ({
     const { selectedSymbol, selectedDate } = get();
     if (selectedDate) {
       const candles = await fetchMultiIntervalCandles(selectedSymbol, selectedDate, interval);
-      if (get().selectedInterval === interval) {
-        set({ candles });
-      }
+      if (get().selectedInterval === interval) set({ candles });
     }
   },
 
-  setWsConnected: (connected: boolean) => {
-    set({ wsConnected: connected });
-  },
+  setWsConnected: (connected: boolean) => set({ wsConnected: connected }),
 
   applyLiveSnapshot: (data: Partial<ReplaySnapshot>) => {
     const { selectedDate, sessions } = get();
-    const latestDate = sessions[0];
-    
-    // Only apply live WebSocket ticks if the user is looking at the active live session
-    if (selectedDate && latestDate && selectedDate !== latestDate) {
-      return;
-    }
-
-    const prev = get().snapshot;
-    if (!prev) {
-      set({ snapshot: data as ReplaySnapshot });
-      return;
-    }
-    const updated: ReplaySnapshot = {
-      ...prev,
-      ...data,
-      stocks: data.stocks || prev.stocks,
-      sectors: data.sectors || prev.sectors,
-      traps: data.traps || prev.traps,
-      weather: data.weather || prev.weather,
-    };
-    set({
-      snapshot: updated,
-      sectors: updated.sectors || [],
-      traps: updated.traps || [],
-    });
+    if (selectedDate && sessions[0] && selectedDate !== sessions[0]) return;
+    const updated = mergeLiveSnapshot(get().snapshot, data);
+    set({ snapshot: updated, sectors: updated.sectors || [], traps: updated.traps || [] });
   },
 
   refresh: async () => {
@@ -189,11 +115,6 @@ export const useMarketStore = create<MarketStoreState>((set, get) => ({
     if (!selectedDate) return;
     const snap = await fetchMarketSnapshot(selectedDate);
     const candles = await fetchMultiIntervalCandles(selectedSymbol, selectedDate, selectedInterval);
-    set({
-      snapshot: snap,
-      sectors: snap?.sectors || [],
-      traps: snap?.traps || [],
-      candles,
-    });
+    set({ snapshot: snap, sectors: snap?.sectors || [], traps: snap?.traps || [], candles });
   },
 }));

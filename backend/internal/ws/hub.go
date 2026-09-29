@@ -21,13 +21,11 @@ var upgrader = websocket.Upgrader{
 			return true
 		}
 		allowed := os.Getenv("ALLOWED_ORIGINS")
-		if allowed == "" && strings.EqualFold(os.Getenv("ENV"), "production") {
-			allowed = "https://gidh.tech,https://www.gidh.tech"
-		} else if allowed == "" {
-			allowed = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080"
+		if allowed == "" {
+			allowed = "https://gidh.tech,https://www.gidh.tech,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080"
 		}
 		for _, candidate := range strings.Split(allowed, ",") {
-			if origin == strings.TrimSpace(candidate) {
+			if strings.EqualFold(origin, strings.TrimSpace(candidate)) {
 				return true
 			}
 		}

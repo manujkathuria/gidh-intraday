@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gidh Intraday — Web UI
+
+The `web/` directory contains the modern Next.js 16 web terminal for Gidh Intraday. It connects directly to `gidh-server` over REST and WebSockets for real-time market radar scanning, interactive chart trading, and live MIS position management.
+
+---
+
+## Features
+
+- **210-Stock Live Radar**: Real-time intraday radar ranking with VWAP distance, RVOL, Day Rank, and CLV metrics.
+- **Interactive Candlestick Studio**: Lightweight-charts canvas featuring intraday VWAP $\pm 1\sigma / \pm 2\sigma$ bands, PDH/PDL levels, and draggable Stop Loss / Target Price / Limit lines.
+- **Live Positions & Risk Console**: Real-time position tracking with MFE/MAE excursion tracking, 1-click square-off, and circuit breaker tripwire monitoring.
+- **Sector Matrix**: Intraday sector rotation heatmap and VWAP breadth tracking across all NSE sectors.
+
+---
+
+## Tech Stack & Standards
+
+- **Framework**: Next.js 16 (App Router, Turbopack)
+- **Language**: TypeScript (strict mode)
+- **State Management**: Zustand stores with 1Hz throttled WebSocket streaming
+- **Charting**: Lightweight-Charts v5 (`ResizeObserver` responsive canvas)
+- **Styling**: Tailwind CSS + Custom Dark/Light theme system
+- **Architecture**: Modular feature-based structure where all source files strictly adhere to **$\le 150$ physical lines per file**.
+
+---
+
+## Directory Structure
+
+```
+src/
+├── app/                    # Next.js App Router routes (/, /chart, /positions, /sectors)
+├── features/               # Feature modules (header, radar, chart, positions, sectors)
+├── stores/                 # Zustand global state (marketStore, liveOrderStore)
+└── lib/                    # Typed API client, WebSocket handlers, and models
+```
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### 1. Environment Configuration
+
+Create or update `.env.local`:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_WS_URL=ws://localhost:8080
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install & Run
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Install dependencies
+npm install
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Start Next.js development server on :3000
+npm run dev
 
-## Learn More
+# Build production bundle
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Documentation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For an in-depth architectural breakdown and component contracts, refer to [docs/FRONTEND.md](../docs/FRONTEND.md).
