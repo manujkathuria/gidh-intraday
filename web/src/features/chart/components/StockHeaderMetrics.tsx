@@ -1,11 +1,12 @@
-"use client";
-
 import React from "react";
 import { ReplayStock } from "@/lib/api";
+import { MacroLevelsData } from "@/lib/api_quant";
+import { useChartIndicatorStore } from "@/stores/chartIndicatorStore";
 import { ChartIntervalSelector } from "./ChartIntervalSelector";
 import { ChartTradeButtons } from "./ChartTradeButtons";
 import { StockSummaryItem } from "../types";
 import { ChartInterval } from "./candleAggregator";
+import { Layers } from "lucide-react";
 
 interface Props {
   activeSymbol: string;
@@ -33,6 +34,7 @@ interface Props {
   draftLevelPrice?: number;
   onDraftLevelPriceChange?: (price: number) => void;
   onUpdateLevels?: (symbol: string, sl?: number | null, tp?: number | null) => Promise<boolean>;
+  macroLevels?: MacroLevelsData | null;
 }
 
 export const StockHeaderMetrics: React.FC<Props> = ({
@@ -57,7 +59,9 @@ export const StockHeaderMetrics: React.FC<Props> = ({
   draftLevelPrice,
   onDraftLevelPriceChange,
   onUpdateLevels,
+  macroLevels,
 }) => {
+  const { showMacroLevels, toggleMacroLevels } = useChartIndicatorStore();
   const price = stockInfo?.price || lastClosePrice;
   const movePct = stockInfo?.move_pct || 0;
   const rvol = stockInfo?.rvol || 0;
@@ -65,9 +69,9 @@ export const StockHeaderMetrics: React.FC<Props> = ({
   const vwapDist = stockInfo?.vwap_dist_pct ?? (price && lastVwap ? ((price - lastVwap) / lastVwap) * 100 : 0);
 
   return (
-    <div className="h-10 px-3 bg-surface border border-surface-border rounded-lg flex items-center justify-between gap-3 select-none text-xs shrink-0">
-      {/* Left: Integrated Interval Selector & Quick LONG / SHRT buttons */}
-      <div className="flex items-center gap-3 min-w-0">
+    <div className="h-10 px-2 sm:px-3 bg-surface border border-surface-border rounded-lg flex items-center justify-between gap-1.5 sm:gap-3 select-none text-xs shrink-0 relative z-30">
+      {/* Left: Integrated Interval Selector & Trade Buttons */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         {onChangeInterval && (
           <div className="flex items-center">
             <ChartIntervalSelector
@@ -102,7 +106,7 @@ export const StockHeaderMetrics: React.FC<Props> = ({
       </div>
 
       {/* Right: Unified Streamlined Metrics (LTP, Move %, RVOL, VWAP) */}
-      <div className="flex items-center gap-2.5 text-xs shrink-0 tabular-nums">
+      <div className="flex items-center gap-2 text-xs shrink-0 tabular-nums">
         {/* LTP */}
         <span className="font-black text-sm text-foreground">
           ₹{price.toFixed(2)}
@@ -112,10 +116,10 @@ export const StockHeaderMetrics: React.FC<Props> = ({
         <span
           className={`font-bold text-xs px-2 py-0.5 rounded-md ${
             movePct > 0
-              ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
+              ? "text-emerald-500 bg-emerald-500/10 border border-emerald-500/20"
               : movePct < 0
-              ? "text-rose-600 dark:text-rose-400 bg-rose-500/10"
-              : "text-foreground/60 bg-surface-muted"
+              ? "text-rose-500 bg-rose-500/10 border border-rose-500/20"
+              : "text-foreground/70 bg-surface-muted border border-surface-border"
           }`}
         >
           {movePct >= 0 ? "+" : ""}
@@ -124,7 +128,7 @@ export const StockHeaderMetrics: React.FC<Props> = ({
 
         {/* RVOL Badge */}
         {rvol > 0 && (
-          <span className="hidden md:inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md bg-surface-muted border border-surface-border text-foreground/70">
+          <span className="hidden sm:inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md bg-surface-muted border border-surface-border text-foreground/70">
             <span className="text-foreground/40 font-medium text-[10px]">RVOL</span>
             <span className="text-foreground font-black">{rvol.toFixed(1)}x</span>
           </span>
@@ -132,7 +136,7 @@ export const StockHeaderMetrics: React.FC<Props> = ({
 
         {/* VWAP Distance */}
         {vwapDist !== 0 && (
-          <span className="hidden lg:inline-flex items-center text-xs font-semibold text-foreground/50">
+          <span className="hidden md:inline-flex items-center text-xs font-semibold text-foreground/50">
             {vwapDist >= 0 ? "+" : ""}{vwapDist.toFixed(1)}% VWAP
           </span>
         )}

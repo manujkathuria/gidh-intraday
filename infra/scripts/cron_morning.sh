@@ -26,16 +26,27 @@ echo "================================================================" >> "${LO
 
 # 1. Run automated TOTP login to refresh KITE_ACCESS_TOKEN in .env
 if [ -f "${APP_DIR}/bin/gidh-auth" ]; then
-    echo "[1/4] Running ./bin/gidh-auth to refresh Zerodha access token..." >> "${LOG_FILE}"
+    echo "[1/5] Running ./bin/gidh-auth to refresh Zerodha access token..." >> "${LOG_FILE}"
     "${APP_DIR}/bin/gidh-auth" >> "${LOG_FILE}" 2>&1 || true
 else
     echo "[WARN] Missing ${APP_DIR}/bin/gidh-auth utility, attempting container fallback..." >> "${LOG_FILE}"
     docker exec gidh-backend /app/bin/gidh-auth >> "${LOG_FILE}" 2>&1 || true
 fi
 
-# 2. Publish today's daily feature baseline for all 210 universe instruments
+# 2. Sync universe instruments and rollover futures contracts automatically
+echo "[2/5] Syncing active F&O universe instruments and active futures..." >> "${LOG_FILE}"
+if [ -f "${APP_DIR}/bin/gidh-batch" ]; then
+    "${APP_DIR}/bin/gidh-batch" instruments sync --expected-count 0 >> "${LOG_FILE}" 2>&1 || {
+        echo "[WARN] Host instruments sync failed, attempting container execution..." >> "${LOG_FILE}"
+        docker exec gidh-backend /app/bin/gidh-batch instruments sync --expected-count 0 >> "${LOG_FILE}" 2>&1 || true
+    }
+else
+    docker exec gidh-backend /app/bin/gidh-batch instruments sync --expected-count 0 >> "${LOG_FILE}" 2>&1 || true
+fi
+
+# 3. Publish today's daily feature baseline for all universe instruments
 TODAY=$(date +%Y-%m-%d)
-echo "[2/4] Publishing daily feature baseline for ${TODAY}..." >> "${LOG_FILE}"
+echo "[3/5] Publishing daily feature baseline for ${TODAY}..." >> "${LOG_FILE}"
 if [ -f "${APP_DIR}/bin/gidh-batch" ]; then
     "${APP_DIR}/bin/gidh-batch" features daily --session-date "${TODAY}" >> "${LOG_FILE}" 2>&1 || {
         echo "[WARN] Host ./bin/gidh-batch failed, attempting container execution..." >> "${LOG_FILE}"

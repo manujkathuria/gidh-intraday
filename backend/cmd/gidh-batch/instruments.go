@@ -15,7 +15,7 @@ import (
 
 func syncInstruments(args []string) {
 	flags := flag.NewFlagSet("instruments sync", flag.ExitOnError)
-	expectedCount := flags.Int("expected-count", 212, "required active cash/future pair count")
+	expectedCount := flags.Int("expected-count", 0, "required active cash/future pair count (0 to accept all active)")
 	_ = flags.Parse(args)
 
 	ctx := context.Background()
@@ -38,7 +38,7 @@ func syncInstruments(args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if len(pairs) != *expectedCount {
+	if *expectedCount > 0 && len(pairs) != *expectedCount {
 		log.Fatalf("refusing to update universe: expected %d pairs, found %d", *expectedCount, len(pairs))
 	}
 	if err := store.NewMarketInstrumentRepo(db).ReplaceActiveUniverse(ctx, pairs); err != nil {

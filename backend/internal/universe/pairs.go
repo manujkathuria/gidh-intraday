@@ -10,26 +10,6 @@ import (
 	"github.com/zerodha/gokiteconnect/v4"
 )
 
-var indexFutureLookup = map[string]string{
-	"NIFTY 50":          "NIFTY",
-	"NIFTY BANK":        "BANKNIFTY",
-	"NIFTY FIN SERVICE": "FINNIFTY",
-	"FINNIFTY":          "FINNIFTY",
-	"NIFTY IT":          "NIFTYIT",
-}
-
-var supportedIndices = map[string]bool{
-	"NIFTY 50":          true,
-	"NIFTY BANK":        true,
-	"NIFTY FIN SERVICE": true,
-	"FINNIFTY":          true,
-	"NIFTY PHARMA":      true,
-	"NIFTY IT":          true,
-	"NIFTY AUTO":        true,
-	"INDIA VIX":         true,
-	"GIFT NIFTY":        true,
-}
-
 func BuildPairs(instruments kiteconnect.Instruments, now time.Time) ([]store.UniversePair, error) {
 	type future struct {
 		token       int64
@@ -40,7 +20,7 @@ func BuildPairs(instruments kiteconnect.Instruments, now time.Time) ([]store.Uni
 	}
 	futures := make(map[string]future)
 	for _, instrument := range instruments {
-		if instrument.Segment != "NFO-FUT" || (instrument.InstrumentType != "FUT" && instrument.InstrumentType != "FUTIDX") {
+		if instrument.Segment != "NFO-FUT" || instrument.InstrumentType != "FUT" {
 			continue
 		}
 		expiry := instrument.Expiry.Time
@@ -58,21 +38,12 @@ func BuildPairs(instruments kiteconnect.Instruments, now time.Time) ([]store.Uni
 
 	pairs := make([]store.UniversePair, 0, len(futures))
 	for _, instrument := range instruments {
-		isEquity := instrument.Segment == "NSE" && instrument.InstrumentType == "EQ"
-		isIndex := instrument.Segment == "INDICES" && supportedIndices[instrument.Tradingsymbol]
-		isGiftNifty := instrument.InstrumentToken == 291849 || instrument.Tradingsymbol == "GIFT NIFTY"
-
-		if !isEquity && !isIndex && !isGiftNifty {
+		if instrument.Segment != "NSE" || instrument.InstrumentType != "EQ" {
 			continue
 		}
 
-		futureLookupKey := instrument.Tradingsymbol
-		if mapped, ok := indexFutureLookup[instrument.Tradingsymbol]; ok {
-			futureLookupKey = mapped
-		}
-
-		future, hasFuture := futures[futureLookupKey]
-		if isEquity && (!hasFuture || future.lotSize <= 0) {
+		future, hasFuture := futures[instrument.Tradingsymbol]
+		if !hasFuture || future.lotSize <= 0 {
 			continue
 		}
 

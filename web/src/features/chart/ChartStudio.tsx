@@ -5,9 +5,20 @@ import { Activity } from "lucide-react";
 import { StockHeaderMetrics } from "./components/StockHeaderMetrics";
 import { CandlestickCanvas } from "./components/CandlestickCanvas";
 import { ChartOrderModal } from "./components/ChartOrderModal";
+import { MacroIndicatorPopover } from "./components/MacroIndicatorPopover";
 import { useChartStudio } from "./hooks/useChartStudio";
+import { useChartIndicatorStore } from "@/stores/chartIndicatorStore";
 
 export const ChartStudio: React.FC = () => {
+  const {
+    showVwap,
+    showBands,
+    showPoc,
+    toggleVwap,
+    toggleBands,
+    togglePoc,
+  } = useChartIndicatorStore();
+
   const {
     activeSymbol,
     handleSelectSymbol,
@@ -47,6 +58,7 @@ export const ChartStudio: React.FC = () => {
     handleOpenOrderModal,
     handleCloseOrderModal,
     dispatchOrder,
+    macroLevels,
   } = useChartStudio();
 
   const lastClose = chartCandles.length > 0 ? chartCandles[chartCandles.length - 1].close : 0;
@@ -91,6 +103,7 @@ export const ChartStudio: React.FC = () => {
         draftLevelPrice={draftLevelPrice}
         onDraftLevelPriceChange={setDraftLevelPrice}
         onUpdateLevels={updatePositionLevels}
+        macroLevels={macroLevels}
       />
 
       {/* 2. Edge-to-Edge Candlestick Studio with Entry, SL, TP, Dynamic POC, and Limit Lines */}
@@ -138,6 +151,7 @@ export const ChartStudio: React.FC = () => {
             draftLevelPrice={draftLevelPrice}
             onDraftLevelPriceChange={setDraftLevelPrice}
             onUpdateLevels={updatePositionLevels}
+            macroLevels={macroLevels}
           />
         </div>
       </div>

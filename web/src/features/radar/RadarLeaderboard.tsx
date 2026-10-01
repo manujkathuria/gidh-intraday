@@ -14,8 +14,8 @@ export const RadarLeaderboard: React.FC = () => {
     stocks,
     preset,
     setPreset,
-    selectedSector,
-    setSelectedSector,
+    vwapFilter,
+    setVwapFilter,
     search,
     setSearch,
     sortField,
@@ -23,7 +23,6 @@ export const RadarLeaderboard: React.FC = () => {
     handleSort,
     selectedSymbol,
     setSelectedSymbol,
-    sectorOptions,
     filteredAndSorted,
   } = useRadarFilters();
 
@@ -34,13 +33,12 @@ export const RadarLeaderboard: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 1. 1-Click Spectator Filter Presets */}
+      {/* 1. Filter Presets, VWAP Filter & Search */}
       <RadarFilterBar
         preset={preset}
         setPreset={setPreset}
-        selectedSector={selectedSector}
-        setSelectedSector={setSelectedSector}
-        sectorOptions={sectorOptions}
+        vwapFilter={vwapFilter}
+        setVwapFilter={setVwapFilter}
         search={search}
         setSearch={setSearch}
         visibleCount={filteredAndSorted.length}
@@ -69,7 +67,7 @@ export const RadarLeaderboard: React.FC = () => {
       {/* 3. iPad / Desktop View: High-Density Flat Table (hidden on mobile, visible md+) */}
       <div className="hidden md:block w-full">
         <div className="overflow-x-auto max-h-[calc(100vh-120px)] custom-scrollbar">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full table-fixed text-left border-collapse text-xs">
             <RadarTableHeader
               sortField={sortField}
               sortAsc={sortAsc}
@@ -79,7 +77,7 @@ export const RadarLeaderboard: React.FC = () => {
               {filteredAndSorted.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="py-12 text-center text-foreground/40 text-xs"
                   >
                     No stocks match this filter.

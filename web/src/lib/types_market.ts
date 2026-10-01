@@ -17,6 +17,11 @@ export interface ReplayStock {
   clv: number;
   volume: number;
   is_above_vwap: boolean;
+  pdh?: number;
+  pdl?: number;
+  oi_latest?: number;
+  oi_change_pct?: number;
+  vwap_sigma?: number;
 }
 
 export interface ReplaySector {

@@ -7,6 +7,7 @@ import { getChartOptions, CANDLE_COLORS } from "./chartOptions";
 import { syncPriceLines } from "./chartPriceLines";
 import { syncCandlesAndIndicators } from "./chartDataSync";
 import { useChartDraggableLines } from "./useChartDraggableLines";
+import { useChartMacroZones } from "./useChartMacroZones";
 import { useChartIndicatorStore } from "@/stores/chartIndicatorStore";
 
 export const CandlestickCanvas: React.FC<ChartProps> = (props) => {
@@ -16,7 +17,16 @@ export const CandlestickCanvas: React.FC<ChartProps> = (props) => {
     isLimitDraggable = false, onLimitPriceChange, orderSide = "LONG", orderType = "MARKET",
     editingLevelType = null, draftLevelPrice = 0, onDraftLevelPriceChange,
   } = props;
-  const { showVwap, showBands, showPoc } = useChartIndicatorStore();
+  const {
+    showVwap,
+    showBands,
+    showPoc,
+    showMacroLevels,
+    showPwhPwl,
+    showPdhPdl,
+    showSwingPivots,
+    showClvZones,
+  } = useChartIndicatorStore();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -34,6 +44,18 @@ export const CandlestickCanvas: React.FC<ChartProps> = (props) => {
   const limitLineRef = useRef<any>(null);
   const pdhLineRef = useRef<any>(null);
   const pdlLineRef = useRef<any>(null);
+  const pwhLineRef = useRef<any>(null);
+  const pwlLineRef = useRef<any>(null);
+  const swingResLineRef = useRef<any>(null);
+  const swingSupLineRef = useRef<any>(null);
+  const supplyZone1TopRef = useRef<any>(null);
+  const supplyZone1BaseRef = useRef<any>(null);
+  const supplyZone2TopRef = useRef<any>(null);
+  const supplyZone2BaseRef = useRef<any>(null);
+  const demandZone1TopRef = useRef<any>(null);
+  const demandZone1FloorRef = useRef<any>(null);
+  const demandZone2TopRef = useRef<any>(null);
+  const demandZone2FloorRef = useRef<any>(null);
 
   const isDark = theme === "dark";
   const isIntraday = interval === "1m" || interval === "5m" || interval === "15m";
@@ -92,6 +114,19 @@ export const CandlestickCanvas: React.FC<ChartProps> = (props) => {
   }, [isDark, interval]);
 
 
+  const { zones: macroZones, updateMacroZones } = useChartMacroZones({
+    chartRef,
+    candleSeriesRef,
+    macroLevels: props.macroLevels,
+    enabled: showMacroLevels && showClvZones,
+    candles,
+  });
+
+  const { dragLimitY, dragLevelY, handleLimitMouseDown, handleLevelMouseDown } = useChartDraggableLines({
+    candleSeriesRef, chartContainerRef, limitPrice, orderType, orderSide, isLimitDraggable, onLimitPriceChange,
+    editingLevelType, draftLevelPrice, onDraftLevelPriceChange, currentLtp, candles,
+  });
+
   useEffect(() => {
     const candleData = syncCandlesAndIndicators(
       candles,
@@ -118,25 +153,88 @@ export const CandlestickCanvas: React.FC<ChartProps> = (props) => {
         if (candleData.length <= 40) ts.fitContent();
         else ts.setVisibleLogicalRange({ from: candleData.length - 60, to: candleData.length + 3 });
       }
+      // Re-project horizontal macro zones
+      requestAnimationFrame(() => updateMacroZones());
     }
-  }, [candles, symbol, interval, selectedDate, isIntraday, showVwap, showBands, showPoc]);
+  }, [candles, symbol, interval, selectedDate, isIntraday, showVwap, showBands, showPoc, updateMacroZones]);
 
   useEffect(() => {
-    syncPriceLines(candleSeriesRef.current, { entryLineRef, stopLineRef, targetLineRef, limitLineRef, pdhLineRef, pdlLineRef }, {
-      entryPrice, displayStopPrice, displayTargetPrice, editingLevelType, limitPrice, orderType, orderSide, candles, isIntraday, isDark,
-    });
-  }, [entryPrice, displayStopPrice, displayTargetPrice, editingLevelType, limitPrice, orderType, orderSide, candles, isIntraday, isDark]);
-
-
-
-  const { dragLimitY, dragLevelY, handleLimitMouseDown, handleLevelMouseDown } = useChartDraggableLines({
-    candleSeriesRef, chartContainerRef, limitPrice, orderType, orderSide, isLimitDraggable, onLimitPriceChange,
-    editingLevelType, draftLevelPrice, onDraftLevelPriceChange, currentLtp, candles,
-  });
+    syncPriceLines(
+      candleSeriesRef.current,
+      {
+        entryLineRef,
+        stopLineRef,
+        targetLineRef,
+        limitLineRef,
+        pdhLineRef,
+        pdlLineRef,
+        pwhLineRef,
+        pwlLineRef,
+        swingResLineRef,
+        swingSupLineRef,
+        supplyZone1TopRef,
+        supplyZone1BaseRef,
+        supplyZone2TopRef,
+        supplyZone2BaseRef,
+        demandZone1TopRef,
+        demandZone1FloorRef,
+        demandZone2TopRef,
+        demandZone2FloorRef,
+      },
+      {
+        entryPrice,
+        displayStopPrice,
+        displayTargetPrice,
+        editingLevelType,
+        limitPrice,
+        orderType,
+        orderSide,
+        candles,
+        macroLevels: props.macroLevels,
+        showMacroLevels,
+        showPwhPwl,
+        showPdhPdl,
+        showSwingPivots,
+        isIntraday,
+        isDark,
+      }
+    );
+  }, [
+    entryPrice,
+    displayStopPrice,
+    displayTargetPrice,
+    editingLevelType,
+    limitPrice,
+    orderType,
+    orderSide,
+    candles,
+    props.macroLevels,
+    showMacroLevels,
+    showPwhPwl,
+    showPdhPdl,
+    showSwingPivots,
+    isIntraday,
+    isDark,
+  ]);
 
   return (
     <div className="w-full h-full relative select-none" data-chart-interactive="true">
       <div ref={chartContainerRef} className="w-full h-full" />
+
+      {/* Shaded Macro Supply & Demand Zones (Clean colored shaded areas) */}
+      {showMacroLevels &&
+        macroZones.map((z) => (
+          <div
+            key={z.id}
+            style={{ top: `${z.topPx}px`, height: `${z.heightPx}px` }}
+            className={`absolute left-0 right-14 pointer-events-none z-10 transition-all ${
+              z.type === "SUPPLY"
+                ? "bg-rose-500/15 border-y border-rose-500/40"
+                : "bg-emerald-500/15 border-y border-emerald-500/40"
+            }`}
+          />
+        ))}
+
       {isLimitDraggable && orderType === "LIMIT" && dragLimitY !== null && dragLimitY >= 0 && (
         <div onMouseDown={handleLimitMouseDown} style={{ top: `${dragLimitY - 10}px` }} className="chart-drag-handle absolute left-0 right-14 h-5 z-20 flex items-center cursor-ns-resize group" title="Drag up/down to adjust limit entry price" data-chart-interactive="true">
           <div className="w-full h-[2px] bg-foreground/40 group-hover:bg-foreground transition" />

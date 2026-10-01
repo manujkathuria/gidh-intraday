@@ -1,8 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
-import { LineChart } from "lucide-react";
 import { ReplayStock } from "@/lib/api";
 
 interface Props {
@@ -10,6 +8,13 @@ interface Props {
   index: number;
   isSelected: boolean;
   onSelect: (symbol: string) => void;
+}
+
+function formatOI(val: number): string {
+  if (val >= 10000000) return `${(val / 10000000).toFixed(2)}Cr`;
+  if (val >= 100000) return `${(val / 100000).toFixed(1)}L`;
+  if (val >= 1000) return `${(val / 1000).toFixed(1)}K`;
+  return val.toString();
 }
 
 export const RadarTableRow: React.FC<Props> = ({
@@ -24,10 +29,21 @@ export const RadarTableRow: React.FC<Props> = ({
   const rvol = stock.rvol || 0;
   const isAbove = stock.is_above_vwap;
 
-  // Determine clean Long / Short AI Action & Stance
-  const isLong = isAbove && move >= 0;
-  const isShort = !isAbove && move < 0;
-  const isSurge = rvol >= 3.0;
+  // Calculate points change: 1 rupee = 1 point
+  // Pts = Price - Previous Close = Price * (move_pct / (100 + move_pct))
+  const pts = (100 + move !== 0) ? (price * move) / (100 + move) : 0;
+
+  // Prior Day High (PDH) & Prior Day Low (PDL) Context
+  const pdh = stock.pdh || 0;
+  const pdl = stock.pdl || 0;
+  const isAbovePdh = pdh > 0 && price > pdh;
+  const isBelowPdl = pdl > 0 && price < pdl;
+  const pdhDistPct = pdh > 0 ? ((price - pdh) / pdh) * 100 : 0;
+  const pdlDistPct = pdl > 0 ? ((price - pdl) / pdl) * 100 : 0;
+
+  // Futures Macro 1-Day Context (from yesterday's EOD daily data)
+  const oiLatest = stock.oi_latest || 0;
+  const oiChangePct = stock.oi_change_pct || 0;
 
   return (
     <tr
@@ -37,59 +53,46 @@ export const RadarTableRow: React.FC<Props> = ({
       }`}
     >
       {/* 1. Rank # */}
-      <td className="py-2.5 px-3.5 text-center text-foreground/30 text-[11px] hidden sm:table-cell">
+      <td className="py-2.5 px-3 text-center text-foreground/30 text-[11px] w-12 hidden sm:table-cell">
         {index + 1}
       </td>
 
       {/* 2. Symbol */}
-      <td className="py-2.5 px-3.5 font-bold text-foreground">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                isAbove ? "bg-foreground" : "bg-surface-border"
-              }`}
-            />
-            <span className="text-xs tracking-wider">{stock.symbol}</span>
-          </div>
-
-          <Link
-            href={`/chart?symbol=${encodeURIComponent(stock.symbol)}`}
-            onClick={(e) => e.stopPropagation()}
-            className="p-1 rounded hover:bg-foreground hover:text-background text-foreground/40 transition opacity-0 group-hover:opacity-100 hover:opacity-100"
-            title={`Open ${stock.symbol} Chart`}
-          >
-            <LineChart className="w-3.5 h-3.5" />
-          </Link>
+      <td className="py-2.5 px-4 font-bold text-foreground w-[24%]">
+        <div className="flex items-center gap-2">
+          <span
+            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+              isAbove ? "bg-emerald-500" : "bg-rose-500"
+            }`}
+          />
+          <span className="text-xs tracking-wider">{stock.symbol}</span>
         </div>
       </td>
 
-      {/* 3. Sector */}
-      <td className="py-2.5 px-3.5 text-foreground/50 text-[11px] hidden lg:table-cell">{stock.sector}</td>
-
-      {/* 4. Price */}
-      <td className="py-2.5 px-3.5 text-right text-foreground">₹{price.toFixed(2)}</td>
-
-      {/* 5. Day Move with Subdued Tint (Green/Red) */}
-      <td className="py-2.5 px-3.5 text-right font-bold">
-        <span
-          className={
-            move > 0
-              ? "text-emerald-600 dark:text-emerald-400 font-bold"
-              : move < 0
-              ? "text-rose-600 dark:text-rose-400 font-bold"
-              : "text-foreground/60"
-          }
-        >
-          {move >= 0 ? "+" : ""}
-          {move.toFixed(2)}%
-        </span>
+      {/* 3. Unified Price, Points, and Change % */}
+      <td className="py-2 px-4 text-right w-[20%]">
+        <div className="flex flex-col items-end leading-tight">
+          <span className="font-semibold text-foreground text-xs tabular-nums">
+            ₹{price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+          <span
+            className={`text-[11px] font-bold tabular-nums ${
+              move > 0
+                ? "text-emerald-600 dark:text-emerald-400"
+                : move < 0
+                ? "text-rose-600 dark:text-rose-400"
+                : "text-foreground/50"
+            }`}
+          >
+            {pts >= 0 ? "+" : ""}{pts.toFixed(2)} ({move >= 0 ? "+" : ""}{move.toFixed(2)}%)
+          </span>
+        </div>
       </td>
 
-      {/* 6. Clean RVOL Number */}
-      <td className="py-2.5 px-3.5 text-right">
+      {/* 4. Relative Volume (RVOL) */}
+      <td className="py-2.5 px-4 text-right w-[14%]">
         <span
-          className={`font-bold ${
+          className={`font-bold tabular-nums ${
             rvol >= 3.0
               ? "text-foreground font-black"
               : "text-foreground/70"
@@ -99,8 +102,8 @@ export const RadarTableRow: React.FC<Props> = ({
         </span>
       </td>
 
-      {/* 7. VWAP State (Clean colored text without tags) */}
-      <td className="py-2.5 px-3.5 text-right font-bold hidden md:table-cell">
+      {/* 5. VWAP Distance % */}
+      <td className="py-2.5 px-4 text-right font-semibold w-[14%]">
         <span
           className={`tabular-nums ${
             isAbove
@@ -113,20 +116,44 @@ export const RadarTableRow: React.FC<Props> = ({
         </span>
       </td>
 
-      {/* 8. AI Action Badge (Single-Word: LONG, SHORT, WAIT) */}
-      <td className="py-2.5 px-3.5 text-center">
-        {isLong ? (
-          <span className="text-[10px] font-black px-2.5 py-0.5 rounded bg-foreground text-background shadow-xs tracking-wider">
-            LONG
+      {/* 6. Prior Day High / Low Context */}
+      <td className="py-2.5 px-4 text-right font-semibold w-[14%] hidden md:table-cell">
+        {isAbovePdh ? (
+          <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+            &gt; PDH (+{pdhDistPct.toFixed(1)}%)
           </span>
-        ) : isShort ? (
-          <span className="text-[10px] font-black px-2.5 py-0.5 rounded border border-foreground/40 text-foreground tracking-wider">
-            SHORT
+        ) : isBelowPdl ? (
+          <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 tabular-nums">
+            &lt; PDL ({pdlDistPct.toFixed(1)}%)
           </span>
         ) : (
-          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-surface-muted text-foreground/40 border border-surface-border tracking-wider">
-            WAIT
+          <span className="text-[11px] text-foreground/40 font-medium">
+            Inside
           </span>
+        )}
+      </td>
+
+      {/* 7. Futures Macro 1-Day Open Interest Inflow */}
+      <td className="py-2 px-4 text-right w-[14%] hidden sm:table-cell">
+        {oiLatest > 0 ? (
+          <div className="flex flex-col items-end leading-tight">
+            <span className="font-semibold text-foreground text-xs tabular-nums">
+              {formatOI(oiLatest)}
+            </span>
+            <span
+              className={`text-[10px] font-bold tabular-nums ${
+                oiChangePct > 0
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : oiChangePct < 0
+                  ? "text-rose-600 dark:text-rose-400"
+                  : "text-foreground/40"
+              }`}
+            >
+              {oiChangePct >= 0 ? "+" : ""}{oiChangePct.toFixed(1)}% (1D)
+            </span>
+          </div>
+        ) : (
+          <span className="text-[11px] text-foreground/30 font-medium">-</span>
         )}
       </td>
     </tr>

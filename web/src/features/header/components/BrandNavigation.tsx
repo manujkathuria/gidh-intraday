@@ -51,18 +51,6 @@ export const BrandNavigation: React.FC<Props> = ({ activeCount }) => {
         </Link>
 
         <Link
-          href="/indices"
-          className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${
-            pathname === "/indices"
-              ? "bg-foreground text-background font-bold border-foreground shadow-sm"
-              : "bg-surface-muted border-surface-border text-foreground/60 hover:text-foreground hover:bg-surface-hover"
-          }`}
-        >
-          <span className="font-mono text-xs font-black">#</span>
-          <span>Indices</span>
-        </Link>
-
-        <Link
           href="/chart"
           className={`px-3 py-1 rounded transition flex items-center gap-1.5 border ${
             pathname === "/chart"

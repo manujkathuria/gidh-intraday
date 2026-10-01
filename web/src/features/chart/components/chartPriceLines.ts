@@ -1,5 +1,6 @@
 import { ISeriesApi, LineStyle } from "lightweight-charts";
 import { Candle } from "@/lib/api";
+import { MacroLevelsData } from "@/lib/api_quant";
 
 export function syncPriceLines(
   series: ISeriesApi<"Candlestick"> | null,
@@ -10,6 +11,18 @@ export function syncPriceLines(
     limitLineRef: React.MutableRefObject<any>;
     pdhLineRef: React.MutableRefObject<any>;
     pdlLineRef: React.MutableRefObject<any>;
+    pwhLineRef?: React.MutableRefObject<any>;
+    pwlLineRef?: React.MutableRefObject<any>;
+    swingResLineRef?: React.MutableRefObject<any>;
+    swingSupLineRef?: React.MutableRefObject<any>;
+    supplyZone1TopRef?: React.MutableRefObject<any>;
+    supplyZone1BaseRef?: React.MutableRefObject<any>;
+    supplyZone2TopRef?: React.MutableRefObject<any>;
+    supplyZone2BaseRef?: React.MutableRefObject<any>;
+    demandZone1TopRef?: React.MutableRefObject<any>;
+    demandZone1FloorRef?: React.MutableRefObject<any>;
+    demandZone2TopRef?: React.MutableRefObject<any>;
+    demandZone2FloorRef?: React.MutableRefObject<any>;
   },
   params: {
     entryPrice?: number;
@@ -20,6 +33,11 @@ export function syncPriceLines(
     orderType: "MARKET" | "LIMIT";
     orderSide: "LONG" | "SHORT";
     candles?: Candle[];
+    macroLevels?: MacroLevelsData | null;
+    showMacroLevels?: boolean;
+    showPwhPwl?: boolean;
+    showPdhPdl?: boolean;
+    showSwingPivots?: boolean;
     isIntraday: boolean;
     isDark: boolean;
   }
@@ -83,61 +101,81 @@ export function syncPriceLines(
     linesRef.limitLineRef.current = null;
   }
 
-  // PDH / PDL Lines
-  syncPdhPdlLines(series, linesRef, params);
+  // Macro Levels (PWH, PWL, PDH, PDL, Swing RES/SUP)
+  syncMacroPriceLines(series, linesRef, params);
 }
 
-
-
-
-
-
-function syncPdhPdlLines(
+function syncMacroPriceLines(
   series: ISeriesApi<"Candlestick">,
-  linesRef: { pdhLineRef: React.MutableRefObject<any>; pdlLineRef: React.MutableRefObject<any> },
-  params: { candles?: Candle[]; isIntraday: boolean; isDark: boolean }
+  linesRef: any,
+  params: {
+    candles?: Candle[];
+    macroLevels?: MacroLevelsData | null;
+    showMacroLevels?: boolean;
+    showPwhPwl?: boolean;
+    showPdhPdl?: boolean;
+    showSwingPivots?: boolean;
+    isIntraday: boolean;
+    isDark: boolean;
+  }
 ) {
-  if (!params.isIntraday || !params.candles || params.candles.length === 0) {
-    if (linesRef.pdhLineRef.current) {
-      series.removePriceLine(linesRef.pdhLineRef.current);
-      linesRef.pdhLineRef.current = null;
-    }
-    if (linesRef.pdlLineRef.current) {
-      series.removePriceLine(linesRef.pdlLineRef.current);
-      linesRef.pdlLineRef.current = null;
-    }
-    return;
-  }
+  const showMacro = params.showMacroLevels !== false;
+  const showPwh = params.showPwhPwl !== false;
+  const showPdh = params.showPdhPdl !== false;
+  const showSwing = params.showSwingPivots !== false;
+  const m = params.macroLevels;
 
-  const latestCandle = params.candles[params.candles.length - 1];
-  const pdh = latestCandle?.pdh ?? params.candles.find((c) => (c?.pdh ?? 0) > 0)?.pdh;
-  const pdl = latestCandle?.pdl ?? params.candles.find((c) => (c?.pdl ?? 0) > 0)?.pdl;
-  const levelColor = params.isDark ? "#E2E8F0" : "#334155";
-
-  if (pdh && pdh > 0) {
-    if (!linesRef.pdhLineRef.current) {
-      linesRef.pdhLineRef.current = series.createPriceLine({
-        price: pdh, color: levelColor, lineWidth: 1, lineStyle: LineStyle.LargeDashed, axisLabelVisible: true, title: "PDH",
-      });
-    } else {
-      linesRef.pdhLineRef.current.applyOptions({ price: pdh, color: levelColor, lineWidth: 1, lineStyle: LineStyle.LargeDashed, title: "PDH" });
+  // Helper to sync or remove a single line
+  const syncLine = (
+    refKey: string,
+    price: number | null | undefined,
+    color: string,
+    lineWidth: number,
+    lineStyle: LineStyle,
+    title: string,
+    condition: boolean = true
+  ) => {
+    if (!linesRef[refKey]) return;
+    if (showMacro && condition && price && price > 0) {
+      if (!linesRef[refKey].current) {
+        linesRef[refKey].current = series.createPriceLine({
+          price,
+          color,
+          lineWidth: lineWidth as any,
+          lineStyle,
+          axisLabelVisible: true,
+          title,
+        });
+      } else {
+        linesRef[refKey].current.applyOptions({
+          price,
+          color,
+          lineWidth: lineWidth as any,
+          lineStyle,
+          title,
+        });
+      }
+    } else if (linesRef[refKey].current) {
+      series.removePriceLine(linesRef[refKey].current);
+      linesRef[refKey].current = null;
     }
-  } else if (linesRef.pdhLineRef.current) {
-    series.removePriceLine(linesRef.pdhLineRef.current);
-    linesRef.pdhLineRef.current = null;
-  }
+  };
 
-  if (pdl && pdl > 0) {
-    if (!linesRef.pdlLineRef.current) {
-      linesRef.pdlLineRef.current = series.createPriceLine({
-        price: pdl, color: levelColor, lineWidth: 1, lineStyle: LineStyle.LargeDashed, axisLabelVisible: true, title: "PDL",
-      });
-    } else {
-      linesRef.pdlLineRef.current.applyOptions({ price: pdl, color: levelColor, lineWidth: 1, lineStyle: LineStyle.LargeDashed, title: "PDL" });
-    }
-  } else if (linesRef.pdlLineRef.current) {
-    series.removePriceLine(linesRef.pdlLineRef.current);
-    linesRef.pdlLineRef.current = null;
-  }
+  // 1. PDH & PDL
+  const candlePdh = params.candles && params.candles.length > 0 ? (params.candles[params.candles.length - 1]?.pdh ?? params.candles.find((c) => (c?.pdh ?? 0) > 0)?.pdh) : null;
+  const candlePdl = params.candles && params.candles.length > 0 ? (params.candles[params.candles.length - 1]?.pdl ?? params.candles.find((c) => (c?.pdl ?? 0) > 0)?.pdl) : null;
+  const pdh = m?.pdh ?? candlePdh;
+  const pdl = m?.pdl ?? candlePdl;
+
+  syncLine("pdhLineRef", pdh, "#FB923C", 1, LineStyle.Dotted, "PDH", showPdh);
+  syncLine("pdlLineRef", pdl, "#38BDF8", 1, LineStyle.Dotted, "PDL", showPdh);
+
+  // 2. PWH & PWL (Prior Week High & Low)
+  syncLine("pwhLineRef", m?.pwh, "#EF4444", 2, LineStyle.Dashed, "PWH", showPwh);
+  syncLine("pwlLineRef", m?.pwl, "#22C55E", 2, LineStyle.Dashed, "PWL", showPwh);
+
+  // 3. Swing RES & SUP (Clean solid lines without title tags)
+  syncLine("swingResLineRef", m?.swing_res, "#EF4444", 2, LineStyle.Solid, "", showSwing);
+  syncLine("swingSupLineRef", m?.swing_sup, "#22C55E", 2, LineStyle.Solid, "", showSwing);
 }
 

@@ -1,17 +1,20 @@
 export type SortField =
   | "symbol"
-  | "sector"
   | "price"
+  | "pts"
   | "move_pct"
   | "rvol"
   | "vwap_dist_pct"
+  | "pd_context"
+  | "futures_oi"
   | "volume";
 
-export type RadarPreset = "ALL" | "SURGES" | "LEADERS" | "DUMPERS";
+export type RadarPreset = "ALL" | "SURGES";
 
-export interface SectorOption {
-  sector: string;
-  label: string;
-  count?: number;
-  avgMovePct?: number;
-}
+export type VwapFilter =
+  | "ALL"
+  | "NEAR_VWAP"
+  | "ABOVE_1S"
+  | "ABOVE_2S"
+  | "BELOW_1S"
+  | "BELOW_2S";

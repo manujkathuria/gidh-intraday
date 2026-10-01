@@ -69,19 +69,6 @@ export async function fetchReplayCandles(
   return fetchMultiIntervalCandles(symbol, sessionDate, interval);
 }
 
-export async function fetchIndicesDashboard(date?: string): Promise<any | null> {
-  try {
-    const url = date ? `${getApiBase()}/api/market/indices?date=${encodeURIComponent(date)}` : `${getApiBase()}/api/market/indices`;
-    const res = await fetch(url, { cache: "no-store" });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn("[REST] fetchIndicesDashboard error:", err);
-  }
-  return null;
-}
-
 export interface HVNNode {
   price_level: number;
   volume: number;

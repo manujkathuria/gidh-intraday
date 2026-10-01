@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { fetchMultiIntervalCandles, Candle, getStreamWsUrlWithAuth } from "@/lib/api";
+import { fetchMacroDaily } from "@/lib/api_quant";
+import { useChartIndicatorStore } from "@/stores/chartIndicatorStore";
 import { ChartInterval, aggregateCandles } from "../components/candleAggregator";
 import { computeVwapBands } from "../components/vwapCalculator";
 
@@ -12,12 +14,45 @@ export function useChartCandlesStream(
   const [chartCandles, setChartCandles] = useState<Candle[]>([]);
   const [loadingCandles, setLoadingCandles] = useState<boolean>(false);
   const raw1mCandlesRef = useRef<Candle[]>([]);
+  const dailyLookback = useChartIndicatorStore((s) => s.dailyLookback);
 
   useEffect(() => {
     if (!selectedDate || !activeSymbol) return;
 
     let isSubscribed = true;
     setLoadingCandles(true);
+
+    if (interval === "1d") {
+      fetchMacroDaily(activeSymbol, selectedDate, dailyLookback || 120)
+        .then((dailyData) => {
+          if (!isSubscribed) return;
+          const candles: Candle[] = (dailyData || []).map((d) => {
+            const dateObj = new Date(`${d.date}T00:00:00Z`);
+            const timeSec = Math.floor(dateObj.getTime() / 1000);
+            return {
+              time: timeSec,
+              open: d.open,
+              high: d.high,
+              low: d.low,
+              close: d.close,
+              volume: d.volume,
+              vwap: 0,
+              pwh: d.pwh,
+              pwl: d.pwl,
+              clv: d.clv,
+            };
+          });
+          setChartCandles(candles);
+          setLoadingCandles(false);
+        })
+        .catch((err) => {
+          console.error("Error fetching daily macro candles:", err);
+          if (isSubscribed) setLoadingCandles(false);
+        });
+      return () => {
+        isSubscribed = false;
+      };
+    }
 
     fetchMultiIntervalCandles(activeSymbol, selectedDate, "1m")
       .then((data) => {

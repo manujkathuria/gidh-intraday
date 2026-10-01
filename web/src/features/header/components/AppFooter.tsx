@@ -6,6 +6,8 @@ import { useMarketStore } from "@/stores/marketStore";
 import { useChartIndicatorStore } from "@/stores/chartIndicatorStore";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserAuthButton } from "./UserAuthButton";
+import { MacroIndicatorPopover } from "@/features/chart/components/MacroIndicatorPopover";
+import { DailyMacroIndicatorPopover } from "@/features/chart/components/DailyMacroIndicatorPopover";
 
 interface Props {
   isDark: boolean;
@@ -19,11 +21,12 @@ export const AppFooter: React.FC<Props> = ({
   breadth = 0,
 }) => {
   const pathname = usePathname();
-  const isChartPage = pathname.startsWith("/chart");
+  const isChartPage = pathname.startsWith("/chart") || pathname.startsWith("/macro");
 
-  const { wsConnected, isLive } = useMarketStore();
+  const { wsConnected, isLive, selectedInterval } = useMarketStore();
   const { showPoc, showBands, showVwap, togglePoc, toggleBands, toggleVwap } = useChartIndicatorStore();
 
+  const isDaily = selectedInterval === "1d";
   const isStreaming = wsConnected && isLive;
   const statusLabel = isStreaming ? "LIVE" : "SYNCED";
   const isBullish = breadth >= 50;
@@ -58,11 +61,13 @@ export const AppFooter: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Center: Chart Plugin Toggles (Only shown on /chart page) */}
-      {isChartPage && (
-        <div className="flex items-center gap-1 shrink-0">
-          <span className="text-[9px] font-bold text-foreground/35 uppercase tracking-wider mr-0.5">PLUGINS:</span>
-          
+      {/* Center: Chart Plugin Toggles (Intraday only) */}
+      {isChartPage && !isDaily && (
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[9px] font-bold text-foreground/35 uppercase tracking-wider mr-0.5">
+            PLUGINS:
+          </span>
+
           {/* POC Toggle */}
           <button
             onClick={togglePoc}
@@ -104,6 +109,9 @@ export const AppFooter: React.FC<Props> = ({
             <span className={`w-1.5 h-1.5 rounded-full ${showVwap ? "bg-purple-400 shadow-xs shadow-purple-500/50" : "bg-foreground/20"}`} />
             VWAP
           </button>
+
+          {/* Macro Structural Levels & Shaded Zones Popover Plugin */}
+          <MacroIndicatorPopover />
         </div>
       )}
 

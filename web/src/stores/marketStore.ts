@@ -40,7 +40,7 @@ export const useMarketStore = create<MarketStoreState>((set, get) => ({
   sessions: [],
   selectedDate: "",
   selectedSymbol: "RELIANCE",
-  selectedInterval: "5m",
+  selectedInterval: "1d",
 
   snapshot: null,
   candles: [],

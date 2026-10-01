@@ -1,4 +1,5 @@
 import { Candle } from "@/lib/api";
+import { MacroLevelsData } from "@/lib/api_quant";
 import { ChartInterval } from "./components/candleAggregator";
 
 export interface StockSummaryItem {
@@ -21,6 +22,7 @@ export interface ChartProps {
   entryPrice?: number;
   stopLossPrice?: number;
   targetPrice?: number;
+  macroLevels?: MacroLevelsData | null;
   // Interactive Limit Order Slider
 
   limitPrice?: number;

@@ -22,6 +22,7 @@ func (s *Server) scanSnapshotStocks(rows pgx.Rows) ([]*Stock, int, map[string]*s
 		if err := rows.Scan(
 			&stk.Symbol, &stk.Sector, &stk.Price, &stk.MovePct, &stk.GapPct,
 			&stk.Vwap, &stk.VwapDistPct, &stk.Rvol, &stk.Clv, &vol, &stk.IsAboveVwap,
+			&stk.Pdh, &stk.Pdl, &stk.OiLatest, &stk.OiChangePct, &stk.VwapSigma,
 		); err != nil {
 			continue
 		}

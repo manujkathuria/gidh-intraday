@@ -3,6 +3,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useMarketStore } from "@/stores/marketStore";
 import { useLiveOrderStore } from "@/stores/liveOrderStore";
 import { OrderIntent } from "@/lib/api";
+import { MacroLevelsData, fetchMacroLevels } from "@/lib/api_quant";
 import { StockSummaryItem } from "../types";
 import { ChartInterval } from "../components/candleAggregator";
 import { useChartCandlesStream } from "./useChartCandlesStream";
@@ -17,9 +18,14 @@ export function useChartStudio() {
   const { activePositions, managedOrders, initLiveOrders, placeTrade, updatePositionLevels } = useLiveOrderStore();
 
   const [activeSymbol, setActiveSymbol] = useState<string>(urlSymbol || selectedSymbol || "RELIANCE");
-  const [interval, setInterval] = useState<ChartInterval>("5m");
+  const [interval, setIntervalState] = useState<ChartInterval>("1d");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const theme = useThemeObserver();
+
+  const setInterval = (newInterval: ChartInterval) => {
+    setIntervalState(newInterval);
+    useMarketStore.getState().setSelectedInterval(newInterval);
+  };
 
   const [isOrderModalOpen, setIsOrderModalOpen] = useState<boolean>(false);
   const [orderSide, setOrderSide] = useState<"LONG" | "SHORT">("LONG");
@@ -106,6 +112,26 @@ export function useChartStudio() {
     [activeSymbol, currentPrice, limitPrice, placeTrade]
   );
 
+  const [macroLevels, setMacroLevels] = useState<MacroLevelsData | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadLevels() {
+      if (!activeSymbol || !selectedDate) {
+        setMacroLevels(null);
+        return;
+      }
+      const data = await fetchMacroLevels(activeSymbol, selectedDate);
+      if (!isCancelled) {
+        setMacroLevels(data);
+      }
+    }
+    loadLevels();
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeSymbol, selectedDate]);
+
   return {
     activeSymbol, handleSelectSymbol, interval, setInterval, searchTerm, setSearchTerm, chartCandles, loadingCandles,
     theme, selectedDate, currentTimeMinutes: 930, stockInfo, currentPrice, allSymbols, filteredSymbols, mode: "COMPLETED",
@@ -113,7 +139,7 @@ export function useChartStudio() {
     hasActivePosition: !!activePosition, positionSide: (activePosition?.side as "LONG" | "SHORT") || "LONG", updatePositionLevels,
     editingLevelType, setEditingLevelType, draftLevelPrice, setDraftLevelPrice, activePendingOrder, isOrderModalOpen, orderSide,
     setOrderSide, orderType, setOrderType, limitPrice: limitPrice || currentPrice, setLimitPrice, handleOpenOrderModal,
-    handleCloseOrderModal, dispatchOrder,
+    handleCloseOrderModal, dispatchOrder, macroLevels,
   };
 }
 
